@@ -318,3 +318,45 @@ plot_DEF(data = subset, features = schema_psych_interest, name = "subset-SCHEMA"
 ## de cellen in het algemeen veranderen
 ### met annotatie duidelijker en specifieker natuurlijk
 
+
+
+
+
+
+
+
+
+### Seurat --> Monocle 3 for pseudo time analysis
+# main site: https://cole-trapnell-lab.github.io/monocle3/
+# main paper (cite): https://www.nature.com/articles/s41586-019-0969-x
+# Seurat -> Monocle vignette: https://htmlpreview.github.io/?https://github.com/satijalab/seurat-wrappers/blob/master/docs/monocle3.html
+# Monocle tutorial: http://cole-trapnell-lab.github.io/monocle-release/monocle3/#tutorial-1-learning-trajectories-with-monocle-3
+# Monocle -> TradeSeq: https://bioconductor.org/packages/release/bioc/vignettes/tradeSeq/inst/doc/Monocle.html
+## TradeSeq: An R package that allows analysis of gene expression along trajectories
+
+
+#### possible pseudotime analysis --- compare to official Seurat vignette approach: https://htmlpreview.github.io/?https://github.com/satijalab/seurat-wrappers/blob/master/docs/monocle3.html
+# Hi everyone,
+# I've just done the import and pseudotime from seurat v3 to monocle v3 using a seurat integrated object. I used the integrated assay because I wanted monocle to map a trajectory onto the merged samples and onto essentially the same UMAP as the seurat object had. I think if I'd used the RNA assay, monocle wouldn't be able to batch-correct and the samples wouldn't even be in the same clusters. Here's what I did. Please let me know if you think I did something wrong lol!
+# `
+# seurat.object <- readRDS("Integrated.rds")
+# data <- as(as.matrix(GetAssayData(seurat.object, assay = "integrated", slot = "scale.data")), 'sparseMatrix')
+#
+# pd <- data.frame(seurat.object@meta.data)
+# #keep only the columns that are relevant
+# pData <- pd %>% select(orig.ident, nCount_RNA, nFeature_RNA)
+# fData <- data.frame(gene_short_name = row.names(data), row.names = row.names(data))
+#
+# #Construct monocle cds
+# monocle.object <- new_cell_data_set(expression_data = data, cell_metadata = pData, gene_metadata = fData)
+# #preprocess
+# monocle.object = preprocess_cds(monocle.object, num_dim = 100, norm_method = "size_only", pseudo_count = 0)
+# monocle.object = reduce_dimension(monocle.object)
+# #map pseudotime
+# monocle.object = order_cells(monocle.object, reduction_method = "UMAP")
+# monocle.object = learn_graph(monocle.object)
+# plot_cells(monocle.object, color_cells_by = "pseudotime")
+#
+# `
+
+

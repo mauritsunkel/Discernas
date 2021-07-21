@@ -271,11 +271,7 @@ saveRDS(subset, file = "mixed-neuronal-subset.rds") # neuronal, astrocytical, mi
 
 
 
-# fix ALL plots, not just the new ones
-## think of size, axes, labels - if they're formattable
-# read the paper on which test method to use for DEG analysis
-# be able to select gene from DEG analysis to show its stats
-## maybe some dplyr skills in seeing what genes for each cluster are interesting etc
+# read the paper on which test method to use for DEG analysis (which paper is that again?)
 
 # check Slingshot R package for RNA velocity, maybe see development arrows on UMAP
 # Pascal papers
