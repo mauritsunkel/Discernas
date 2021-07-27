@@ -125,7 +125,7 @@ integrated <- IntegrateData(anchorset = anchors)
 DefaultAssay(integrated) <- "integrated"
 
 # Run the standard workflow for visualization and clustering
-integrated <- ScaleData(integrated, features = all.genes, verbose = FALSE)
+integrated <- ScaleData(integrated, features = rownames(integrated), verbose = FALSE)
 # integrated <- RunPCA(integrated, npcs = 30, verbose = FALSE)
 integrated <- RunPCA(integrated, features = VariableFeatures(object = integrated), npcs = 20, verbose = FALSE)
 # determine dimensionality of the dataset by the Jackstraw procedure (if takees too long, try something else)
@@ -193,7 +193,7 @@ plot_DEF(data = integrated, features = neuron_interest, name = "neuron")
 plot_DEF(data = integrated, features = schema_psych_interest, name = "SCHEMA")
 
 # save integrated Seurat object
-saveRDS(data, file = "integrated.rds")
+saveRDS(integrated, file = "integrated.rds")
 
 
 
@@ -254,7 +254,7 @@ table(subset@meta.data$seurat_clusters)
 DefaultAssay(subset) <- "integrated"
 
 # Run the standard workflow for visualization and clustering
-subset <- ScaleData(subset, features = all.genes, verbose = FALSE)
+subset <- ScaleData(subset, features = rownames(data), verbose = FALSE)
 # subset <- RunPCA(subset, npcs = 30, verbose = FALSE)
 subset <- RunPCA(subset, features = VariableFeatures(object = subset), npcs = 20, verbose = FALSE)
 # determine dimensionality of the dataset by the Jackstraw procedure (if takees too long, try something else)
@@ -294,6 +294,12 @@ plot_DEF(data = subset, features = neuron_interest, name = "subset-neuron")
 plot_DEF(data = subset, features = schema_psych_interest, name = "subset-SCHEMA")
 
 
+
+### TODO DEA Wilcox parameter for more stringency?
+
+### TODO https://panglaodb.se/ use site for cluster annotation possibly?
+## can give in database search marker genes in and/or fashion to get cell types
+## or give in cell types to get marker genes!
 
 
 
