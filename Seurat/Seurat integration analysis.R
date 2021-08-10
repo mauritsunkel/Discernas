@@ -14,13 +14,13 @@ work_dir <- "C:/Users/mauri/Desktop/M/Erasmus MC PhD/Projects/Single Cell RNA Se
 
 ### READ RDS METHOD
 ## BL_N - BL_C
-rds.files <- c("C:/Users/mauri/Desktop/M/Erasmus MC PhD/Projects/Single Cell RNA Sequencing/Seurat/results/2021-07-20 13-23-16/BL_N/neuronal-subset.rds",
-               "C:/Users/mauri/Desktop/M/Erasmus MC PhD/Projects/Single Cell RNA Sequencing/Seurat/results/2021-07-20 13-23-16/BL_C/mixed-neuronal-subset.rds")
+rds.files <- c("C:/Users/mauri/Desktop/M/Erasmus MC PhD/Projects/Single Cell RNA Sequencing/Seurat/results/Exploration results/BL_N/old - without cell cycle regression and PCA scores/neuronal-subset.rds",
+               "C:/Users/mauri/Desktop/M/Erasmus MC PhD/Projects/Single Cell RNA Sequencing/Seurat/results/Exploration results/BL_C/old - without cell cycle regression and PCA scores/mixed-neuronal-subset.rds")
 
 sample_name <- "BL_N + BL_C"
 ## BL_A + BL_C
-rds.files <- c("C:/Users/mauri/Desktop/M/Erasmus MC PhD/Projects/Single Cell RNA Sequencing/Seurat/results/2021-07-20 13-23-16/BL_A/astrocytical-subset.rds",
-               "C:/Users/mauri/Desktop/M/Erasmus MC PhD/Projects/Single Cell RNA Sequencing/Seurat/results/2021-07-20 13-23-16/BL_C/mixed-astrocytical-subset.rds")
+rds.files <- c("C:/Users/mauri/Desktop/M/Erasmus MC PhD/Projects/Single Cell RNA Sequencing/Seurat/results/Exploration results/BL_A/old - without cell cycle regression and PCA scores/astrocytical-subset.rds",
+               "C:/Users/mauri/Desktop/M/Erasmus MC PhD/Projects/Single Cell RNA Sequencing/Seurat/results/Exploration results/BL_C/old - without cell cycle regression and PCA scores/mixed-astrocytical-subset.rds")
 sample_name <- "BL_A + BL_C"
 ### END READ RDS
 
@@ -63,47 +63,23 @@ data.list <- lapply(X = rds.files, FUN = function(x) {
 
 
 ### LATEST TIMEPOINT WITH RDS FILE EXISTING METHOD
-sample_name <- "BL_N"
-datetimes <- list.dirs(paste0("../../", sample_name), full.names = FALSE, recursive = FALSE)
-max(datetimes)
+# sample_name <- "BL_N"
+# datetimes <- list.dirs(paste0("../../", sample_name), full.names = FALSE, recursive = FALSE)
+# max(datetimes)
 ### END
 
 
-data.list <- lapply(X = samples.list, FUN = function(x) {
-
-  ### BETTER TO MAKE LIST OF .rds files to read in after per sample analysis
-  ## make data.list of those
-  ## perform steps at Perform integration
-
-  ### COMPARE this and LoadRDS method to see if outcome is similar
-
-  # load/read dataset
-  data.data <- Read10X(data.dir = paste0("../../../data/samples/", x, "/filtered_feature_bc_matrix"), strip.suffix = TRUE)
-  # Initialize the Seurat object with the raw (non-normalized data).
-  data <- CreateSeuratObject(counts = data.data, project = x, min.cells = 3, min.features = 700)
-  # calculate percentage mitochondrial DNA
-  data[["percent.mt"]] <- PercentageFeatureSet(data, pattern = "^MT-")
-  # filter cells with: less then 20% mitochondrial, lower than 200 unique features (genes)
-  data <- subset(data, subset = nFeature_RNA > 200 & percent.mt < 20)
-
-  # normalization
-  data <- NormalizeData(data, normalization.method = "LogNormalize", scale.factor = 10000)
-
-  # Identification of highly variable features (feature selection)
-  data <- FindVariableFeatures(data, selection.method = "vst", nfeatures = 2000)
-})
 
 
 
 # select features that are repeatedly variable across datasets for integration
-features <- SelectIntegrationFeatures(object.list = data.list)
+## nfeatures = 3000 & PrepSCTIntegration, because using SCTransform
+features <- SelectIntegrationFeatures(object.list = data.list, nfeatures = 3000)
+data.list <- PrepSCTIntegration(object.list = data.list, anchor.features = features)
+
 
 # use Canonical COrrelation Analysis (CCA) to find 'anchors' between datasets
 ## with reference is faster and finds the same amount of anchors
-
-
-
-
 # define combined sample index in data.list position
 c <- 1
 for (obj in data.list) {
@@ -113,11 +89,11 @@ for (obj in data.list) {
   c <- c + 1
 }
 # use combined sample as reference dataset
-anchors <- FindIntegrationAnchors(object.list = data.list, anchor.features = features, reference = c(ind))
+anchors <- FindIntegrationAnchors(object.list = data.list, normalization.method = "SCT", anchor.features = features, reference = c(ind))
 
 # this command creates an 'integrated' data assay
 ## note that the original unmodified data still resides in the 'RNA' assay
-integrated <- IntegrateData(anchorset = anchors)
+integrated <- IntegrateData(anchorset = anchors, normalization.method = "SCT")
 
 ## start integrated analysis
 
@@ -125,7 +101,8 @@ integrated <- IntegrateData(anchorset = anchors)
 DefaultAssay(integrated) <- "integrated"
 
 # Run the standard workflow for visualization and clustering
-integrated <- ScaleData(integrated, features = rownames(integrated), verbose = FALSE)
+## DEPRECATED: DO NOT run ScaleData here when using SCTransform
+# integrated <- ScaleData(integrated, features = rownames(integrated), verbose = FALSE)
 # integrated <- RunPCA(integrated, npcs = 30, verbose = FALSE)
 integrated <- RunPCA(integrated, features = VariableFeatures(object = integrated), npcs = 20, verbose = FALSE)
 # determine dimensionality of the dataset by the Jackstraw procedure (if takees too long, try something else)
@@ -158,6 +135,7 @@ ggplot2::ggsave(file = paste0("UMAP_", sample_name, "_split.png"), width = 30, h
 
 
 # For performing differential expression after integration, we switch back to the original data (RNA)
+### TODO should this be DefaultAssay(subset) <- "SCT" # because we now use SCTransform for normalization and scaling?
 DefaultAssay(integrated) <- "RNA"
 markers <- FindConservedMarkers(integrated, ident.1 = 0, ident.2 = NULL,
                                 grouping.var = "orig.ident", meta.method = metap::minimump, verbose = TRUE)
@@ -168,8 +146,25 @@ astrocyte_interest <- c("GFAP", "VIM", "S100B", "SOX9", "CD44", "AQP4", "ALDH1L1
 neuron_interest <- c("TUBB3", "MAP2", "CAMK2A", "GAD2", "NEUROG2", "SYN1", "RBFOX3", "GJA1")
 schema_psych_interest <- c("SETD1A", "CUL1", "XPO7", "TRIO", "CACNA1G", "SP4",
                            "GRIA3", "GRIN2A", "HERC1", "RB1CC1", "HCN4", "AKAP11")
+sloan_2017_interest <- c("AQP4", "ALDH1L1", "AGXT2L1", "RANBP3L", "IGFBP7", "TOP2A", "TMSB15A", "NNAT", "HIST1H3B",
+                         "STMN2", "SYT1", "SNAP25", "SOX9", "CLU", "SLC1A3", "UBE2C", "NUSAP1", "PTPRZ1",
+                         "HOPX", "FAM107A", "AGT")
 
 plot_DEF <- function(data, features, name) {
+  dir.create(paste0(work_dir, "/Feature_split_plots_", name))
+  for (i in seq_along(features)) {
+    p <- FeaturePlot(data, features = features[i], split.by = "orig.ident", cols = c("grey", "red"))
+    ggplot2::ggsave(file=paste0("Feature_split_plots_", name ,"/DEG-analysis_", name, "_feature-plot-split_", features[i], ".png"), width = 30, height = 20, units = "cm")
+  }
+  p <- VlnPlot(data, features = features, split.by = "orig.ident")
+  ggplot2::ggsave(file = paste0("DEG-analysis_", name, "_violin-plot-split.png"), width = 30, height = 20, units = "cm")
+
+
+
+
+
+
+
   p <- FeaturePlot(data, features = features)
   ggplot2::ggsave(file=paste0("DEG-analysis_", name, "_feature-plot.png"), width = 30, height = 20, units = "cm")
   p <- VlnPlot(data, features = features)
@@ -185,12 +180,15 @@ plot_DEF <- function(data, features, name) {
   levels(Idents(data)) <- cluster.labels
   p <- DotPlot(data, features = features) + RotatedAxis() + WhiteBackground()
   ggplot2::ggsave(file = paste0("DEG-analysis_", name, "_dot-plot.png"), width = 30, height = 20, units = "cm")
+  p <- DotPlot(data, features = features, split.by = "orig.ident") + RotatedAxis() + WhiteBackground()
+  ggplot2::ggsave(file = paste0("DEG-analysis_", name, "_dot-plot-split.png"), width = 30, height = 20, units = "cm")
   levels(Idents(data)) <- c(0:(length(levels(Idents(data)))-1))
 }
 # plot_DEF(data = integrated, features = unique(topn), name = "top-features")
 plot_DEF(data = integrated, features = astrocyte_interest, name = "astrocyte")
 plot_DEF(data = integrated, features = neuron_interest, name = "neuron")
 plot_DEF(data = integrated, features = schema_psych_interest, name = "SCHEMA")
+plot_DEF(data = integrated, features = sloan_2017_interest, name = "Sloan2017")
 
 # save integrated Seurat object
 saveRDS(integrated, file = "integrated.rds")
@@ -284,6 +282,7 @@ ggplot2::ggsave(file = paste0("Integration subset alignment UMAP - subset", samp
 
 # For performing differential expression after integration, we switch back to the original data (RNA)
 DefaultAssay(subset) <- "RNA"
+### TODO should this be DefaultAssay(subset) <- "SCT" # because we now use SCTransform for normalization and scaling?
 markers <- FindConservedMarkers(subset, ident.1 = 0, ident.2 = NULL,
                                 grouping.var = "orig.ident", meta.method = metap::minimump, verbose = TRUE)
 
@@ -294,21 +293,9 @@ plot_DEF(data = subset, features = neuron_interest, name = "subset-neuron")
 plot_DEF(data = subset, features = schema_psych_interest, name = "subset-SCHEMA")
 
 
-
-### TODO DEA Wilcox parameter for more stringency?
-
 ### TODO https://panglaodb.se/ use site for cluster annotation possibly?
 ## can give in database search marker genes in and/or fashion to get cell types
 ## or give in cell types to get marker genes!
-
-
-
-### TODO use discussed gene panels for cluster selection (high level annotation)
-## automate it in pipeline with an option
-## see if annotation selection changes when initiated from RDS/individually processed -> integrated
-## create functions that reduce redundancy in the pipeline
-# - Neurons: NEUROG2, SYN1, RBFOX3
-# - Astrocytes: VIM, S100B, SOX9
 
 ### TODO check why heatmap doesnt run from RDS + integrated ?
 ## error: No requested features found in the scale.data slot for the RNA assay.
@@ -325,13 +312,6 @@ plot_DEF(data = subset, features = schema_psych_interest, name = "subset-SCHEMA"
 ### met annotatie duidelijker en specifieker natuurlijk
 
 
-
-
-
-
-
-
-
 ### Seurat --> Monocle 3 for pseudo time analysis
 # main site: https://cole-trapnell-lab.github.io/monocle3/
 # main paper (cite): https://www.nature.com/articles/s41586-019-0969-x
@@ -339,30 +319,3 @@ plot_DEF(data = subset, features = schema_psych_interest, name = "subset-SCHEMA"
 # Monocle tutorial: http://cole-trapnell-lab.github.io/monocle-release/monocle3/#tutorial-1-learning-trajectories-with-monocle-3
 # Monocle -> TradeSeq: https://bioconductor.org/packages/release/bioc/vignettes/tradeSeq/inst/doc/Monocle.html
 ## TradeSeq: An R package that allows analysis of gene expression along trajectories
-
-
-#### possible pseudotime analysis --- compare to official Seurat vignette approach: https://htmlpreview.github.io/?https://github.com/satijalab/seurat-wrappers/blob/master/docs/monocle3.html
-# Hi everyone,
-# I've just done the import and pseudotime from seurat v3 to monocle v3 using a seurat integrated object. I used the integrated assay because I wanted monocle to map a trajectory onto the merged samples and onto essentially the same UMAP as the seurat object had. I think if I'd used the RNA assay, monocle wouldn't be able to batch-correct and the samples wouldn't even be in the same clusters. Here's what I did. Please let me know if you think I did something wrong lol!
-# `
-# seurat.object <- readRDS("Integrated.rds")
-# data <- as(as.matrix(GetAssayData(seurat.object, assay = "integrated", slot = "scale.data")), 'sparseMatrix')
-#
-# pd <- data.frame(seurat.object@meta.data)
-# #keep only the columns that are relevant
-# pData <- pd %>% select(orig.ident, nCount_RNA, nFeature_RNA)
-# fData <- data.frame(gene_short_name = row.names(data), row.names = row.names(data))
-#
-# #Construct monocle cds
-# monocle.object <- new_cell_data_set(expression_data = data, cell_metadata = pData, gene_metadata = fData)
-# #preprocess
-# monocle.object = preprocess_cds(monocle.object, num_dim = 100, norm_method = "size_only", pseudo_count = 0)
-# monocle.object = reduce_dimension(monocle.object)
-# #map pseudotime
-# monocle.object = order_cells(monocle.object, reduction_method = "UMAP")
-# monocle.object = learn_graph(monocle.object)
-# plot_cells(monocle.object, color_cells_by = "pseudotime")
-#
-# `
-
-
