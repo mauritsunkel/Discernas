@@ -28,7 +28,7 @@ library(ggplot2)
 # integrated <- readRDS("C:/Users/mauri/Desktop/M/Erasmus MC PhD/Projects/Single Cell RNA Sequencing/Seurat/results/2021-07-20 13-23-16/integrated/BL_A + BL_C/integrated.rds")
 # sample_name <- "BL_A + BL_C"
 ## BL_N + BLC_C
-integrated <- readRDS("C:/Users/mauri/Desktop/M/Erasmus MC PhD/Projects/Single Cell RNA Sequencing/Seurat/results/2021-07-20 13-23-16/integrated/BL_N + BL_C/integrated.rds")
+integrated <- readRDS("C:/Users/mauri/Desktop/M/Erasmus MC PhD/Projects/Single Cell RNA Sequencing/Seurat/results/Exploration results/SCTransform/integrated/BL_N + BL_C/integrated.rds")
 sample_name <- "BL_N + BL_C"
 
 
@@ -53,6 +53,8 @@ dir.create(work_dir)
 setwd(work_dir)
 ### end initialization ###
 
+# ds <- DietSeurat(integrated, graphs = "pca")
+# sce <- as.SingleCellExperiment(ds)
 
 
 cds <- SeuratWrappers::as.cell_data_set(integrated)
@@ -60,13 +62,13 @@ cds <- monocle3::cluster_cells(cds, cluster_method = "leiden") # it's a requirem
 p1 <- monocle3::plot_cells(cds, show_trajectory_graph = FALSE, group_label_size = 4)
 p2 <- monocle3::plot_cells(cds, color_cells_by = "partition", show_trajectory_graph = FALSE, group_label_size = 4)
 patchwork::wrap_plots(p1, p2)
-ggplot2::ggsave(file = paste0("Partitioning", sample_name, ".png"), width = 30, height = 20, units = "cm")
+ggplot2::ggsave(file = paste0("Partitioning_", sample_name, ".png"), width = 30, height = 20, units = "cm")
 
 integrated.sub <- subset(Seurat::as.Seurat(cds, counts = "counts", data = "logcounts", assay = NULL, project = "SingleCellExperiment"), monocle3_partitions == 1)
 cds <- SeuratWrappers::as.cell_data_set(integrated.sub)
 cds <- monocle3::learn_graph(cds)
 monocle3::plot_cells(cds, label_groups_by_cluster = T, label_leaves = T, label_branch_points = F, group_label_size = 6, graph_label_size = 4)
-ggplot2::ggsave(file = paste0("Trajectory", sample_name, ".png"), width = 30, height = 20, units = "cm")
+ggplot2::ggsave(file = paste0("Trajectory_", sample_name, ".png"), width = 30, height = 20, units = "cm")
 
 
 max.avp <- which.max(unlist(Seurat::FetchData(integrated.sub, "AVP")))

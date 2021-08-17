@@ -14,13 +14,12 @@ work_dir <- "C:/Users/mauri/Desktop/M/Erasmus MC PhD/Projects/Single Cell RNA Se
 
 ### READ RDS METHOD
 ## BL_N - BL_C
-rds.files <- c("C:/Users/mauri/Desktop/M/Erasmus MC PhD/Projects/Single Cell RNA Sequencing/Seurat/results/Exploration results/BL_N/old - without cell cycle regression and PCA scores/neuronal-subset.rds",
-               "C:/Users/mauri/Desktop/M/Erasmus MC PhD/Projects/Single Cell RNA Sequencing/Seurat/results/Exploration results/BL_C/old - without cell cycle regression and PCA scores/mixed-neuronal-subset.rds")
-
+rds.files <- c("C:/Users/mauri/Desktop/M/Erasmus MC PhD/Projects/Single Cell RNA Sequencing/Seurat/results/Exploration results/SCTransform/BL_C/mixed-neuronal-subset.rds",
+               "C:/Users/mauri/Desktop/M/Erasmus MC PhD/Projects/Single Cell RNA Sequencing/Seurat/results/Exploration results/SCTransform/BL_N/neuronal-subset.rds")
 sample_name <- "BL_N + BL_C"
 ## BL_A + BL_C
-rds.files <- c("C:/Users/mauri/Desktop/M/Erasmus MC PhD/Projects/Single Cell RNA Sequencing/Seurat/results/Exploration results/BL_A/old - without cell cycle regression and PCA scores/astrocytical-subset.rds",
-               "C:/Users/mauri/Desktop/M/Erasmus MC PhD/Projects/Single Cell RNA Sequencing/Seurat/results/Exploration results/BL_C/old - without cell cycle regression and PCA scores/mixed-astrocytical-subset.rds")
+rds.files <- c("C:/Users/mauri/Desktop/M/Erasmus MC PhD/Projects/Single Cell RNA Sequencing/Seurat/results/Exploration results/SCTransform/BL_C/mixed-astrocytical-subset.rds",
+               "C:/Users/mauri/Desktop/M/Erasmus MC PhD/Projects/Single Cell RNA Sequencing/Seurat/results/Exploration results/SCTransform/BL_A/astrocytical-subset.rds")
 sample_name <- "BL_A + BL_C"
 ### END READ RDS
 
@@ -104,42 +103,45 @@ DefaultAssay(integrated) <- "integrated"
 ## DEPRECATED: DO NOT run ScaleData here when using SCTransform
 # integrated <- ScaleData(integrated, features = rownames(integrated), verbose = FALSE)
 # integrated <- RunPCA(integrated, npcs = 30, verbose = FALSE)
-integrated <- RunPCA(integrated, features = VariableFeatures(object = integrated), npcs = 20, verbose = FALSE)
-# determine dimensionality of the dataset by the Jackstraw procedure (if takees too long, try something else)
-integrated <- JackStraw(integrated, num.replicate = 100, dims = length(integrated[["pca"]]))
-integrated <- ScoreJackStraw(integrated, dims = 1:length(integrated[["pca"]]))
-# determine amount of PCs based on p-value 0.05 of the jackstraw based method
-jackstraw_p_value <- 0.05
-PC_p_values <- integrated[["pca"]]@jackstraw@overall.p.values[,'Score'] < jackstraw_p_value
-choose_n_PC <- which(PC_p_values==FALSE)[1]-1
+integrated <- RunPCA(integrated, features = VariableFeatures(object = integrated), npcs = 50, verbose = FALSE)
+
+# ## DEPRECATED: we use SCTransform now
+# # determine dimensionality of the dataset by the Jackstraw procedure (if takees too long, try something else)
+# integrated <- JackStraw(integrated, num.replicate = 100, dims = length(integrated[["pca"]]))
+# integrated <- ScoreJackStraw(integrated, dims = 1:length(integrated[["pca"]]))
+# # determine amount of PCs based on p-value 0.05 of the jackstraw based method
+# jackstraw_p_value <- 0.05
+# PC_p_values <- integrated[["pca"]]@jackstraw@overall.p.values[,'Score'] < jackstraw_p_value
+# choose_n_PC <- which(PC_p_values==FALSE)[1]-1
 
 
-# integrated <- FindNeighbors(integrated, reduction = "pca", dims = 1:30)
-integrated <- FindNeighbors(integrated, dims = 1:length(integrated[["pca"]]))
+choose_N_PCs <- 20
+integrated <- FindNeighbors(integrated, dims = 1:choose_N_PCs) # default 20, DEPRECATED length(integrated[["pca"]])
 integrated <- FindClusters(integrated, resolution = 0.5)
-integrated <- RunUMAP(integrated, reduction = "pca", dims = 1:length(integrated[["pca"]]))
-
-
+integrated <- RunUMAP(integrated, reduction = "pca", dims = 1:choose_N_PCs) # default 20, DEPRECATED length(integrated[["pca"]])
 # Visualization
 p <- DimPlot(integrated, reduction = "umap", group.by = 'orig.ident')
 p <- p + DimPlot(integrated, reduction = "umap", label = TRUE, repel = TRUE)
 ggplot2::ggsave(file = paste0("UMAP_", sample_name, "_grouped.png"), width = 30, height = 20, units = "cm")
-
-
 p <- DimPlot(integrated, reduction = "umap", label = TRUE, split.by = "orig.ident")
 ggplot2::ggsave(file = paste0("UMAP_", sample_name, "_split.png"), width = 30, height = 20, units = "cm")
 
 
-
-
-
-
-# For performing differential expression after integration, we switch back to the original data (RNA)
-### TODO should this be DefaultAssay(subset) <- "SCT" # because we now use SCTransform for normalization and scaling?
+# For performing differential expression after integration, we switch back to the original data (RNA, not SCT)
+## SCT are now the normalized (and scaled?) Pearson residuals for each data set, prior to integration
 DefaultAssay(integrated) <- "RNA"
-markers <- FindConservedMarkers(integrated, ident.1 = 0, ident.2 = NULL,
+# based on the test used with any of the FindMarkers or derived Seurat functions the RNA counts or normalized data will be used, which are both in different data slots
+## because of using SCTransform the RNA assay data is not yet normalized, the data need not be scaled as the scale.data slot is never used for DE
+### proofs by Seurat responses in Github issue numbers: 1836, 2023, 3839, 4032
+integrated <- NormalizeData(integrated, normalization.method = "LogNormalize", scale.factor = 10000)
+
+
+all_markers <- FindAllMarkers(integrated, min.pct = 0.1)
+write.csv2(all_markers, file = paste0("DEG-analysis_all-markers.csv"))
+# TODO use this or regular FindMarkers function for integration DEG analysis?
+conserved_markers <- FindConservedMarkers(integrated, ident.1 = 0, ident.2 = NULL,
                                 grouping.var = "orig.ident", meta.method = metap::minimump, verbose = TRUE)
-write.csv2(markers, file = paste0("DEG-analysis_genes-list.csv"))
+write.csv2(conserved_markers, file = paste0("DEG-analysis_conserved-markers.csv"))
 
 astrocyte_interest <- c("GFAP", "VIM", "S100B", "SOX9", "CD44", "AQP4", "ALDH1L1",
                         "HIST1H4C", "FABP7", "SLC1A2", "SLC1A3", "GJA1")
@@ -159,18 +161,10 @@ plot_DEF <- function(data, features, name) {
   p <- VlnPlot(data, features = features, split.by = "orig.ident")
   ggplot2::ggsave(file = paste0("DEG-analysis_", name, "_violin-plot-split.png"), width = 30, height = 20, units = "cm")
 
-
-
-
-
-
-
   p <- FeaturePlot(data, features = features)
   ggplot2::ggsave(file=paste0("DEG-analysis_", name, "_feature-plot.png"), width = 30, height = 20, units = "cm")
   p <- VlnPlot(data, features = features)
   ggplot2::ggsave(file = paste0("DEG-analysis_", name, "_violin-plot.png"), width = 30, height = 20, units = "cm")
-  # p <- DoHeatmap(data, features = features) + NoLegend()
-  # ggplot2::ggsave(file = paste0("DEG-analysis_", name, "_heatmap.png"), width = 30, height = 20, units = "cm")
   p <- RidgePlot(data, features = features, ncol = 3)
   ggplot2::ggsave(file = paste0("DEG-analysis_", name, "_ridge-plot.png"), width = 30, height = 20, units = "cm")
 
@@ -183,6 +177,10 @@ plot_DEF <- function(data, features, name) {
   p <- DotPlot(data, features = features, split.by = "orig.ident") + RotatedAxis() + WhiteBackground()
   ggplot2::ggsave(file = paste0("DEG-analysis_", name, "_dot-plot-split.png"), width = 30, height = 20, units = "cm")
   levels(Idents(data)) <- c(0:(length(levels(Idents(data)))-1))
+
+  DefaultAssay(data) <- "SCT"
+  p <- DoHeatmap(data, features = features) + NoLegend()
+  ggplot2::ggsave(file = paste0("DEG-analysis_", name, "_heatmap.png"), width = 30, height = 20, units = "cm")
 }
 # plot_DEF(data = integrated, features = unique(topn), name = "top-features")
 plot_DEF(data = integrated, features = astrocyte_interest, name = "astrocyte")
@@ -197,120 +195,16 @@ saveRDS(integrated, file = "integrated.rds")
 
 
 
-
-
-
-
-
-
-
-
-### THOUGHTS and ISSUES
-## annotation can happen at 3 points, giving more options again for what the ideal sequence of analysis steps might be
-### 1: after individual processing, and using the same panel on both samples
-#### difference in pure sample, developing vs mature and mix sample, developing vs mature vs other cell type (neurons/astrocytes), might introduce more bias (highlight differences more?)
-### 2/3: after RDS+integration/independent+integration
-#### first creates structure by processing and then annotation, might align cells more (highlight similarities more?)
-## issue: selecting clusters (by annotation), or rather the cells belonging to specific clusters, is not built into Seurat
-### they simply don't need it as they would normally only need specific clusters at DEA level and that is possible
-### we on the other hand have a design with mixed cell populations that we want to separate before analysis
-#### it's possible, it just takes me more time to figure out proper selection and then perform reanalysis
-#### because the Seurat object is complicated, using slots for data types and set options on the background
-## automating annotation will only be possible after we have defined which genes and their expressions relate to which celltypes
-## automating cluster/cell selection requires predefined gene sets combined with relative expression levels as well
-### I don't know if automation or manual work here is the norm or proper approach
-## understanding the proper theoretical design approach and/or how to objectively compare results from designs
-head(integrated@meta.data)
-table(integrated$orig.ident)
-table(integrated$seurat_clusters)
-
-integrated@active.assay
-integrated@assays
-integrated@assays$integrated
-
-integrated@assays$RNA@meta.features
-integrated@assays$integrated@meta.features
-integrated@assays$RNA@var.features
-length(integrated@assays$integrated@var.features)
-
-integrated@reductions$pca@jackstraw
-integrated
-
-
-
-
-
-
-
-# subset data
-`%notin%` <- Negate(`%in%`)
-subset = subset(integrated, seurat_clusters %notin% c(3,4,5,11)) # or use idents = c() instead of seurat_clusters
-head(subset@meta.data)
-table(subset@meta.data$seurat_clusters)
-# reprocess subset data
-# specify that we will perform downstream analysis on the corrected data
-DefaultAssay(subset) <- "integrated"
-
-# Run the standard workflow for visualization and clustering
-subset <- ScaleData(subset, features = rownames(data), verbose = FALSE)
-# subset <- RunPCA(subset, npcs = 30, verbose = FALSE)
-subset <- RunPCA(subset, features = VariableFeatures(object = subset), npcs = 20, verbose = FALSE)
-# determine dimensionality of the dataset by the Jackstraw procedure (if takees too long, try something else)
-subset <- JackStraw(subset, num.replicate = 100, dims = length(subset[["pca"]]))
-subset <- ScoreJackStraw(subset, dims = 1:length(subset[["pca"]]))
-# determine amount of PCs based on p-value 0.05 of the jackstraw based method
-jackstraw_p_value <- 0.05
-PC_p_values <- subset[["pca"]]@jackstraw@overall.p.values[,'Score'] < jackstraw_p_value
-choose_n_PC <- which(PC_p_values==FALSE)[1]-1
-
-
-# subset <- FindNeighbors(subset, reduction = "pca", dims = 1:30)
-subset <- FindNeighbors(subset, dims = 1:length(subset[["pca"]]))
-subset <- FindClusters(subset, resolution = 0.5)
-subset <- RunUMAP(subset, reduction = "pca", dims = 1:length(subset[["pca"]]))
-
-
-# Visualization
-p <- DimPlot(subset, reduction = "umap", group.by = 'orig.ident')
-p <- p + DimPlot(subset, reduction = "umap", label = TRUE, repel = TRUE)
-ggplot2::ggsave(file = paste0("Integration subset alignment UMAP - subset", sample_name, " - ref r1 - equal parameters - grouped and clustered.png"), width = 30, height = 20, units = "cm")
-
-
-p <- DimPlot(subset, reduction = "umap", split.by = "orig.ident")
-ggplot2::ggsave(file = paste0("Integration subset alignment UMAP - subset", sample_name, "- ref r1 - equal parameters - split.png"), width = 30, height = 20, units = "cm")
-
-
-# For performing differential expression after integration, we switch back to the original data (RNA)
-DefaultAssay(subset) <- "RNA"
-### TODO should this be DefaultAssay(subset) <- "SCT" # because we now use SCTransform for normalization and scaling?
-markers <- FindConservedMarkers(subset, ident.1 = 0, ident.2 = NULL,
-                                grouping.var = "orig.ident", meta.method = metap::minimump, verbose = TRUE)
-
-# plotting
-# plot_DEF(data = subset, features = unique(topn), name = "subset-top-features")
-plot_DEF(data = subset, features = astrocyte_interest, name = "subset-astrocyte")
-plot_DEF(data = subset, features = neuron_interest, name = "subset-neuron")
-plot_DEF(data = subset, features = schema_psych_interest, name = "subset-SCHEMA")
-
-
-### TODO https://panglaodb.se/ use site for cluster annotation possibly?
-## can give in database search marker genes in and/or fashion to get cell types
-## or give in cell types to get marker genes!
-
-### TODO check why heatmap doesnt run from RDS + integrated ?
-## error: No requested features found in the scale.data slot for the RNA assay.
-
 ### TODO
 ## create topn: loop door alle clusters (verander ident.1) (maak soortvan findallclusters na van de individuele DE analyse)
 ## zoek topN voor elk cluster en gebruik deze als genpanel voor plotting
 ### annotatie wordt hier belangrijk, vooral als we specifiek naar subceltypes willen kijken/vergelijken
+# integrated <- readRDS("C:/Users/mauri/Desktop/M/Erasmus MC PhD/Projects/Single Cell RNA Sequencing/Seurat/results/Exploration results/SCTransform/integrated/BL_A + BL_C/integrated.rds")
+# is FindAllMarkers genoeg?
 
-
-### TODO
-## kan "Identify differential expressed genes across conditions" (vignet) nadoen zonder annotatie om te kijken hoe
-## de cellen in het algemeen veranderen
-### met annotatie duidelijker en specifieker natuurlijk
-
+### TODO https://panglaodb.se/ use site for cluster annotation possibly?
+## can give in database search marker genes in and/or fashion to get cell types
+## or give in cell types to get marker genes!
 
 ### Seurat --> Monocle 3 for pseudo time analysis
 # main site: https://cole-trapnell-lab.github.io/monocle3/
@@ -319,3 +213,7 @@ plot_DEF(data = subset, features = schema_psych_interest, name = "subset-SCHEMA"
 # Monocle tutorial: http://cole-trapnell-lab.github.io/monocle-release/monocle3/#tutorial-1-learning-trajectories-with-monocle-3
 # Monocle -> TradeSeq: https://bioconductor.org/packages/release/bioc/vignettes/tradeSeq/inst/doc/Monocle.html
 ## TradeSeq: An R package that allows analysis of gene expression along trajectories
+
+
+
+

@@ -280,14 +280,19 @@ ggsave(file = "DEG-analysis_big-heatmap.png", width = 30, height = 20, units = "
 
 # save preselection data
 saveRDS(data, file = "neuronal.rds") # neuronal, astrocytical or mixed
-# subset data
+
+
+
+
+# subset data manually - uncomment code
+work_dir <- "C:/Users/mauri/Desktop/M/Erasmus MC PhD/Projects/Single Cell RNA Sequencing/Seurat/results/Exploration results/SCTransform/BL_C"
+setwd(work_dir)
+data <- readRDS(file = "mixed.rds")
 # `%notin%` <- Negate(`%in%`)
-# subset <- subset(data, seurat_clusters %in% c(0, 4, 5, 6, 7, 8, 10, 12)) # or use idents = c() instead of seurat_clusters
-# saveRDS(subset, file = "mixed-neuronal-subset.rds") # neuronal, astrocytical, mixed-neuronal, mixed-astrocytical
 
 
+# TODO after subsetting but before integration, re-normalize data with SCTransform ?
+subset <- subset(data, seurat_clusters %in% c(2, 3, 11)) # or use idents = c() instead of seurat_clusters
 
-# Pascal papers
-## https://bioconductor.org/packages/devel/bioc/vignettes/slingshot/inst/doc/vignette.html
-##  https://www.ncbi.nlm.nih.gov/pmc/articles/PMC6582955/
-## Korsunsky2019 Fast, sensitive and accurate integration of single-cell data with Harmony - on desktop
+
+saveRDS(subset, file = "mixed-astrocytical-subset.rds") # neuronal, astrocytical, mixed-neuronal, mixed-astrocytical
