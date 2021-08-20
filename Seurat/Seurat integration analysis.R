@@ -4,22 +4,21 @@ library(patchwork)
 library(ggplot2)
 library(chron)
 library(tidyr)
+library(dplyr)
 
 ### USER PARAMETERS
-# combined, neuronal and astrocyte samples
-samples.list <- c("BL_C", "BL_N", "BL_A")
 # work dir should contain forward slashes (/) on Windows
 work_dir <- "C:/Users/mauri/Desktop/M/Erasmus MC PhD/Projects/Single Cell RNA Sequencing/Seurat/"
 ### END USER PARAMETERS
 
 ### READ RDS METHOD
 ## BL_N - BL_C
-rds.files <- c("C:/Users/mauri/Desktop/M/Erasmus MC PhD/Projects/Single Cell RNA Sequencing/Seurat/results/Exploration results/SCTransform/BL_C/mixed-neuronal-subset.rds",
-               "C:/Users/mauri/Desktop/M/Erasmus MC PhD/Projects/Single Cell RNA Sequencing/Seurat/results/Exploration results/SCTransform/BL_N/neuronal-subset.rds")
+rds.files <- c("C:/Users/mauri/Desktop/M/Erasmus MC PhD/Projects/Single Cell RNA Sequencing/Seurat/results/Exploration results/SCTransform + Leiden/BL_N/neuronal-subset.rds",
+               "C:/Users/mauri/Desktop/M/Erasmus MC PhD/Projects/Single Cell RNA Sequencing/Seurat/results/Exploration results/SCTransform + Leiden/BL_C/mixed-neuronal-subset.rds")
 sample_name <- "BL_N + BL_C"
 ## BL_A + BL_C
-rds.files <- c("C:/Users/mauri/Desktop/M/Erasmus MC PhD/Projects/Single Cell RNA Sequencing/Seurat/results/Exploration results/SCTransform/BL_C/mixed-astrocytical-subset.rds",
-               "C:/Users/mauri/Desktop/M/Erasmus MC PhD/Projects/Single Cell RNA Sequencing/Seurat/results/Exploration results/SCTransform/BL_A/astrocytical-subset.rds")
+rds.files <- c("C:/Users/mauri/Desktop/M/Erasmus MC PhD/Projects/Single Cell RNA Sequencing/Seurat/results/Exploration results/SCTransform + Leiden/BL_A/astrocytical-subset.rds",
+               "C:/Users/mauri/Desktop/M/Erasmus MC PhD/Projects/Single Cell RNA Sequencing/Seurat/results/Exploration results/SCTransform + Leiden/BL_C/mixed-astrocytical-subset.rds")
 sample_name <- "BL_A + BL_C"
 ### END READ RDS
 
@@ -117,7 +116,8 @@ integrated <- RunPCA(integrated, features = VariableFeatures(object = integrated
 
 choose_N_PCs <- 20
 integrated <- FindNeighbors(integrated, dims = 1:choose_N_PCs) # default 20, DEPRECATED length(integrated[["pca"]])
-integrated <- FindClusters(integrated, resolution = 0.5)
+# # algorithm = 4 (= Leiden algorithm) & use: method = "igraph" (for large datasets when using Leiden algorithm)
+integrated <- FindClusters(integrated, resolution = 0.5, algorithm = 4)
 integrated <- RunUMAP(integrated, reduction = "pca", dims = 1:choose_N_PCs) # default 20, DEPRECATED length(integrated[["pca"]])
 # Visualization
 p <- DimPlot(integrated, reduction = "umap", group.by = 'orig.ident')
@@ -139,10 +139,16 @@ integrated <- NormalizeData(integrated, normalization.method = "LogNormalize", s
 all_markers <- FindAllMarkers(integrated, min.pct = 0.1)
 write.csv2(all_markers, file = paste0("DEG-analysis_all-markers.csv"))
 # TODO use this or regular FindMarkers function for integration DEG analysis?
-conserved_markers <- FindConservedMarkers(integrated, ident.1 = 0, ident.2 = NULL,
+conserved_markers <- FindConservedMarkers(integrated, ident.1 = 1, ident.2 = NULL,
                                 grouping.var = "orig.ident", meta.method = metap::minimump, verbose = TRUE)
 write.csv2(conserved_markers, file = paste0("DEG-analysis_conserved-markers.csv"))
 
+# select topn genes per cluster for quick plots
+topn <- all_markers %>%
+  group_by(cluster) %>%
+  top_n(n = 1, wt = avg_log2FC) %>%
+  ungroup() %>%
+  pull(gene)
 astrocyte_interest <- c("GFAP", "VIM", "S100B", "SOX9", "CD44", "AQP4", "ALDH1L1",
                         "HIST1H4C", "FABP7", "SLC1A2", "SLC1A3", "GJA1")
 neuron_interest <- c("TUBB3", "MAP2", "CAMK2A", "GAD2", "NEUROG2", "SYN1", "RBFOX3", "GJA1")
@@ -182,7 +188,7 @@ plot_DEF <- function(data, features, name) {
   p <- DoHeatmap(data, features = features) + NoLegend()
   ggplot2::ggsave(file = paste0("DEG-analysis_", name, "_heatmap.png"), width = 30, height = 20, units = "cm")
 }
-# plot_DEF(data = integrated, features = unique(topn), name = "top-features")
+plot_DEF(data = integrated, features = unique(topn), name = "topn-features")
 plot_DEF(data = integrated, features = astrocyte_interest, name = "astrocyte")
 plot_DEF(data = integrated, features = neuron_interest, name = "neuron")
 plot_DEF(data = integrated, features = schema_psych_interest, name = "SCHEMA")
@@ -190,30 +196,3 @@ plot_DEF(data = integrated, features = sloan_2017_interest, name = "Sloan2017")
 
 # save integrated Seurat object
 saveRDS(integrated, file = "integrated.rds")
-
-
-
-
-
-### TODO
-## create topn: loop door alle clusters (verander ident.1) (maak soortvan findallclusters na van de individuele DE analyse)
-## zoek topN voor elk cluster en gebruik deze als genpanel voor plotting
-### annotatie wordt hier belangrijk, vooral als we specifiek naar subceltypes willen kijken/vergelijken
-# integrated <- readRDS("C:/Users/mauri/Desktop/M/Erasmus MC PhD/Projects/Single Cell RNA Sequencing/Seurat/results/Exploration results/SCTransform/integrated/BL_A + BL_C/integrated.rds")
-# is FindAllMarkers genoeg?
-
-### TODO https://panglaodb.se/ use site for cluster annotation possibly?
-## can give in database search marker genes in and/or fashion to get cell types
-## or give in cell types to get marker genes!
-
-### Seurat --> Monocle 3 for pseudo time analysis
-# main site: https://cole-trapnell-lab.github.io/monocle3/
-# main paper (cite): https://www.nature.com/articles/s41586-019-0969-x
-# Seurat -> Monocle vignette: https://htmlpreview.github.io/?https://github.com/satijalab/seurat-wrappers/blob/master/docs/monocle3.html
-# Monocle tutorial: http://cole-trapnell-lab.github.io/monocle-release/monocle3/#tutorial-1-learning-trajectories-with-monocle-3
-# Monocle -> TradeSeq: https://bioconductor.org/packages/release/bioc/vignettes/tradeSeq/inst/doc/Monocle.html
-## TradeSeq: An R package that allows analysis of gene expression along trajectories
-
-
-
-

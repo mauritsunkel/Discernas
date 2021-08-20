@@ -13,9 +13,13 @@ library(ggplot2)
 # A geodesic curve commonly represents the shortest distance (in some sense) on a surface
 ## a Riemannian manifold (like a UMAP) in our case.
 
-
-
-
+## Seurat --> Monocle 3 for pseudo time analysis
+# main site: https://cole-trapnell-lab.github.io/monocle3/
+# main paper (cite): https://www.nature.com/articles/s41586-019-0969-x
+# Seurat -> Monocle vignette: https://htmlpreview.github.io/?https://github.com/satijalab/seurat-wrappers/blob/master/docs/monocle3.html
+# Monocle tutorial: http://cole-trapnell-lab.github.io/monocle-release/monocle3/#tutorial-1-learning-trajectories-with-monocle-3
+# Monocle -> TradeSeq: https://bioconductor.org/packages/release/bioc/vignettes/tradeSeq/inst/doc/Monocle.html
+## TradeSeq: An R package that allows analysis of gene expression along trajectories
 
 
 
@@ -28,8 +32,8 @@ library(ggplot2)
 # integrated <- readRDS("C:/Users/mauri/Desktop/M/Erasmus MC PhD/Projects/Single Cell RNA Sequencing/Seurat/results/2021-07-20 13-23-16/integrated/BL_A + BL_C/integrated.rds")
 # sample_name <- "BL_A + BL_C"
 ## BL_N + BLC_C
-integrated <- readRDS("C:/Users/mauri/Desktop/M/Erasmus MC PhD/Projects/Single Cell RNA Sequencing/Seurat/results/Exploration results/SCTransform/integrated/BL_N + BL_C/integrated.rds")
-sample_name <- "BL_N + BL_C"
+integrated <- readRDS("C:/Users/mauri/Desktop/M/Erasmus MC PhD/Projects/Single Cell RNA Sequencing/Seurat/results/2021-08-20 15-39-04/integrated/BL_A + BL_C/integrated.rds")
+sample_name <- "BL_A + BL_C"
 
 
 ## why monoculture sample pseudotime trajectory is not possible: https://github.com/cole-trapnell-lab/monocle3/issues/111#issuecomment-503790399

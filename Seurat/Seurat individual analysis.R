@@ -10,7 +10,7 @@ library(data.table)
 ### USER PARAMETERS
 # work dir should contain forward slashes (/) on Windows
 work_dir <- "C:/Users/mauri/Desktop/M/Erasmus MC PhD/Projects/Single Cell RNA Sequencing/Seurat/"
-sample_name <- 'BL_N'
+sample_name <- 'BL_A'
 ### END USER PARAMETERS
 
 
@@ -181,18 +181,8 @@ dev.off()
 ### primary similarity measures like Euclidean distance less effective than secondary like SNN (w/ Jaccard distance)
 choose_N_PCs <- 20 # default: 20 (out of default 50 generated at RunPCA), DEPRECATED: length(data[["pca"]])
 data <- FindNeighbors(data, dims = 1:choose_N_PCs)
-data <- FindClusters(data, resolution = 0.5)
-
-### TRY TO IMPLEMENT LEIDEN ALGORITHM ###
-# data <- FindClusters(data, resolution = 0.5, algorithm = "leiden")
-## implement Leiden algorithm for clustering instead of standard Louvain or LSM!
-# membership <- leiden(pbmc@graphs$RNA_snn)
-# table(membership)
-# https://cran.r-project.org/web/packages/leiden/vignettes/run_leiden.html
-# how to install leiden, leidenalg (pip), igrpah (pip) and reticulate (devtools, via leiden git)
-# check https://rstudio.github.io/reticulate/
-# redo steps and figure it out
-## would this work instead of pip install: reticulate::py_install(packages = "igraph" etc)
+# # algorithm = 4 (= Leiden algorithm) & use: method = "igraph" (for large datasets when using Leiden algorithm)
+data <- FindClusters(data, resolution = 0.5, algorithm = 4)
 
 # run non-linear dimension reduction (T-SNE/UMAP)
 data <- RunUMAP(data, reduction = "pca", dims = 1:choose_N_PCs)
@@ -259,7 +249,7 @@ plot_DEF <- function(data, features, name) {
   ggsave(file = paste0("DEG-analysis_", name, "_dot-plot.png"), width = 30, height = 20, units = "cm")
   levels(Idents(data)) <- c(0:(length(levels(Idents(data)))-1))
 }
-plot_DEF(data = data, features = unique(topn), name = "top-features")
+plot_DEF(data = data, features = unique(topn), name = "topn-features")
 plot_DEF(data = data, features = astrocyte_interest, name = "astrocyte")
 plot_DEF(data = data, features = neuron_interest, name = "neuron")
 plot_DEF(data = data, features = schema_psych_interest, name = "SCHEMA")
@@ -279,20 +269,20 @@ ggsave(file = "DEG-analysis_big-heatmap.png", width = 30, height = 20, units = "
 ## Astrocyte panel: VIM, S100B, SOX9
 
 # save preselection data
-saveRDS(data, file = "neuronal.rds") # neuronal, astrocytical or mixed
+saveRDS(data, file = "astrocytical.rds") # neuronal, astrocytical or mixed
 
 
 
 
 # subset data manually - uncomment code
-work_dir <- "C:/Users/mauri/Desktop/M/Erasmus MC PhD/Projects/Single Cell RNA Sequencing/Seurat/results/Exploration results/SCTransform/BL_C"
-setwd(work_dir)
-data <- readRDS(file = "mixed.rds")
-# `%notin%` <- Negate(`%in%`)
-
-
-# TODO after subsetting but before integration, re-normalize data with SCTransform ?
-subset <- subset(data, seurat_clusters %in% c(2, 3, 11)) # or use idents = c() instead of seurat_clusters
-
-
-saveRDS(subset, file = "mixed-astrocytical-subset.rds") # neuronal, astrocytical, mixed-neuronal, mixed-astrocytical
+# work_dir <- "C:/Users/mauri/Desktop/M/Erasmus MC PhD/Projects/Single Cell RNA Sequencing/Seurat/results/Exploration results/SCTransform + Leiden/BL_C"
+# setwd(work_dir)
+# data <- readRDS(file = "mixed.rds")
+# # `%notin%` <- Negate(`%in%`)
+#
+#
+# # TODO after subsetting but before integration, re-normalize data with SCTransform ?
+# subset <- subset(data, seurat_clusters %in% c(4, 5, 12, 15)) # or use idents = c() instead of seurat_clusters
+#
+#
+# saveRDS(subset, file = "mixed-astrocytical-subset.rds") # neuronal, astrocytical, mixed-neuronal, mixed-astrocytical
