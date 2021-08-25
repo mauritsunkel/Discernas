@@ -28,12 +28,9 @@ library(ggplot2)
 ### INITIALIZE ###
 
 # read an integrated saved RDS file
-## BL_A + BLC_C
-# integrated <- readRDS("C:/Users/mauri/Desktop/M/Erasmus MC PhD/Projects/Single Cell RNA Sequencing/Seurat/results/2021-07-20 13-23-16/integrated/BL_A + BL_C/integrated.rds")
-# sample_name <- "BL_A + BL_C"
-## BL_N + BLC_C
-integrated <- readRDS("C:/Users/mauri/Desktop/M/Erasmus MC PhD/Projects/Single Cell RNA Sequencing/Seurat/results/2021-08-20 15-39-04/integrated/BL_A + BL_C/integrated.rds")
-sample_name <- "BL_A + BL_C"
+sample_name <- "BL_N + BL_C"
+integrated <- readRDS(paste0("C:/Users/mauri/Desktop/M/Erasmus MC PhD/Projects/Single Cell RNA Sequencing/Seurat/results/Exploration results/SCTransform + Leiden - Cellcycle/integrated/", sample_name, "/integrated.rds"))
+
 
 
 ## why monoculture sample pseudotime trajectory is not possible: https://github.com/cole-trapnell-lab/monocle3/issues/111#issuecomment-503790399

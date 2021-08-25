@@ -13,12 +13,12 @@ work_dir <- "C:/Users/mauri/Desktop/M/Erasmus MC PhD/Projects/Single Cell RNA Se
 
 ### READ RDS METHOD
 ## BL_N - BL_C
-rds.files <- c("C:/Users/mauri/Desktop/M/Erasmus MC PhD/Projects/Single Cell RNA Sequencing/Seurat/results/Exploration results/SCTransform + Leiden/BL_N/neuronal-subset.rds",
-               "C:/Users/mauri/Desktop/M/Erasmus MC PhD/Projects/Single Cell RNA Sequencing/Seurat/results/Exploration results/SCTransform + Leiden/BL_C/mixed-neuronal-subset.rds")
+rds.files <- c("C:/Users/mauri/Desktop/M/Erasmus MC PhD/Projects/Single Cell RNA Sequencing/Seurat/results/Exploration results/SCTransform + Leiden - Cellcycle/BL_N/neuronal-subset.rds",
+               "C:/Users/mauri/Desktop/M/Erasmus MC PhD/Projects/Single Cell RNA Sequencing/Seurat/results/Exploration results/SCTransform + Leiden - Cellcycle/BL_C/mixed-neuronal-subset.rds")
 sample_name <- "BL_N + BL_C"
 ## BL_A + BL_C
-rds.files <- c("C:/Users/mauri/Desktop/M/Erasmus MC PhD/Projects/Single Cell RNA Sequencing/Seurat/results/Exploration results/SCTransform + Leiden/BL_A/astrocytical-subset.rds",
-               "C:/Users/mauri/Desktop/M/Erasmus MC PhD/Projects/Single Cell RNA Sequencing/Seurat/results/Exploration results/SCTransform + Leiden/BL_C/mixed-astrocytical-subset.rds")
+rds.files <- c("C:/Users/mauri/Desktop/M/Erasmus MC PhD/Projects/Single Cell RNA Sequencing/Seurat/results/Exploration results/SCTransform + Leiden - Cellcycle/BL_A/astrocytical-subset.rds",
+               "C:/Users/mauri/Desktop/M/Erasmus MC PhD/Projects/Single Cell RNA Sequencing/Seurat/results/Exploration results/SCTransform + Leiden - Cellcycle/BL_C/mixed-astrocytical-subset.rds")
 sample_name <- "BL_A + BL_C"
 ### END READ RDS
 
@@ -79,6 +79,7 @@ data.list <- PrepSCTIntegration(object.list = data.list, anchor.features = featu
 # use Canonical COrrelation Analysis (CCA) to find 'anchors' between datasets
 ## with reference is faster and finds the same amount of anchors
 # define combined sample index in data.list position
+ind <- NULL
 c <- 1
 for (obj in data.list) {
   if (levels(obj$orig.ident) == "BL_C") {

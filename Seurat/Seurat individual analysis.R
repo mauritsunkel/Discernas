@@ -10,7 +10,7 @@ library(data.table)
 ### USER PARAMETERS
 # work dir should contain forward slashes (/) on Windows
 work_dir <- "C:/Users/mauri/Desktop/M/Erasmus MC PhD/Projects/Single Cell RNA Sequencing/Seurat/"
-sample_name <- 'BL_A'
+sample_name <- 'BL_C'
 ### END USER PARAMETERS
 
 
@@ -84,47 +84,44 @@ png("Feature-selection_variable-genes.png")
 plot2
 dev.off()
 
+run_cell_cycle_regression <- FALSE
+if (run_cell_cycle_regression) {
+  ### TODO for pipeline, regressing out cell cycle effect should be optional
+  # A list of cell cycle markers, from Tirosh et al, 2015, is loaded with Seurat.  We can
+  # segregate this list into markers of G2/M phase and markers of S phase
+  s.genes <- cc.genes$s.genes
+  g2m.genes <- cc.genes$g2m.genes
+  # First, we assign each cell a score, based on its expression of G2/M and S phase markers.
+  # These marker sets should be anticorrelated in their expression levels, and cells expressing
+  # neither are likely not cycling and in G1 phase.
+  data <- CellCycleScoring(data, s.features = s.genes, g2m.features = g2m.genes, set.ident = TRUE)
+  # Visualize the distribution of cell cycle markers across
+  png("Cell_cycle_markers_ridgeplot.png")
+  RidgePlot(data, features = c("PCNA", "TOP2A", "MCM6", "MKI67"), ncol = 2)
+  dev.off()
+  data <- RunPCA(data, features = VariableFeatures(object = data), npcs = 20, verbose = FALSE)
+  png("Cell_cycle_PCA_dimplot-all-features.png")
+  DimPlot(data, reduction = "pca", label = TRUE) # plot dimensions
+  dev.off()
+  # Running a PCA on cell cycle genes reveals, unsurprisingly, that cells separate entirely by phase
+  data <- RunPCA(data, features = c(s.genes, g2m.genes), npcs = 20, verbose = FALSE)
+  png("Cell_cycle_PCA_dimplot-s-and-g2m-features.png")
+  DimPlot(data, reduction = "pca", label = TRUE)
+  dev.off()
+  data <- ScaleData(data, vars.to.regress = c("S.Score", "G2M.Score"), features = rownames(data))
+  # When running a PCA on only cell cycle genes, cells no longer separate by cell-cycle phase
+  data <- RunPCA(data, features = c(s.genes, g2m.genes), npcs = 20, verbose = FALSE)
+  png("Cell_cycle_PCA_dimplot_after-regression-s-and-g2m-features.png")
+  DimPlot(data, reduction = "pca", label = TRUE)
+  dev.off()
+  data <- RunPCA(data, features = VariableFeatures(data), npcs = 20, nfeatures.print = 10, verbose = FALSE)
+  png("Cell_cycle_PCA_dimplot_after-regression-all-features.png")
+  DimPlot(data, reduction = "pca", label = TRUE)
+  dev.off()
+  # reset sample identity to data, instead of cell cycle identity
+  data@active.ident <- data@meta.data$old.ident
+}
 
-
-
-
-
-
-
-### TODO for pipeline, regressing out cell cycle effect should be optional
-# A list of cell cycle markers, from Tirosh et al, 2015, is loaded with Seurat.  We can
-# segregate this list into markers of G2/M phase and markers of S phase
-s.genes <- cc.genes$s.genes
-g2m.genes <- cc.genes$g2m.genes
-# First, we assign each cell a score, based on its expression of G2/M and S phase markers.
-# These marker sets should be anticorrelated in their expression levels, and cells expressing
-# neither are likely not cycling and in G1 phase.
-data <- CellCycleScoring(data, s.features = s.genes, g2m.features = g2m.genes, set.ident = TRUE)
-# Visualize the distribution of cell cycle markers across
-png("Cell_cycle_markers_ridgeplot.png")
-RidgePlot(data, features = c("PCNA", "TOP2A", "MCM6", "MKI67"), ncol = 2)
-dev.off()
-data <- RunPCA(data, features = VariableFeatures(object = data), npcs = 20, verbose = FALSE)
-png("Cell_cycle_PCA_dimplot-all-features.png")
-DimPlot(data, reduction = "pca", label = TRUE) # plot dimensions
-dev.off()
-# Running a PCA on cell cycle genes reveals, unsurprisingly, that cells separate entirely by phase
-data <- RunPCA(data, features = c(s.genes, g2m.genes), npcs = 20, verbose = FALSE)
-png("Cell_cycle_PCA_dimplot-s-and-g2m-features.png")
-DimPlot(data, reduction = "pca", label = TRUE)
-dev.off()
-data <- ScaleData(data, vars.to.regress = c("S.Score", "G2M.Score"), features = rownames(data))
-# When running a PCA on only cell cycle genes, cells no longer separate by cell-cycle phase
-data <- RunPCA(data, features = c(s.genes, g2m.genes), npcs = 20, verbose = FALSE)
-png("Cell_cycle_PCA_dimplot_after-regression-s-and-g2m-features.png")
-DimPlot(data, reduction = "pca", label = TRUE)
-dev.off()
-data <- RunPCA(data, features = VariableFeatures(data), npcs = 20, nfeatures.print = 10, verbose = FALSE)
-png("Cell_cycle_PCA_dimplot_after-regression-all-features.png")
-DimPlot(data, reduction = "pca", label = TRUE)
-dev.off()
-# reset sample identity to data, instead of cell cycle identity
-data@active.ident <- data@meta.data$old.ident
 
 # perform linear dimension reduction: PCA
 data <- RunPCA(data, features = VariableFeatures(object = data), npcs = 50, verbose = FALSE)
@@ -269,20 +266,20 @@ ggsave(file = "DEG-analysis_big-heatmap.png", width = 30, height = 20, units = "
 ## Astrocyte panel: VIM, S100B, SOX9
 
 # save preselection data
-saveRDS(data, file = "astrocytical.rds") # neuronal, astrocytical or mixed
+saveRDS(data, file = "mixed.rds") # neuronal, astrocytical or mixed
 
 
 
 
 # subset data manually - uncomment code
-# work_dir <- "C:/Users/mauri/Desktop/M/Erasmus MC PhD/Projects/Single Cell RNA Sequencing/Seurat/results/Exploration results/SCTransform + Leiden/BL_C"
+# work_dir <- "C:/Users/mauri/Desktop/M/Erasmus MC PhD/Projects/Single Cell RNA Sequencing/Seurat/results/2021-08-24 12-45-11/BL_A"
 # setwd(work_dir)
-# data <- readRDS(file = "mixed.rds")
+# data <- readRDS(file = "astrocytical.rds")
 # # `%notin%` <- Negate(`%in%`)
 #
 #
 # # TODO after subsetting but before integration, re-normalize data with SCTransform ?
-# subset <- subset(data, seurat_clusters %in% c(4, 5, 12, 15)) # or use idents = c() instead of seurat_clusters
+# subset <- subset(data, seurat_clusters %in% c(1, 6, 7)) # or use idents = c() instead of seurat_clusters
 #
 #
-# saveRDS(subset, file = "mixed-astrocytical-subset.rds") # neuronal, astrocytical, mixed-neuronal, mixed-astrocytical
+# saveRDS(subset, file = "astrocytical-subset.rds") # neuronal, astrocytical, mixed-neuronal, mixed-astrocytical
