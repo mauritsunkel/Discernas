@@ -6,6 +6,12 @@ library(chron)
 library(tidyr)
 library(dplyr)
 
+
+
+# TODO put in it's own file and source from here or pipeline
+## TODO tryout sourcing in test file by setting working directory and seeing how sourcing behaves with a mock function
+# TODO add rm cleanup environment to end of function
+# TODO check maximum Windows file length and output pathway (partial) name instead of order for enrichment plot
 # FGSEA package: vignette: http://127.0.0.1:31440/library/fgsea/doc/fgsea-tutorial.html
 FGSEA_analysis <- function(markers, working_directory, marker_type, cluster) {
   library(biomaRt)
@@ -14,8 +20,8 @@ FGSEA_analysis <- function(markers, working_directory, marker_type, cluster) {
   library(ggplot2)
   ## library(reactome.db) # not needed in test run
 
-  dir.create(paste0(work_dir, "../GSEA_analysis/", marker_type, "/"))
-  dir.create(paste0(work_dir, "../GSEA_analysis/", marker_type, "/", cluster, "/"))
+  dir.create(paste0(work_dir, "../GSE_analysis/", marker_type, "/"))
+  dir.create(paste0(work_dir, "../GSE_analysis/", marker_type, "/cluster ", cluster, "/"))
 
   ## fix infinite values later by applying -log10 function
   markers$p_val[markers$p_val == 0] <- min(markers$p_val[markers$p_val != 0])
@@ -23,8 +29,6 @@ FGSEA_analysis <- function(markers, working_directory, marker_type, cluster) {
   ## calculate metric by FoldChangeSign and -LogPvalue
   markers$fcsign <- sign(markers$avg_log2FC)
   markers$logPval <- -log10(markers$p_val)
-
-
 
   ## create ranked vector
   fgsea_ranks <- markers$logPval/markers$fcsign
@@ -38,6 +42,7 @@ FGSEA_analysis <- function(markers, working_directory, marker_type, cluster) {
     mart = hsmart
   )
   names(fgsea_ranks) <- match(rownames(markers), mapping$hgnc_symbol)
+  print(fgsea_ranks)
 
   ## get Reactome pathways by Entrez IDs
   pathways <- reactomePathways(names(fgsea_ranks))
@@ -52,7 +57,7 @@ FGSEA_analysis <- function(markers, working_directory, marker_type, cluster) {
   topPathwaysDown <- fgsea_results[ES < 0][head(order(pval), n=10), pathway]
   topPathways <- c(topPathwaysUp, rev(topPathwaysDown))
 
-  png(filename=paste0(working_directory, "../GSEA_analysis/", marker_type, "/", cluster, "/overview_table.png"), width = 1600)
+  png(filename=paste0(working_directory, "../GSE_analysis/", marker_type, "/cluster ", cluster, "/overview_table.png"), width = 1600)
   plotGseaTable(pathways[topPathways], fgsea_ranks, fgsea_results,
                      gseaParam=0.5)
   dev.off()
@@ -65,7 +70,7 @@ FGSEA_analysis <- function(markers, working_directory, marker_type, cluster) {
 
   ## check if mainPathways is empty (likely collapsedPathways is empty too)
   if (length(mainPathways) > 0) {
-    png(filename=paste0(working_directory, "../GSEA_analysis/", marker_type, "/", cluster, "/collapsed_table.png"), width = 1600)
+    png(filename=paste0(working_directory, "../GSE_analysis/", marker_type, "/cluster ", cluster, "/collapsed_table.png"), width = 1600)
     p <- plotGseaTable(pathways[mainPathways], fgsea_ranks, fgsea_results,
                        gseaParam = 0.5)
     dev.off()
@@ -74,13 +79,13 @@ FGSEA_analysis <- function(markers, working_directory, marker_type, cluster) {
   # TODO check why NES column is wrong and check what columns mean
   # TODO uncomment DE function code
   print(fgsea_results$NES)
-  fwrite(fgsea_results, file=paste0(working_directory, "../GSEA_analysis/", marker_type, "/", cluster, "/overview.xls"), sep="\t", sep2=c("", ",", ""))
+  fwrite(fgsea_results, file=paste0(working_directory, "../GSE_analysis/", marker_type, "/cluster ", cluster, "/overview.xls"), sep="\t", sep2=c("", ",", ""))
 
   for (i in seq_along(topPathways)) {
     # png(filename=paste0(working_directory, "GSEA/cluster_", cluster, "/enriched_", i, ".png"), width = 1600)
     p <- plotEnrichment(pathways[[topPathways[i]]],
                         fgsea_ranks) + labs(title=topPathways[[i]])
-    ggsave(file = paste0(working_directory, "../GSEA_analysis/", marker_type, "/", cluster, "/enriched_", i, ".png"), width = 30, height = 20, units = "cm")
+    ggsave(file = paste0(working_directory, "../GSE_analysis/", marker_type, "/cluster ", cluster, "/enriched_", i, ".png"), width = 30, height = 20, units = "cm")
   }
 }
 
@@ -117,7 +122,7 @@ dir.create(paste0(work_dir, "conserved_markers/negative/"))
 dir.create(paste0(work_dir, "condition_markers/"))
 dir.create(paste0(work_dir, "condition_markers/positive/"))
 dir.create(paste0(work_dir, "condition_markers/negative/"))
-dir.create(paste0(work_dir, "../GSEA_analysis/"))
+dir.create(paste0(work_dir, "../GSE_analysis/"))
 
 cluster_ids <- levels(integrated$seurat_clusters)
 for (i in cluster_ids) {
@@ -153,19 +158,19 @@ for (i in cluster_ids) {
   # write.csv2(neg_conserved_markers, file = paste0("conserved_markers/negative/all_cluster", i, "_cm.csv"))
   # write.csv2(neg_conserved_markers_top10, file = paste0("conserved_markers/negative/top10_cluster", i, "_cm.csv"))
   # write.csv2(neg_conserved_markers_top100, file = paste0("conserved_markers/negative/top100_cluster", i, "_cm.csv"))
-  #
-
-
-
-  # Error in ValidateCellGroups(object = object, cells.1 = cells.1, cells.2 = cells.2,  :
-  # Cell group 2 is empty - no cells with identity class
-  # TODO check if ident.2 has cells before comparison is done, otherwise get above error message
 
   # ## create condition markers for integrated data within each cluster between each condition
   # ## DEV NOTE: this is not pairwise if more than 2 conditions are integrated at the same time
   subset <- subset(integrated, seurat_clusters == i)
   # ##  change cluster identity to original identity to find markers between conditions
   Idents(subset) <- subset$orig.ident
+  ## check if subset contains cells for at least 2 condtions/samples for comparison
+  ### DEVNOTE: also need to check if a condition has ENOUGH cells for comparison?
+  if (length(names(table(subset$orig.ident))) == 1) {
+    print(paste0('In cluster ', i, ' only cells for condition/sample ',
+                 names(table(subset$orig.ident)), ' were found, cannot create condition markers for this cluster.'))
+    next
+  }
   condition_markers <- FindMarkers(subset, ident.1 = "BL_C", verbose = T, only.pos = FALSE)
   # pos_condition_markers <- condition_markers %>% filter(avg_log2FC > 0)
   # pos_condition_markers_top10 <- condition_markers %>% filter(avg_log2FC > 0) %>% slice_head(n = 10)
@@ -195,3 +200,77 @@ for (i in cluster_ids) {
 
 
 
+
+
+
+
+
+# topGO vignette: http://127.0.0.1:25748/library/topGO/doc/topGO.pdf
+
+
+# # DEVNOTE: load markers and prep for topGoData class object
+# go <- markers$p_val
+# hsmart <- useMart(dataset = "hsapiens_gene_ensembl", biomart = "ensembl")
+# mapping <- getBM(
+#   attributes = c('entrezgene_id', 'hgnc_symbol'),
+#   filters = 'hgnc_symbol',
+#   values = rownames(markers),
+#   mart = hsmart
+# )
+# names(go) <- paste0(match(rownames(markers), mapping$hgnc_symbol), '_at')
+#
+# # DEVNOTE used this to find Affymetrix glossary for _at _f _g _i _r _s
+# table(sapply(strsplit(names(geneList), '_'), "[[", 2))
+#
+# library(topGO)
+# library(ALL) # Acute Lymphoblastic Leukemia
+# data(ALL) # Acute Lymphoblastic Leukemia
+# data(geneList)
+#
+# affyLib <- paste(annotation(ALL), "db", sep = ".")
+# library(package = affyLib, character.only = TRUE)
+# # sum(topDiffGenes(geneList)) # same as sum(geneList < 0.01)
+#
+# # create topGoData class object
+# ## DEVNOTE I don't see how I can do this for our data, as they use a certain database for their specific
+# ## affymetrix probes that they used in the ALL experiment, I can add _at behind our integer Entrez IDs which
+# ## seems to work but I cannot be sure that ID 1000 in Entrez is same gene in their affylib (hgu95av2.db) database
+# ### code in comments  below is from vignette chapter 4.3 Custom Annotation, but this doesn't seem applicable for us
+# #### geneID2GO <- readMappings(file = system.file("examples/geneid2go.map", package = "topGO"))
+# #### str(head(geneID2GO))
+# sampleGOdata <- new("topGOdata",
+#                     description = "Simple session", ontology = "BP",
+#                     allGenes = go, geneSel = topDiffGenes,
+#                     nodeSize = 10,
+#                     annot = annFUN.db, affyLib = affyLib)
+# sampleGOdata
+#
+# # TODO which tests would be proper for our data?
+# resultFisher <- runTest(sampleGOdata, algorithm = "classic", statistic = "fisher")
+# resultKS <- runTest(sampleGOdata, algorithm = "classic", statistic = "ks")
+# resultKS.elim <- runTest(sampleGOdata, algorithm = "elim", statistic = "ks")
+#
+# allRes <- GenTable(sampleGOdata,
+#                    classicFisher = resultFisher, classicKS = resultKS, elimKS = resultKS.elim,
+#                    orderBy = "elimKS", ranksOf = "classicFisher", topNodes = 100)
+# allRes
+#
+# colMap <- function(x) {
+#   .col <- rep(rev(heat.colors(length(unique(x)), alpha = 1)), time = table(x))
+#   return(.col[match(1:length(x), order(x))])
+# }
+#
+# pValue.classic <- score(resultKS)
+# pValue.elim <- score(resultKS.elim)[names(pValue.classic)]
+# gstat <- termStat(sampleGOdata, names(pValue.classic))
+# gSize <- gstat$Annotated / max(gstat$Annotated) * 4
+# gCol <- colMap(gstat$Significant)
+# plot(pValue.classic, pValue.elim, xlab = "p-value classic", ylab = "p-value elim",
+#        pch = 19, cex = gSize, col = gCol)
+#
+# sel.go <- names(pValue.classic)[pValue.elim < pValue.classic]
+# cbind(termStat(sampleGOdata, sel.go),
+#         elim = pValue.elim[sel.go],
+#         classic = pValue.classic[sel.go])
+#
+# showSigOfNodes(sampleGOdata, score(resultKS.elim), firstSigNodes = 5, useInfo = 'all')
