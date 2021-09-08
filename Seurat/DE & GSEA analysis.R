@@ -18,7 +18,6 @@ FGSEA_analysis <- function(markers, working_directory, marker_type, cluster) {
   library(fgsea)
   library(data.table)
   library(ggplot2)
-  ## library(reactome.db) # not needed in test run
 
   dir.create(paste0(work_dir, "../GSE_analysis/", marker_type, "/"))
   dir.create(paste0(work_dir, "../GSE_analysis/", marker_type, "/cluster ", cluster, "/"))
@@ -42,7 +41,6 @@ FGSEA_analysis <- function(markers, working_directory, marker_type, cluster) {
     mart = hsmart
   )
   names(fgsea_ranks) <- match(rownames(markers), mapping$hgnc_symbol)
-  print(fgsea_ranks)
 
   ## get Reactome pathways by Entrez IDs
   pathways <- reactomePathways(names(fgsea_ranks))
@@ -76,9 +74,6 @@ FGSEA_analysis <- function(markers, working_directory, marker_type, cluster) {
     dev.off()
   }
 
-  # TODO check why NES column is wrong and check what columns mean
-  # TODO uncomment DE function code
-  print(fgsea_results$NES)
   fwrite(fgsea_results, file=paste0(working_directory, "../GSE_analysis/", marker_type, "/cluster ", cluster, "/overview.xls"), sep="\t", sep2=c("", ",", ""))
 
   for (i in seq_along(topPathways)) {
@@ -88,7 +83,6 @@ FGSEA_analysis <- function(markers, working_directory, marker_type, cluster) {
     ggsave(file = paste0(working_directory, "../GSE_analysis/", marker_type, "/cluster ", cluster, "/enriched_", i, ".png"), width = 30, height = 20, units = "cm")
   }
 }
-
 
 ### USER PARAMETERS
 # read an integrated saved RDS file
@@ -124,40 +118,77 @@ dir.create(paste0(work_dir, "condition_markers/positive/"))
 dir.create(paste0(work_dir, "condition_markers/negative/"))
 dir.create(paste0(work_dir, "../GSE_analysis/"))
 
+### create marker dfs to count N cells used in comparisons
+## markers
+markers_columns <- c('cluster_ID', 'n_cells_cluster', 'n_all_other_cells')
+markers_df <- data.frame(matrix(nrow = 0, ncol = length(markers_columns)))
+colnames(markers_df) <- markers_columns
+## conserved markers
+conserved_markers_columns <- c('cluster_ID',
+                               paste0('n_cells_cluster_identity_', names(table(integrated$orig.ident))[1]),
+                               paste0('n_cells_cluster_identity_', names(table(integrated$orig.ident))[2]),
+                               paste0('n_all_other_cells_identity_', names(table(integrated$orig.ident))[1]),
+                               paste0('n_all_other_cells_identity_', names(table(integrated$orig.ident))[2]))
+conserved_markers_df <- data.frame(matrix(nrow = 0, ncol = length(conserved_markers_columns)))
+colnames(conserved_markers_df) <- conserved_markers_columns
+## conition markers
+condition_markers_columns <- c('cluster_id',
+                               paste0('n_cells_', names(table(integrated$orig.ident))[1]),
+                               paste0('n_cells_', names(table(integrated$orig.ident))[2]))
+condition_markers_df <- data.frame(matrix(nrow = 0, ncol = length(condition_markers_columns)))
+colnames(condition_markers_df) <- condition_markers_columns
+
+## get cluster IDs to loop over
 cluster_ids <- levels(integrated$seurat_clusters)
 for (i in cluster_ids) {
   print(paste('Cluster ID:', i))
+
+  ## add amount of cells used for markers comparison to df
+  markers_df[nrow(markers_df) + 1,] = c(i,
+                                        table(integrated$seurat_clusters)[i],
+                                        sum(table(integrated$seurat_clusters)[-as.integer(i)]))
   ## create markers for integrated data for each cluster vs all other clusters
   markers <- FindMarkers(integrated, ident.1 = i, only.pos = FALSE, verbose = T)
-  # pos_markers <- markers %>% filter(avg_log2FC > 0)
-  # pos_markers_top10 <- markers %>% filter(avg_log2FC > 0) %>% slice_head(n = 10)
-  # pos_markers_top100 <- markers %>% filter(avg_log2FC > 0) %>% slice_head(n = 100)
-  # neg_markers <- markers %>% filter(avg_log2FC < 0)
-  # neg_markers_top10 <- markers %>% filter(avg_log2FC < 0) %>% slice_head(n = 10)
-  # neg_markers_top100 <- markers %>% filter(avg_log2FC < 0) %>% slice_head(n = 100)
-  # write.csv2(pos_markers, file = paste0("markers/positive/all_cluster", i, "_m.csv"))
-  # write.csv2(pos_markers_top10, file = paste0("markers/positive/top10_cluster", i, "_m.csv"))
-  # write.csv2(pos_markers_top100, file = paste0("markers/positive/top100_cluster", i, "_m.csv"))
-  # write.csv2(neg_markers, file = paste0("markers/negative/all_cluster", i, "_m.csv"))
-  # write.csv2(neg_markers_top10, file = paste0("markers/negative/top10_cluster", i, "_m.csv"))
-  # write.csv2(neg_markers_top100, file = paste0("markers/negative/top100_cluster", i, "_m.csv"))
+  pos_markers <- markers %>% filter(avg_log2FC > 0)
+  pos_markers_top10 <- markers %>% filter(avg_log2FC > 0) %>% slice_head(n = 10)
+  pos_markers_top100 <- markers %>% filter(avg_log2FC > 0) %>% slice_head(n = 100)
+  neg_markers <- markers %>% filter(avg_log2FC < 0)
+  neg_markers_top10 <- markers %>% filter(avg_log2FC < 0) %>% slice_head(n = 10)
+  neg_markers_top100 <- markers %>% filter(avg_log2FC < 0) %>% slice_head(n = 100)
+  write.csv2(pos_markers, file = paste0("markers/positive/all_cluster", i, "_m.csv"))
+  write.csv2(pos_markers_top10, file = paste0("markers/positive/top10_cluster", i, "_m.csv"))
+  write.csv2(pos_markers_top100, file = paste0("markers/positive/top100_cluster", i, "_m.csv"))
+  write.csv2(neg_markers, file = paste0("markers/negative/all_cluster", i, "_m.csv"))
+  write.csv2(neg_markers_top10, file = paste0("markers/negative/top10_cluster", i, "_m.csv"))
+  write.csv2(neg_markers_top100, file = paste0("markers/negative/top100_cluster", i, "_m.csv"))
   FGSEA_analysis(markers = markers, working_directory = work_dir, marker_type = 'markers', cluster = i)
 
+  ## add amount of cells used for conserved_markers comparison to df
+  df <- data.frame('orig.ident' = integrated$orig.ident, 'seurat_clusters' = integrated$seurat_clusters)
+  # condition 1 & match cluster
+  cm_val1 <- nrow(df %>% filter(orig.ident == names(table(integrated$orig.ident))[1] & seurat_clusters == i))
+  # condition 2 & match cluster
+  cm_val2 <- nrow(df %>% filter(orig.ident == names(table(integrated$orig.ident))[2] & seurat_clusters == i))
+  # condition 1 & no match cluster
+  cm_val3 <- nrow(df %>% filter(orig.ident == names(table(integrated$orig.ident))[1] & seurat_clusters != i))
+  # condition 2 & no match cluster
+  cm_val4 <- nrow(df %>% filter(orig.ident == names(table(integrated$orig.ident))[2] & seurat_clusters != i))
+  conserved_markers_df[nrow(conserved_markers_df) + 1,] = c(i, cm_val1, cm_val2, cm_val3, cm_val4)
   ## create markers conserved between groups (conditions) for integrated data for each cluster vs all other clusters
-  # conserved_markers <- FindConservedMarkers(integrated, ident.1 = i, only.pos = FALSE,
-  #                                           grouping.var = "orig.ident", verbose = T)
-  # pos_conserved_markers <- conserved_markers %>% filter((.[[2]] > 0) & (.[[7]] > 0))
-  # pos_conserved_markers_top10 <- conserved_markers %>% filter((.[[2]] > 0) & (.[[7]] > 0)) %>% slice_head(n = 10)
-  # pos_conserved_markers_top100 <- conserved_markers %>% filter((.[[2]] > 0) & (.[[7]] > 0)) %>% slice_head(n = 100)
-  # neg_conserved_markers <- conserved_markers %>% filter((.[[2]] < 0) | (.[[7]] < 0))
-  # neg_conserved_markers_top10 <- conserved_markers %>% filter((.[[2]] < 0) | (.[[7]] < 0)) %>% slice_head(n = 10)
-  # neg_conserved_markers_top100 <- conserved_markers %>% filter((.[[2]] < 0) | (.[[7]] < 0)) %>% slice_head(n = 100)
-  # write.csv2(pos_conserved_markers, file = paste0("conserved_markers/positive/all_cluster", i, "_cm.csv"))
-  # write.csv2(pos_conserved_markers_top10, file = paste0("conserved_markers/positive/top10_cluster", i, "_cm.csv"))
-  # write.csv2(pos_conserved_markers_top100, file = paste0("conserved_markers/positive/top100_cluster", i, "_cm.csv"))
-  # write.csv2(neg_conserved_markers, file = paste0("conserved_markers/negative/all_cluster", i, "_cm.csv"))
-  # write.csv2(neg_conserved_markers_top10, file = paste0("conserved_markers/negative/top10_cluster", i, "_cm.csv"))
-  # write.csv2(neg_conserved_markers_top100, file = paste0("conserved_markers/negative/top100_cluster", i, "_cm.csv"))
+  conserved_markers <- FindConservedMarkers(integrated, ident.1 = i, only.pos = FALSE,
+                                            grouping.var = "orig.ident", verbose = T)
+  pos_conserved_markers <- conserved_markers %>% filter((.[[2]] > 0) & (.[[7]] > 0))
+  pos_conserved_markers_top10 <- conserved_markers %>% filter((.[[2]] > 0) & (.[[7]] > 0)) %>% slice_head(n = 10)
+  pos_conserved_markers_top100 <- conserved_markers %>% filter((.[[2]] > 0) & (.[[7]] > 0)) %>% slice_head(n = 100)
+  neg_conserved_markers <- conserved_markers %>% filter((.[[2]] < 0) | (.[[7]] < 0))
+  neg_conserved_markers_top10 <- conserved_markers %>% filter((.[[2]] < 0) | (.[[7]] < 0)) %>% slice_head(n = 10)
+  neg_conserved_markers_top100 <- conserved_markers %>% filter((.[[2]] < 0) | (.[[7]] < 0)) %>% slice_head(n = 100)
+  write.csv2(pos_conserved_markers, file = paste0("conserved_markers/positive/all_cluster", i, "_cm.csv"))
+  write.csv2(pos_conserved_markers_top10, file = paste0("conserved_markers/positive/top10_cluster", i, "_cm.csv"))
+  write.csv2(pos_conserved_markers_top100, file = paste0("conserved_markers/positive/top100_cluster", i, "_cm.csv"))
+  write.csv2(neg_conserved_markers, file = paste0("conserved_markers/negative/all_cluster", i, "_cm.csv"))
+  write.csv2(neg_conserved_markers_top10, file = paste0("conserved_markers/negative/top10_cluster", i, "_cm.csv"))
+  write.csv2(neg_conserved_markers_top100, file = paste0("conserved_markers/negative/top100_cluster", i, "_cm.csv"))
 
   # ## create condition markers for integrated data within each cluster between each condition
   # ## DEV NOTE: this is not pairwise if more than 2 conditions are integrated at the same time
@@ -171,31 +202,42 @@ for (i in cluster_ids) {
                  names(table(subset$orig.ident)), ' were found, cannot create condition markers for this cluster.'))
     next
   }
+
+  ## add amount of cells used for condition_markers comparison to df
+  condition_markers_df[nrow(condition_markers_df) + 1,] = c(i, table(subset$orig.ident)[1], table(subset$orig.ident)[2])
+  ## create condition_markers for subset data for within each cluster to compare conditions
   condition_markers <- FindMarkers(subset, ident.1 = "BL_C", verbose = T, only.pos = FALSE)
-  # pos_condition_markers <- condition_markers %>% filter(avg_log2FC > 0)
-  # pos_condition_markers_top10 <- condition_markers %>% filter(avg_log2FC > 0) %>% slice_head(n = 10)
-  # pos_condition_markers_top100 <- condition_markers %>% filter(avg_log2FC > 0) %>% slice_head(n = 100)
-  # neg_condition_markers <- condition_markers %>% filter(avg_log2FC < 0)
-  # neg_condition_markers_top10 <- condition_markers %>% filter(avg_log2FC < 0) %>% slice_head(n = 10)
-  # neg_condition_markers_top100 <- condition_markers %>% filter(avg_log2FC < 0) %>% slice_head(n = 100)
-  # write.csv2(pos_condition_markers, file = paste0("condition_markers/positive/all_cluster", i, "_cm.csv"))
-  # write.csv2(pos_condition_markers_top10, file = paste0("condition_markers/positive/top10_cluster", i, "_cm.csv"))
-  # write.csv2(pos_condition_markers_top100, file = paste0("condition_markers/positive/top100_cluster", i, "_cm.csv"))
-  # write.csv2(neg_condition_markers, file = paste0("condition_markers/negative/all_cluster", i, "_cm.csv"))
-  # write.csv2(neg_condition_markers_top10, file = paste0("condition_markers/negative/top10_cluster", i, "_cm.csv"))
-  # write.csv2(neg_condition_markers_top100, file = paste0("condition_markers/negative/top100_cluster", i, "_cm.csv"))
-  print(paste('Cluster ID:', i, ' before condition_markers call'))
+  pos_condition_markers <- condition_markers %>% filter(avg_log2FC > 0)
+  pos_condition_markers_top10 <- condition_markers %>% filter(avg_log2FC > 0) %>% slice_head(n = 10)
+  pos_condition_markers_top100 <- condition_markers %>% filter(avg_log2FC > 0) %>% slice_head(n = 100)
+  neg_condition_markers <- condition_markers %>% filter(avg_log2FC < 0)
+  neg_condition_markers_top10 <- condition_markers %>% filter(avg_log2FC < 0) %>% slice_head(n = 10)
+  neg_condition_markers_top100 <- condition_markers %>% filter(avg_log2FC < 0) %>% slice_head(n = 100)
+  write.csv2(pos_condition_markers, file = paste0("condition_markers/positive/all_cluster", i, ".csv"))
+  write.csv2(pos_condition_markers_top10, file = paste0("condition_markers/positive/top10_cluster", i, ".csv"))
+  write.csv2(pos_condition_markers_top100, file = paste0("condition_markers/positive/top100_cluster", i, ".csv"))
+  write.csv2(neg_condition_markers, file = paste0("condition_markers/negative/all_cluster", i, ".csv"))
+  write.csv2(neg_condition_markers_top10, file = paste0("condition_markers/negative/top10_cluster", i, ".csv"))
+  write.csv2(neg_condition_markers_top100, file = paste0("condition_markers/negative/top100_cluster", i, ".csv"))
+  print(paste('Cluster ID:', i, ' before condition_markers FGSEA call'))
   FGSEA_analysis(markers = condition_markers, working_directory = work_dir, marker_type = 'condition_markers', cluster = i)
 
   # DEVNOTE if want to assign each table to its own variable, use assign() and get()
   # assign(paste0("cluster", i, "_markers"), markers)
   ## get(paste0("cluster", i, "_markers"))
 }
+## write n cells for comparison to CSV files
+write.csv2(markers_df, file = "markers/n_cells_for_comparison_m.csv", row.names = FALSE)
+write.csv2(conserved_markers_df, file = "conserved_markers/n_cells_for_comparison_cm.csv", row.names = FALSE)
+write.csv2(condition_markers_df, file = "condition_markers/n_cells_for_comparison.csv", row.names = FALSE)
+
 ## cleanup environment
-# rm("markers", "pos_markers", "pos_markers_top10", "pos_markers_top100", "neg_markers", "neg_markers_top10", "neg_markers_top100",
-#    "conserved_markers", "pos_conserved_markers", "pos_conserved_markers_top10", "pos_conserved_markers_top100", "neg_conserved_markers", "neg_conserved_markers_top10", "neg_conserved_markers_top100",
-#    "condition_markers", "pos_condition_markers", "pos_condition_markers_top10", "pos_condition_markers_top100", "neg_condition_markers", "neg_condition_markers_top10", "neg_condition_markers_top100",
-#    "cluster_ids", "subset")
+rm("markers", "pos_markers", "pos_markers_top10", "pos_markers_top100", "neg_markers", "neg_markers_top10", "neg_markers_top100",
+   "conserved_markers", "pos_conserved_markers", "pos_conserved_markers_top10", "pos_conserved_markers_top100", "neg_conserved_markers", "neg_conserved_markers_top10", "neg_conserved_markers_top100",
+   "condition_markers", "pos_condition_markers", "pos_condition_markers_top10", "pos_condition_markers_top100", "neg_condition_markers", "neg_condition_markers_top10", "neg_condition_markers_top100",
+   "cluster_ids", "subset", "i", "df", "markers_df", "conserved_markers_df", "condition_markers_df",
+   "cm_val1", "cm_val2", "cm_val3", "cm_val4",
+   "markers_columns", "condition_markers_columns", "conserved_markers_columns")
 
 
 
