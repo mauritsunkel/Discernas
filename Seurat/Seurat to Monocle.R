@@ -28,8 +28,9 @@ library(ggplot2)
 ### INITIALIZE ###
 
 # read an integrated saved RDS file
-sample_name <- "BL_N + BL_C"
-integrated <- readRDS(paste0("C:/Users/mauri/Desktop/M/Erasmus MC PhD/Projects/Single Cell RNA Sequencing/Seurat/results/Exploration results/SCTransform + Leiden - Cellcycle/integrated/", sample_name, "/integrated.rds"))
+sample_name <- "BL_A + BL_C"
+file <- "C:/Users/mauri/Desktop/M/Work & Education/Erasmus MC PhD/Projects/Single Cell RNA Sequencing/Seurat/results/SCTransform + Leiden - Cellcycle + Annotation/integrated/BL_A + BL_C/integrated_BL_A + BL_C.rds"
+integrated <- readRDS(file)
 
 
 
@@ -39,14 +40,14 @@ integrated <- readRDS(paste0("C:/Users/mauri/Desktop/M/Erasmus MC PhD/Projects/S
 
 
 # work dir should contain forward slashes (/) on Windows
-work_dir <- "C:/Users/mauri/Desktop/M/Erasmus MC PhD/Projects/Single Cell RNA Sequencing/Seurat/"
+work_dir <- "C:/Users/mauri/Desktop/M/Work & Education/Erasmus MC PhD/Projects/Single Cell RNA Sequencing/Seurat"
 
 work_dir <- paste0(work_dir, 'results/')
 dir.create(work_dir)
 start_time <- format(Sys.time(), "%F %H-%M-%S")
 work_dir <- paste0(work_dir, start_time, '/')
 dir.create(work_dir)
-work_dir <- paste0(work_dir, 'monocle/')
+work_dir <- paste0(work_dir, 'Monocle/')
 dir.create(work_dir)
 work_dir <- paste0(work_dir, sample_name)
 dir.create(work_dir)
@@ -66,6 +67,12 @@ patchwork::wrap_plots(p1, p2)
 ggplot2::ggsave(file = paste0("Partitioning_", sample_name, ".png"), width = 30, height = 20, units = "cm")
 
 integrated.sub <- subset(Seurat::as.Seurat(cds, counts = "counts", data = "logcounts", assay = NULL, project = "SingleCellExperiment"), monocle3_partitions == 1)
+
+
+
+
+
+
 cds <- SeuratWrappers::as.cell_data_set(integrated.sub)
 cds <- monocle3::learn_graph(cds)
 monocle3::plot_cells(cds, label_groups_by_cluster = T, label_leaves = T, label_branch_points = F, group_label_size = 6, graph_label_size = 4)
