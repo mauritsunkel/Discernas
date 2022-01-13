@@ -1,5 +1,6 @@
 ### start initialization
 library(Seurat)
+library(future)
 library(patchwork)
 library(ggplot2)
 library(chron)
@@ -86,11 +87,22 @@ FGSEA_analysis <- function(markers, working_directory, marker_type, cluster) {
 
 ### USER PARAMETERS
 # read an integrated saved RDS file
-sample_name <- "BL_A + BL_C"
-integrated <- readRDS(paste0("C:/Users/mauri/Desktop/M/Erasmus MC PhD/Projects/Single Cell RNA Sequencing/Seurat/results/Exploration results/SCTransform + Leiden - Cellcycle/integrated/", sample_name, "/integrated.rds"))
+sample_name <- "BL_N + BL_C"
+integrated <- readRDS("C:/Users/mauri/Desktop/M/Work & Education/Erasmus MC PhD/Projects/Single Cell RNA Sequencing/Seurat/results/SCTransform + Leiden - Cellcycle + Annotation/integrated/BL_A + BL_C/integrated_BL_A + BL_C.rds")
 
 # work dir should contain forward slashes (/) on Windows
-work_dir <- "C:/Users/mauri/Desktop/M/Erasmus MC PhD/Projects/Single Cell RNA Sequencing/Seurat/"
+work_dir <- "C:/Users/mauri/Desktop/M/Work & Education/Erasmus MC PhD/Projects/Single Cell RNA Sequencing/Seurat/"
+
+# load future library and set plan to run certain functions with multiprocessing
+plan("multisession", workers = 1) # DEVNOTE: n_workers > 1 for parallelization (for me, 5 is max, 4 is safe)
+
+# play system sounds, call function to alarm user than running is done!
+beep <- function(n = 5){
+  for(i in seq(n)){
+    system("rundll32 user32.dll, MessageBeep -1")
+    Sys.sleep(.5)
+  }
+}
 ### END USER PARAMETERS
 
 work_dir <- paste0(work_dir, 'results/')
@@ -105,20 +117,352 @@ dir.create(work_dir)
 work_dir <- paste0(work_dir, 'DE_analysis/')
 dir.create(work_dir)
 setwd(work_dir)
-### end initialization ###
 
+
+dir.create(paste0(work_dir, "sample_markers/"))
 dir.create(paste0(work_dir, "markers/"))
-dir.create(paste0(work_dir, "markers/positive/"))
-dir.create(paste0(work_dir, "markers/negative/"))
 dir.create(paste0(work_dir, "conserved_markers/"))
-dir.create(paste0(work_dir, "conserved_markers/positive/"))
-dir.create(paste0(work_dir, "conserved_markers/negative/"))
 dir.create(paste0(work_dir, "condition_markers/"))
-dir.create(paste0(work_dir, "condition_markers/positive/"))
-dir.create(paste0(work_dir, "condition_markers/negative/"))
 dir.create(paste0(work_dir, "../GSE_analysis/"))
 
+
+## OVERRIDE SEURAT DE FUNCTIONS WITH ADDITIONAL FUNCTIONALITY
+
+# fixInNamespace(FindMarkers.Assay, pos = "package:Seurat") # use this to copy source code
+# trace(Seurat:::FindMarkers.Assay, edit = T)
+## but then need: untrace(Seurat:::FindMarkers.Assay) # to undo edits by tracing, will also be undone on reloading R
+### all these functions call edit() under the hood
+FoldChange.default.adjusted <- function (object, cells.1, cells.2, mean.fxn, fc.name, mean.fxn.adj = mean.fxn.adj, features = NULL, ...)
+{
+  features <- features %||% rownames(x = object)
+  thresh.min <- 0
+  pct.1 <- round(x = rowSums(x = object[features, cells.1,
+                                        drop = FALSE] > thresh.min)/length(x = cells.1), digits = 3)
+  pct.2 <- round(x = rowSums(x = object[features, cells.2,
+                                        drop = FALSE] > thresh.min)/length(x = cells.2), digits = 3)
+  data.1 <- mean.fxn(object[features, cells.1, drop = FALSE])
+  data.2 <- mean.fxn(object[features, cells.2, drop = FALSE])
+  fc <- (data.1 - data.2)
+
+  ### MY INJECTED CUSTOM CODE
+  n_nonzero.1 <- rowSums(x = object[features, cells.1, drop = FALSE] > 0)
+  n_nonzero.2 <- rowSums(x = object[features, cells.2, drop = FALSE] > 0)
+  object[object==0] <- NA
+
+  # Seurat code
+  mean.fxn <- mean.fxn %||% switch(
+    EXPR = slot,
+    'data' = function(x) {
+      return(log(x = rowMeans(x = expm1(x = x)) + pseudocount.use, base = base))
+    },
+    'scale.data' = rowMeans,
+    function(x) {
+      return(log(x = rowMeans(x = x) + pseudocount.use, base = base))
+    }
+  )
+  ## Custom code for temporary custom mean.fxn.adj to calculate proper rowMeans for non-zero expressing cells
+  # added: na.rm = TRUE, such that 0's not taken into account for row means
+  # pseudocount.use = 1, base = 2, hardcoded because of namespace issues
+  mean.fxn.adj <- function (x)
+  {
+    return(log(x = mean(x = expm1(x = x), na.rm = T) + 1,
+               base = 2))
+  }
+  mean.fxn.adj <- mean.fxn.adj %||% switch(
+    EXPR = slot,
+    'data' = function(x) {
+      return(log(x = mean(x = expm1(x = x), na.rm = T) + 1, base = 2))
+    },
+    'scale.data' = rowMeans,
+    function(x) {
+      return(log(x = mean(x = x, na.rm = T) + 1, base = 2))
+    }
+  )
+  nonzero_data.1 <- apply(object[features, cells.1, drop = FALSE], 1, mean.fxn.adj)
+  nonzero_data.2 <- apply(object[features, cells.2, drop = FALSE], 1, mean.fxn.adj)
+  nonzero_fc <- (nonzero_data.1 - nonzero_data.2)
+  nonzero_fc[is.na(nonzero_fc)] <- 0
+
+  # ADJUSTED by adding: nonzero_fc, n_nonzero.1, n_nonzero.2
+  fc.results <- as.data.frame(x = cbind(fc, pct.1, pct.2, data.1, data.2, nonzero_fc, n_nonzero.1, n_nonzero.2,
+                                        nonzero_data.1, nonzero_data.2))
+  # ADJUSTED by adding: "nz_log_fc", "n_nz.1", "n_nz.2"
+  colnames(fc.results) <- c(fc.name, "pct.1", "pct.2", "meanExpr.1", "meanExpr.2",
+                            paste0("nz_", fc.name), "nz_n.1", "nz_n.2", "nz_meanExpr.1", "nz_meanExpr.2")
+
+  return(fc.results)
+}
+# WORKS, but, if it fails after all continue searching
+## https://stackoverflow.com/questions/8204008/redirect-intercept-function-calls-within-a-package-function
+# namespace of customFunction is R_globalenv, where it is defined, bur should be Seurat as that is ns of my targeted function
+environment(FoldChange.default.adjusted) <- asNamespace("Seurat")
+# then with assignInNameSpace I can basically inject my code their copied function and then substitute it back in their environment
+assignInNamespace("FoldChange.default", FoldChange.default.adjusted, ns = "Seurat")
+
+WilcoxDETest.adjusted <- function (data.use, cells.1, cells.2, verbose = TRUE, ...)
+{
+  # save data.use for non-zero calculation in case it is filtered too much beforehand
+  data.use.orig <- data.use
+
+
+  # use only data needed for group comparison
+  data.use <- data.use[, c(cells.1, cells.2), drop = FALSE]
+  # create sequential index of group 1 cells
+  j <- seq_len(length.out = length(x = cells.1))
+  # use ProgressBarSApply or FutureSApply (sequential/parallel processing)
+  my.sapply <- ifelse(test = verbose && future::nbrOfWorkers() ==
+                        1, yes = pbsapply, no = future_sapply)
+  # check if not overflowing (data is NaN)
+  overflow.check <- ifelse(test = is.na(x = suppressWarnings(length(x = data.use[1,
+  ]) * length(x = data.use[1, ]))), yes = FALSE, no = TRUE)
+  # check if limma package available in R session
+  limma.check <- PackageCheck("limma", error = FALSE)
+  # if data not overflowing and limma package available in R session
+  if (limma.check[1] && overflow.check) {
+    # calculate p-value with defined sapply function
+    p_val <- my.sapply(X = 1:nrow(x = data.use), FUN = function(x) {
+      return(min(2 * min(limma::rankSumTestWithCorrelation(index = j,
+                                                           statistics = data.use[x, ])), 1))
+    })
+  }
+  else {
+    if (getOption("Seurat.limma.wilcox.msg", TRUE) && overflow.check) {
+      message("For a more efficient implementation of the Wilcoxon Rank Sum Test,",
+              "\n(default method for FindMarkers) please install the limma package",
+              "\n--------------------------------------------",
+              "\ninstall.packages('BiocManager')", "\nBiocManager::install('limma')",
+              "\n--------------------------------------------",
+              "\nAfter installation of limma, Seurat will automatically use the more ",
+              "\nefficient implementation (no further action necessary).",
+              "\nThis message will be shown once per session")
+      options(Seurat.limma.wilcox.msg = FALSE)
+    }
+    group.info <- data.frame(row.names = c(cells.1, cells.2))
+    group.info[cells.1, "group"] <- "Group1"
+    group.info[cells.2, "group"] <- "Group2"
+    group.info[, "group"] <- factor(x = group.info[, "group"])
+    data.use <- data.use[, rownames(x = group.info), drop = FALSE]
+    p_val <- my.sapply(X = 1:nrow(x = data.use), FUN = function(x) {
+      return(wilcox.test(data.use[x, ] ~ group.info[,
+                                                    "group"], ...)$p.value)
+    })
+  }
+
+  ### CUSTOM CODE for calculating p-value for non-zero expression cells
+  # use only non-zero expression data needed for group comparison
+  data.use <- data.use.orig[, c(cells.1, cells.2), drop = FALSE]
+
+  if (limma.check[1] && overflow.check) {
+    # calculate p-value with defined sapply function
+    nz_p_val <- my.sapply(X = 1:nrow(x = data.use), FUN = function(x) {
+      return(min(2 * min(limma::rankSumTestWithCorrelation(index = seq_len(sum(names(data.use[x,][data.use[x,] > 0]) %in% cells.1)),
+                                                           statistics = data.use[x,][data.use[x,] > 0]
+      )), 1))
+    })
+  }
+  else {
+    data.use <- data.use[, rownames(x = group.info), drop = FALSE]
+    nz_p_val <- my.sapply(X = 1:nrow(x = data.use), FUN = function(x) {
+      return(wilcox.test(data.use[x, ] ~ group.info[,
+                                                    "group"], ...)$p.value)
+    })
+  }
+
+  return(data.frame(p_val, nz_p_val, row.names = rownames(x = data.use)))
+}
+# change namespace of adjusted function to target function
+environment(WilcoxDETest.adjusted) <- asNamespace("Seurat")
+# now overrice target function within that namespace with my custom function
+assignInNamespace("WilcoxDETest", WilcoxDETest.adjusted, ns = "Seurat")
+
+
+FindMarkers.default.adjusted <- function(
+  object,
+  slot = "data",
+  counts = numeric(),
+  cells.1 = NULL,
+  cells.2 = NULL,
+  features = NULL,
+  logfc.threshold = 0.25,
+  test.use = 'wilcox',
+  min.pct = 0.1,
+  min.diff.pct = -Inf,
+  verbose = TRUE,
+  only.pos = FALSE,
+  max.cells.per.ident = Inf,
+  random.seed = 1,
+  latent.vars = NULL,
+  min.cells.feature = 3,
+  min.cells.group = 3,
+  pseudocount.use = 1,
+  fc.results = NULL,
+  densify = FALSE,
+  ...
+) {
+  ValidateCellGroups(
+    object = object,
+    cells.1 = cells.1,
+    cells.2 = cells.2,
+    min.cells.group = min.cells.group
+  )
+  features <- features %||% rownames(x = object)
+  # reset parameters so no feature filtering is performed
+  if (test.use %in% DEmethods_noprefilter()) {
+    features <- rownames(x = object)
+    min.diff.pct <- -Inf
+    logfc.threshold <- 0
+  }
+  data <- switch(
+    EXPR = slot,
+    'scale.data' = counts,
+    object
+  )
+  # feature selection (based on percentages)
+  alpha.min <- pmax(fc.results$pct.1, fc.results$pct.2)
+  names(x = alpha.min) <- rownames(x = fc.results)
+  features <- names(x = which(x = alpha.min >= min.pct))
+  if (length(x = features) == 0) {
+    warning("No features pass min.pct threshold; returning empty data.frame")
+    return(fc.results[features, ])
+  }
+  alpha.diff <- alpha.min - pmin(fc.results$pct.1, fc.results$pct.2)
+  features <- names(
+    x = which(x = alpha.min >= min.pct & alpha.diff >= min.diff.pct)
+  )
+  if (length(x = features) == 0) {
+    warning("No features pass min.diff.pct threshold; returning empty data.frame")
+    return(fc.results[features, ])
+  }
+  # feature selection (based on logFC)
+  if (slot != "scale.data") {
+    total.diff <- fc.results[, 1] #first column is logFC
+    names(total.diff) <- rownames(fc.results)
+    features.diff <- if (only.pos) {
+      names(x = which(x = total.diff >= logfc.threshold))
+    } else {
+      names(x = which(x = abs(x = total.diff) >= logfc.threshold))
+    }
+    features <- intersect(x = features, y = features.diff)
+    if (length(x = features) == 0) {
+      warning("No features pass logfc.threshold threshold; returning empty data.frame")
+      return(fc.results[features, ])
+    }
+  }
+  # subsample cell groups if they are too large
+  if (max.cells.per.ident < Inf) {
+    set.seed(seed = random.seed)
+    if (length(x = cells.1) > max.cells.per.ident) {
+      cells.1 <- sample(x = cells.1, size = max.cells.per.ident)
+    }
+    if (length(x = cells.2) > max.cells.per.ident) {
+      cells.2 <- sample(x = cells.2, size = max.cells.per.ident)
+    }
+    if (!is.null(x = latent.vars)) {
+      latent.vars <- latent.vars[c(cells.1, cells.2), , drop = FALSE]
+    }
+  }
+  de.results <- PerformDE(
+    object = object,
+    cells.1 = cells.1,
+    cells.2 = cells.2,
+    features = features,
+    test.use = test.use,
+    verbose = verbose,
+    min.cells.feature = min.cells.feature,
+    latent.vars = latent.vars,
+    densify = densify,
+    ...
+  )
+  de.results <- cbind(de.results, fc.results[rownames(x = de.results), , drop = FALSE])
+  if (only.pos) {
+    de.results <- de.results[de.results[, 2] > 0, , drop = FALSE]
+  }
+  if (test.use %in% DEmethods_nocorrect()) {
+    de.results <- de.results[order(-de.results$power, -de.results[, 1]), ]
+  } else {
+    de.results <- de.results[order(de.results$p_val, -de.results[, 1]), ]
+    de.results$p_val_adj = p.adjust(
+      p = de.results$p_val,
+      method = "bonferroni",
+      n = nrow(x = object)
+    )
+    # MY CUSTOM CODE: also perform Bonferroni correction for non-zero expression DE data
+    de.results$nz_p_val_adj = p.adjust(
+      p = de.results$nz_p_val,
+      method = "bonferroni",
+      n = nrow(x = object)
+    )
+  # sort table column names
+  de.results <- de.results[,c(1, 13, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 2, 14)]
+  }
+  return(de.results)
+}
+# change namespace of adjusted function to target function
+environment(FindMarkers.default.adjusted) <- asNamespace("Seurat")
+# now overrice target function within that namespace with my custom function
+assignInNamespace("FindMarkers.default", FindMarkers.default.adjusted, ns = "Seurat")
+
+### END DE INITIALIZATION ###
+
+
+
+
 ### create marker dfs to count N cells used in comparisons
+## sample markers
+sample_markers_columns <- c(paste0("n_cells_", names(table(integrated$orig.ident))[1]),
+                            paste0("n_cells_", names(table(integrated$orig.ident))[2]))
+sample_markers_df <- data.frame(matrix(nrow = 0, ncol = length(sample_markers_columns)))
+colnames(sample_markers_df) <- sample_markers_columns
+sample_markers_df[nrow(sample_markers_df) + 1,] = c(table(integrated$orig.ident)[1],
+                                                    table(integrated$orig.ident)[2])
+
+
+# set idents to compare cells at sample level instead of cluster level
+Idents(integrated) <- integrated$orig.ident
+# get sample vs sample markers (now: monoculture vs coculture (for neurons and astrocytes))
+## note: p_val_adj = Adjusted p-value, based on Bonferroni correction using all genes (including non-zero expression) in the dataset
+### adjusted both defaults: logfc.threshold = 0.25, min.pct = 0.1    to 0
+sample_markers <- FindMarkers(integrated, ident.1 = names(table(integrated$orig.ident))[1], only.pos = FALSE, verbose = T,
+                              logfc.threshold = 0, min.pct = 0)
+
+# set pct variable based on BL_C orig.identity index
+if (names(table(integrated$orig.ident))[1] == "BL_C") {
+  pct <- "pct.1"
+} else {
+  pct <- "pct.2"
+}
+
+# filters rows (genes) if they are >0.05 for both p_val and non-zero p_val with Bonferronu correction
+sample_markers <- sample_markers[!(sample_markers$p_val_adj > 0.05 & sample_markers$nz_p_val_adj > 0.05),]
+# filter on pct.ref and order by avg_log2FC
+sample_markers_pval_adj <- sample_markers %>% arrange(desc(avg_log2FC)) # DEPRECATED: filter(pct > 0.1)
+
+# sample_markers_pval_adj <- sample_markers %>% filter(p_val_adj <= 0.05) %>% filter(pct > 0.1) %>% arrange(desc(avg_log2FC))
+write.csv2(sample_markers_pval_adj, file = paste0("sample_markers/pct1=", names(table(integrated$orig.ident))[1], "-pct2=", names(table(integrated$orig.ident))[2], " - (nz-)p-val st 0.05.csv"), row.names = TRUE)
+FGSEA_analysis(markers = sample_markers, working_directory = work_dir, marker_type = 'sample_markers', cluster = pct)
+
+beep()
+# set idents back to cluster level
+Idents(integrated) <- integrated$seurat_clusters
+
+
+
+
+
+
+
+
+
+
+
+# Note: Custom Bonferroni correction based on amount of genes TESTED would be way less stringent then using n_genes in dataset, as we filter features for downstream processing before DE
+## Note: alternatives to this stringent Bonferroni are not supported by Seurat but can be custom made on the output p-values of FindMarkers functions
+### Note: answer to Steven specific discussion: https://github.com/satijalab/seurat/issues/4112
+# dim(integrated[which(rowSums(integrated)!=0),]) # 22056, number of nonzero expression genes
+# dim(integrated) # 23173, number of total genes, also if they have 0 expression, used for DE Bonferroni correction
+
+
+
 ## markers
 markers_columns <- c('cluster_ID', 'n_cells_cluster', 'n_all_other_cells')
 markers_df <- data.frame(matrix(nrow = 0, ncol = length(markers_columns)))
@@ -149,18 +493,9 @@ for (i in cluster_ids) {
                                         sum(table(integrated$seurat_clusters)[-as.integer(i)]))
   ## create markers for integrated data for each cluster vs all other clusters
   markers <- FindMarkers(integrated, ident.1 = i, only.pos = FALSE, verbose = T)
-  pos_markers <- markers %>% filter(avg_log2FC > 0)
-  pos_markers_top10 <- markers %>% filter(avg_log2FC > 0) %>% slice_head(n = 10)
-  pos_markers_top100 <- markers %>% filter(avg_log2FC > 0) %>% slice_head(n = 100)
-  neg_markers <- markers %>% filter(avg_log2FC < 0)
-  neg_markers_top10 <- markers %>% filter(avg_log2FC < 0) %>% slice_head(n = 10)
-  neg_markers_top100 <- markers %>% filter(avg_log2FC < 0) %>% slice_head(n = 100)
-  write.csv2(pos_markers, file = paste0("markers/positive/all_cluster", i, "_m.csv"))
-  write.csv2(pos_markers_top10, file = paste0("markers/positive/top10_cluster", i, "_m.csv"))
-  write.csv2(pos_markers_top100, file = paste0("markers/positive/top100_cluster", i, "_m.csv"))
-  write.csv2(neg_markers, file = paste0("markers/negative/all_cluster", i, "_m.csv"))
-  write.csv2(neg_markers_top10, file = paste0("markers/negative/top10_cluster", i, "_m.csv"))
-  write.csv2(neg_markers_top100, file = paste0("markers/negative/top100_cluster", i, "_m.csv"))
+  # filters rows (genes) if they are >0.05 for both p_val and non-zero p_val with Bonferroni correction
+  markers <- markers[!(markers$p_val_adj > 0.05 & markers$nz_p_val_adj > 0.05),]
+  write.csv2(markers, file = paste0("markers/all_cluster", i, "_m.csv"))
   FGSEA_analysis(markers = markers, working_directory = work_dir, marker_type = 'markers', cluster = i)
 
   ## add amount of cells used for conserved_markers comparison to df
@@ -177,18 +512,14 @@ for (i in cluster_ids) {
   ## create markers conserved between groups (conditions) for integrated data for each cluster vs all other clusters
   conserved_markers <- FindConservedMarkers(integrated, ident.1 = i, only.pos = FALSE,
                                             grouping.var = "orig.ident", verbose = T)
-  pos_conserved_markers <- conserved_markers %>% filter((.[[2]] > 0) & (.[[7]] > 0))
-  pos_conserved_markers_top10 <- conserved_markers %>% filter((.[[2]] > 0) & (.[[7]] > 0)) %>% slice_head(n = 10)
-  pos_conserved_markers_top100 <- conserved_markers %>% filter((.[[2]] > 0) & (.[[7]] > 0)) %>% slice_head(n = 100)
-  neg_conserved_markers <- conserved_markers %>% filter((.[[2]] < 0) | (.[[7]] < 0))
-  neg_conserved_markers_top10 <- conserved_markers %>% filter((.[[2]] < 0) | (.[[7]] < 0)) %>% slice_head(n = 10)
-  neg_conserved_markers_top100 <- conserved_markers %>% filter((.[[2]] < 0) | (.[[7]] < 0)) %>% slice_head(n = 100)
-  write.csv2(pos_conserved_markers, file = paste0("conserved_markers/positive/all_cluster", i, "_cm.csv"))
-  write.csv2(pos_conserved_markers_top10, file = paste0("conserved_markers/positive/top10_cluster", i, "_cm.csv"))
-  write.csv2(pos_conserved_markers_top100, file = paste0("conserved_markers/positive/top100_cluster", i, "_cm.csv"))
-  write.csv2(neg_conserved_markers, file = paste0("conserved_markers/negative/all_cluster", i, "_cm.csv"))
-  write.csv2(neg_conserved_markers_top10, file = paste0("conserved_markers/negative/top10_cluster", i, "_cm.csv"))
-  write.csv2(neg_conserved_markers_top100, file = paste0("conserved_markers/negative/top100_cluster", i, "_cm.csv"))
+  # filters rows (genes) if they are >0.05 for both p_val and non-zero p_val with Bonferroni correction
+  conserved_markers <- conserved_markers[!(conserved_markers$p_val_adj > 0.05 & conserved_markers$nz_p_val_adj > 0.05),]
+  # TODO check if filters are still correct now that order of column names is different etc
+  head(conserved_markers)
+  # pos_conserved_markers <- conserved_markers %>% filter((.[[2]] > 0) & (.[[7]] > 0))
+  # neg_conserved_markers <- conserved_markers %>% filter((.[[2]] < 0) | (.[[7]] < 0))
+  write.csv2(conserved_markers, file = paste0("conserved_markers/all_cluster", i, "_cm.csv"))
+  FGSEA_analysis(markers = conserved_markers, working_directory = work_dir, marker_type = 'conserved_markers', cluster = i)
 
   # ## create condition markers for integrated data within each cluster between each condition
   # ## DEV NOTE: this is not pairwise if more than 2 conditions are integrated at the same time
@@ -207,18 +538,11 @@ for (i in cluster_ids) {
   condition_markers_df[nrow(condition_markers_df) + 1,] = c(i, table(subset$orig.ident)[1], table(subset$orig.ident)[2])
   ## create condition_markers for subset data for within each cluster to compare conditions
   condition_markers <- FindMarkers(subset, ident.1 = "BL_C", verbose = T, only.pos = FALSE)
-  pos_condition_markers <- condition_markers %>% filter(avg_log2FC > 0)
-  pos_condition_markers_top10 <- condition_markers %>% filter(avg_log2FC > 0) %>% slice_head(n = 10)
-  pos_condition_markers_top100 <- condition_markers %>% filter(avg_log2FC > 0) %>% slice_head(n = 100)
-  neg_condition_markers <- condition_markers %>% filter(avg_log2FC < 0)
-  neg_condition_markers_top10 <- condition_markers %>% filter(avg_log2FC < 0) %>% slice_head(n = 10)
-  neg_condition_markers_top100 <- condition_markers %>% filter(avg_log2FC < 0) %>% slice_head(n = 100)
-  write.csv2(pos_condition_markers, file = paste0("condition_markers/positive/all_cluster", i, ".csv"))
-  write.csv2(pos_condition_markers_top10, file = paste0("condition_markers/positive/top10_cluster", i, ".csv"))
-  write.csv2(pos_condition_markers_top100, file = paste0("condition_markers/positive/top100_cluster", i, ".csv"))
-  write.csv2(neg_condition_markers, file = paste0("condition_markers/negative/all_cluster", i, ".csv"))
-  write.csv2(neg_condition_markers_top10, file = paste0("condition_markers/negative/top10_cluster", i, ".csv"))
-  write.csv2(neg_condition_markers_top100, file = paste0("condition_markers/negative/top100_cluster", i, ".csv"))
+  # filters rows (genes) if they are >0.05 for both p_val and non-zero p_val with Bonferroni correction
+  condition_markers <- condition_markers[!(condition_markers$p_val_adj > 0.05 & condition_markers$nz_p_val_adj > 0.05),]
+  # pos_condition_markers <- condition_markers %>% filter(avg_log2FC > 0)
+  # neg_condition_markers <- condition_markers %>% filter(avg_log2FC < 0)
+  write.csv2(condition_markers, file = paste0("condition_markers/all_cluster", i, ".csv"))
   print(paste('Cluster ID:', i, ' before condition_markers FGSEA call'))
   FGSEA_analysis(markers = condition_markers, working_directory = work_dir, marker_type = 'condition_markers', cluster = i)
 
@@ -227,17 +551,12 @@ for (i in cluster_ids) {
   ## get(paste0("cluster", i, "_markers"))
 }
 ## write n cells for comparison to CSV files
+write.csv2(sample_markers_df, file = "sample_markers/n_cells_for_comparison_m.csv", row.names = FALSE)
 write.csv2(markers_df, file = "markers/n_cells_for_comparison_m.csv", row.names = FALSE)
 write.csv2(conserved_markers_df, file = "conserved_markers/n_cells_for_comparison_cm.csv", row.names = FALSE)
 write.csv2(condition_markers_df, file = "condition_markers/n_cells_for_comparison.csv", row.names = FALSE)
 
-## cleanup environment
-rm("markers", "pos_markers", "pos_markers_top10", "pos_markers_top100", "neg_markers", "neg_markers_top10", "neg_markers_top100",
-   "conserved_markers", "pos_conserved_markers", "pos_conserved_markers_top10", "pos_conserved_markers_top100", "neg_conserved_markers", "neg_conserved_markers_top10", "neg_conserved_markers_top100",
-   "condition_markers", "pos_condition_markers", "pos_condition_markers_top10", "pos_condition_markers_top100", "neg_condition_markers", "neg_condition_markers_top10", "neg_condition_markers_top100",
-   "cluster_ids", "subset", "i", "df", "markers_df", "conserved_markers_df", "condition_markers_df",
-   "cm_val1", "cm_val2", "cm_val3", "cm_val4",
-   "markers_columns", "condition_markers_columns", "conserved_markers_columns")
+beep()
 
 
 
@@ -316,3 +635,21 @@ rm("markers", "pos_markers", "pos_markers_top10", "pos_markers_top100", "neg_mar
 #         classic = pValue.classic[sel.go])
 #
 # showSigOfNodes(sampleGOdata, score(resultKS.elim), firstSigNodes = 5, useInfo = 'all')
+
+
+### TESTING BAS CUSTOM GENE LISTS FOR DE
+# bas <- read.table("C:/Users/mauri/Desktop/M/Erasmus MC PhD/Projects/Single Cell RNA Sequencing/Seurat/data/Bas Genes of interest scRNA seq DE.txt",
+#                   sep = '\t')
+# bas_markers <- c(bas$V1)
+# sample_markers[rownames(sample_markers) %in% bas_markers,]
+#
+# bas[bas_markers %in% rownames(sample_markers),] # which genes are in DE at all
+# bas[!bas_markers %in% rownames(sample_markers),] # which genes are not in DE at all
+# bas[bas_markers %in% rownames(integrated@assays$RNA@meta.features),] # which genes are in all features
+# bas[!bas_markers %in% rownames(integrated@assays$RNA@meta.features),] # which genes are not in all features - GJB6
+
+# SYN synonyms: SYN1 & SYN3
+# PSD95 synonym: DLG4 (SAP90)
+# ---
+# GJB6 synonyms: CX30, EDH, HED, DFNA3
+###
