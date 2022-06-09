@@ -93,7 +93,7 @@ data <- subset(data, subset = nFeature_RNA > 200 & percent.mt < 20)
 # data <- ScaleData(data, features = all.genes)
 
 # normalization + FindVariableFeatures + ScaleData (also sets default assay to SCT)
-data <- SCTransform(data, vst.flavor = "v2", vars.to.regress = "percent.mt")
+data <- SCTransform(data, vars.to.regress = "percent.mt")
 
 # plot variable features with and without labels
 plot1 <- VariableFeaturePlot(data, cols = c("#85d0f5", "#2b2f70")) # EMC colors

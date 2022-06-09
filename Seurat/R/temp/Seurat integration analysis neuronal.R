@@ -31,23 +31,23 @@ run_label_transfer <- FALSE
 perform_selection <- TRUE
 
 ## SELECTION PARAMETERS FOR NEURONS
-# # define selection panel (varies per selection type)
-# selection_panel <- c("MAP2", "DCX", "NEUROG2") # RBFOX3 <-> DCX
-# # define panel type
-# selection_panel_type <- "neuronal"
-## SELECTION PARAMETERS FOR ASTROCYTES
 # define selection panel (varies per selection type)
-selection_panel <- c("VIM", "S100B", "FAPB7") # SOX9 <-> FAPB7
+selection_panel <- c("MAP2", "RBFOX3", "NEUROG2") # RBFOX3 <-> DCX
 # define panel type
-selection_panel_type <- "astrocytical"
+selection_panel_type <- "neuronal"
+## SELECTION PARAMETERS FOR ASTROCYTES
+# # define selection panel (varies per selection type)
+# selection_panel <- c("VIM", "S100B", "FAPB7") # SOX9 <-> FAPB7
+# # define panel type
+# selection_panel_type <- "astrocytical"
 ## SELECTION PARAMETERS IN GENERAL
 # define minimally percent expression in cluster for each feature from selection_panel
 selection_percent_expressed <- 20
 
 ## files and sample names
-rds.files <- c("C:/Users/mauri/Desktop/Single Cell RNA Sequencing/Seurat/results/Pipe SCTv2 01-06-2022/BL_A/BL_A.rds",
-               "C:/Users/mauri/Desktop/Single Cell RNA Sequencing/Seurat/results/Pipe SCTv2 01-06-2022/BL_C/BL_C.rds")
-sample_name <- "BL_A + BL_C"
+rds.files <- c("C:/Users/mauri/Desktop/Single Cell RNA Sequencing/Seurat/results/Pipe SCTv2 +new_panel_selection +01-06-2022/BL_N/BL_N.rds",
+               "C:/Users/mauri/Desktop/Single Cell RNA Sequencing/Seurat/results/Pipe SCTv2 +new_panel_selection +01-06-2022/BL_C/BL_C.rds")
+sample_name <- "BL_N + BL_C"
 ref_sample <- "BL_C"
 ### END USER PARAMETERS
 

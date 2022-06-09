@@ -37,7 +37,7 @@ perform_selection <- TRUE
 # selection_panel_type <- "neuronal"
 ## SELECTION PARAMETERS FOR ASTROCYTES
 # define selection panel (varies per selection type)
-selection_panel <- c("VIM", "S100B", "FAPB7") # SOX9 <-> FAPB7
+selection_panel <- c("VIM", "S100B", "SOX9") # SOX9 <-> FAPB7
 # define panel type
 selection_panel_type <- "astrocytical"
 ## SELECTION PARAMETERS IN GENERAL
@@ -45,8 +45,8 @@ selection_panel_type <- "astrocytical"
 selection_percent_expressed <- 20
 
 ## files and sample names
-rds.files <- c("C:/Users/mauri/Desktop/Single Cell RNA Sequencing/Seurat/results/Pipe SCTv2 01-06-2022/BL_A/BL_A.rds",
-               "C:/Users/mauri/Desktop/Single Cell RNA Sequencing/Seurat/results/Pipe SCTv2 01-06-2022/BL_C/BL_C.rds")
+rds.files <- c("C:/Users/mauri/Desktop/Single Cell RNA Sequencing/Seurat/results/Pipe SCTv2 +new_panel_selection +01-06-2022/BL_A/BL_A.rds",
+               "C:/Users/mauri/Desktop/Single Cell RNA Sequencing/Seurat/results/Pipe SCTv2 +new_panel_selection +01-06-2022/BL_C/BL_C.rds")
 sample_name <- "BL_A + BL_C"
 ref_sample <- "BL_C"
 ### END USER PARAMETERS
