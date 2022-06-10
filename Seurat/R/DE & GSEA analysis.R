@@ -388,6 +388,9 @@ assignInNamespace("FindMarkers.default", FindMarkers.default.adjusted, ns = "Seu
 # read an integrated saved RDS file
 sample_name <- "BL_A + BL_C"
 integrated <- readRDS("C:/Users/mauri/Desktop/Single Cell RNA Sequencing/Seurat/results/Pipe +SCT +Leiden -Cellcycle +SingleR +Autoselection +05-05-2022/integrated/BL_A + BL_C/after_selection/BL_A + BL_C.rds")
+## TODO deprecate when only SCTv2 data with new visualizations are in use
+# prep data (recorrect counts) for SCT DEG and visualization
+integrated <- PrepSCTFindMarkers(integrated, assay = "SCT")
 
 # set amount of cells used for 'downsampling' clusters during FindMarkers function (max amount of cells per cluster)
 nCellsDownsampling <- Inf
