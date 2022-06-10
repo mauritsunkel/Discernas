@@ -37,22 +37,20 @@ perform_selection <- TRUE
 # selection_panel_type <- "neuronal"
 ## SELECTION PARAMETERS FOR ASTROCYTES
 # define selection panel (varies per selection type)
-selection_panel <- c("VIM", "S100B", "FAPB7") # SOX9 <-> FAPB7
+selection_panel <- c("VIM", "S100B", "FABP7") # SOX9 <-> FABP7
 # define panel type
 selection_panel_type <- "astrocytical"
 ## SELECTION PARAMETERS IN GENERAL
 # define minimally percent expression in cluster for each feature from selection_panel
 selection_percent_expressed <- 20
 
-## files and sample names
-rds.files <- c("C:/Users/mauri/Desktop/Single Cell RNA Sequencing/Seurat/results/Pipe SCTv2 01-06-2022/BL_A/BL_A.rds",
-               "C:/Users/mauri/Desktop/Single Cell RNA Sequencing/Seurat/results/Pipe SCTv2 01-06-2022/BL_C/BL_C.rds")
-sample_name <- "BL_A + BL_C"
+# files and sample names
+rds.files <- c("C:/Users/mauri/Desktop/Single Cell RNA Sequencing/Seurat/results/Pipe SCTv2 +new_panel_selection +01-06-2022/BL_N/BL_N.rds",
+               "C:/Users/mauri/Desktop/Single Cell RNA Sequencing/Seurat/results/Pipe SCTv2 +new_panel_selection +01-06-2022/BL_C/BL_C.rds")
+sample_name <- "BL_N + BL_C"
 ref_sample <- "BL_C"
-### END USER PARAMETERS
 
-
-
+# initialize start time and directories
 start_time <- format(Sys.time(), "%F %H-%M-%S")
 dir.create(paste0(work_dir, 'results/', start_time, '/integrated/', sample_name, "/"), recursive = T)
 setwd(paste0(work_dir, 'results/', start_time, '/integrated/', sample_name, "/"))
@@ -63,7 +61,6 @@ dir.create("DE_analysis/condition_markers/")
 dir.create("DE_analysis/conserved_markers/")
 dir.create("Plots/")
 dir.create("GSEA_analysis/")
-### end initialization
 ### END USER PARAMETERS
 
 
@@ -113,6 +110,10 @@ integration_analysis <- function(integrated, selection_performed = FALSE) {
   # algorithm = 4 (= Leiden algorithm) & use: method = "igraph" (for large datasets when using Leiden algorithm)
   integrated <- Seurat::FindClusters(integrated, resolution = 0.5, algorithm = 4, method = "igraph")
   integrated <- Seurat::RunUMAP(integrated, reduction = "pca", dims = 1:choose_N_PCs)
+
+  # prep data (recorrect counts) for SCT DEG and visualization
+  integrated <- PrepSCTFindMarkers(integrated, assay = "SCT")
+  DefaultAssay(integrated) <- "SCT"
 
   # run label transfer for integrated analysis after plotting regular UMAP
   if (run_label_transfer) {
@@ -249,13 +250,14 @@ integration_analysis <- function(integrated, selection_performed = FALSE) {
   ggplot2::ggsave(paste0("UMAPs_", sample_name, ".png"), plot = p, width = c(12,12), height = c(12,12))
   dev.off() # TODO test if this works to get heatmap instead of old plot in label transfer after selection
 
-  # For performing differential expression after integration, we switch back to the original data (RNA, not SCT)
-  ## SCT are now the normalized (and scaled?) Pearson residuals for each data set, prior to integration
-  SeuratObject::DefaultAssay(integrated) <- "RNA"
-  # based on the test used with any of the FindMarkers or derived Seurat functions the RNA counts or normalized data will be used, which are both in different data slots
-  ## because of using SCTransform the RNA assay data is not yet normalized, the data need not be scaled as the scale.data slot is never used for DE
-  ### proofs by Seurat responses in Github issue numbers: 1836, 2023, 3839, 4032
-  integrated <- Seurat::NormalizeData(integrated, normalization.method = "LogNormalize", scale.factor = 10000)
+  ### DEPRECATED: was for Seurat SCT v1, v2 now performs DEG and visualization on the SCT assay data slot
+  # # For performing differential expression after integration, we switch back to the original data (RNA, not SCT)
+  # ## SCT are now the normalized (and scaled?) Pearson residuals for each data set, prior to integration
+  # SeuratObject::DefaultAssay(integrated) <- "RNA"
+  # # based on the test used with any of the FindMarkers or derived Seurat functions the RNA counts or normalized data will be used, which are both in different data slots
+  # ## because of using SCTransform the RNA assay data is not yet normalized, the data need not be scaled as the scale.data slot is never used for DE
+  # ### proofs by Seurat responses in Github issue numbers: 1836, 2023, 3839, 4032
+  # integrated <- Seurat::NormalizeData(integrated, normalization.method = "LogNormalize", scale.factor = 10000)
 
   ## perform visualization
   astrocyte_interest <- c("GFAP", "VIM", "S100B", "SOX9", "CD44", "AQP4", "ALDH1L1",
@@ -335,6 +337,10 @@ if (perform_selection) {
   p <- Seurat::DotPlot(integrated, features = selection_panel)
   # get cluster names where percent expressed is above (25)% for each feature (gene) of selection_panel
   cluster_selection <- names(which(table(p$data[p$data$pct.exp > selection_percent_expressed,]$id) == length(selection_panel)))
+  # if no clusters selected, set selection to NULL
+  if (length(cluster_selection) == 0) {
+    cluster_selection <- NULL
+  }
   # subset/keep only clusters based on cluster_selection
   integrated <- subset(integrated, idents = cluster_selection)
   # remove empty clusters from original seurat_clusters
@@ -347,10 +353,6 @@ if (perform_selection) {
 
 # TODO remove after automating the pipeline
 beep()
-
-
-
-
 
 
 
