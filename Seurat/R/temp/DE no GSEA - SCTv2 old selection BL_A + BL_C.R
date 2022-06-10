@@ -8,6 +8,27 @@ library(tidyr)
 library(dplyr)
 
 
+## TODO build in SCT based DEG: https://satijalab.org/seurat/articles/sctransform_v2_vignette.html
+# SCT DEG: we make use of 'corrected counts' that are stored in the data slot of the the SCT assay
+
+
+## use SCT assay for visualization
+# DefaultAssay(immune.combined.sct) <- "SCT"
+# visualization_functions_here()
+
+
+
+# SCTransform combines NormalizeData (better normalization), ScaleData and FindVariableFeatures
+## v2 upgrades: https://satijalab.org/seurat/articles/sctransform_v2_vignette.html#perform-integration-using-pearson-residuals-1
+# normally SCT used for dadta transformations that are then used for: PCA, clustering, UMAP
+# before, RNA assay was used for DE, as SCT Pearson residuals could not resolve batch effects in comparison
+## now: this is the optimized way of doing DE analysis
+# can use top VariableFeatureGenes for marker identifictation: https://www.biostars.org/p/406388/
+# RNA assay: counts@rawcounts / TPMs, data@normalized data, scale.data@scaled data
+# SCT assay: counts@corrected counts, data@log1p(counts), scale.data@pearson residuals
+
+
+# TODO commented out FGSEA analysis for now, focus on DEGA
 
 # TODO put in it's own file and source from here or pipeline
 ## TODO tryout sourcing in test file by setting working directory and seeing how sourcing behaves with a mock function
@@ -84,38 +105,9 @@ FGSEA_analysis <- function(markers, working_directory, marker_type, cluster) {
   }
 }
 
-### USER PARAMETERS
-# read an integrated saved RDS file
-sample_name <- "BL_A + BL_C"
-integrated <- readRDS("C:/Users/mauri/Desktop/Single Cell RNA Sequencing/Seurat/results/Pipe +SCT +Leiden -Cellcycle +SingleR +Autoselection +05-05-2022/integrated/BL_A + BL_C/after_selection/BL_A + BL_C.rds")
-
-# work dir should contain forward slashes (/) on Windows
-work_dir <- "C:/Users/mauri/Desktop/Single Cell RNA Sequencing/Seurat/"
-
-# load future library and set plan to run certain functions with multiprocessing
-plan("multisession", workers = 1) # DEVNOTE: n_workers > 1 for parallelization (for me, 5 is max, 4 is safe)
-
-# play system sounds, call function to alarm user than running is done!
-beep <- function(n = 5){
-  for(i in seq(n)){
-    system("rundll32 user32.dll, MessageBeep -1")
-    Sys.sleep(.5)
-  }
-}
-### END USER PARAMETERS
-start_time <- format(Sys.time(), "%F %H-%M-%S")
-dir.create(paste0(work_dir, 'results/', start_time, '/integrated/', sample_name, "/DE_analysis/"), recursive = T)
-work_dir <- paste0(work_dir, 'results/', start_time, '/integrated/', sample_name, "/DE_analysis/")
-setwd(work_dir)
-dir.create(paste0(work_dir, "../GSE_analysis/"))
-dir.create(paste0(work_dir, "sample_markers/"))
-dir.create(paste0(work_dir, "markers/"))
-dir.create(paste0(work_dir, "conserved_markers/"))
-dir.create(paste0(work_dir, "condition_markers/"))
 
 
 ## OVERRIDE SEURAT DE FUNCTIONS WITH ADDITIONAL FUNCTIONALITY
-
 # fixInNamespace(FindMarkers.Assay, pos = "package:Seurat") # use this to copy source code
 # trace(Seurat:::FindMarkers.Assay, edit = T)
 ## but then need: untrace(Seurat:::FindMarkers.Assay) # to undo edits by tracing, will also be undone on reloading R
@@ -263,29 +255,28 @@ environment(WilcoxDETest.adjusted) <- asNamespace("Seurat")
 # now overrice target function within that namespace with my custom function
 assignInNamespace("WilcoxDETest", WilcoxDETest.adjusted, ns = "Seurat")
 
-
 FindMarkers.default.adjusted <- function(
-  object,
-  slot = "data",
-  counts = numeric(),
-  cells.1 = NULL,
-  cells.2 = NULL,
-  features = NULL,
-  logfc.threshold = 0.25,
-  test.use = 'wilcox',
-  min.pct = 0.1,
-  min.diff.pct = -Inf,
-  verbose = TRUE,
-  only.pos = FALSE,
-  max.cells.per.ident = Inf,
-  random.seed = 1,
-  latent.vars = NULL,
-  min.cells.feature = 3,
-  min.cells.group = 3,
-  pseudocount.use = 1,
-  fc.results = NULL,
-  densify = FALSE,
-  ...
+    object,
+    slot = "data",
+    counts = numeric(),
+    cells.1 = NULL,
+    cells.2 = NULL,
+    features = NULL,
+    logfc.threshold = 0.25,
+    test.use = 'wilcox',
+    min.pct = 0.1,
+    min.diff.pct = -Inf,
+    verbose = TRUE,
+    only.pos = FALSE,
+    max.cells.per.ident = Inf,
+    random.seed = 1,
+    latent.vars = NULL,
+    min.cells.feature = 3,
+    min.cells.group = 3,
+    pseudocount.use = 1,
+    fc.results = NULL,
+    densify = FALSE,
+    ...
 ) {
   ValidateCellGroups(
     object = object,
@@ -380,8 +371,8 @@ FindMarkers.default.adjusted <- function(
       method = "bonferroni",
       n = nrow(x = object)
     )
-  # sort table column names
-  de.results <- de.results[,c(1, 13, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 2, 14)]
+    # sort table column names
+    de.results <- de.results[,c(1, 13, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 2, 14)]
   }
   return(de.results)
 }
@@ -389,11 +380,47 @@ FindMarkers.default.adjusted <- function(
 environment(FindMarkers.default.adjusted) <- asNamespace("Seurat")
 # now overrice target function within that namespace with my custom function
 assignInNamespace("FindMarkers.default", FindMarkers.default.adjusted, ns = "Seurat")
-
 ### END DE INITIALIZATION ###
 
 
 
+### USER PARAMETERS
+# read an integrated saved RDS file
+sample_name <- "BL_A + BL_C"
+integrated <- readRDS("C:/Users/mauri/Desktop/Single Cell RNA Sequencing/Seurat/results/Pipe SCTv2 +new_panel_selection +01-06-2022/integrated - old selection/BL_A + BL_C/BL_A + BL_C.rds")
+## TODO deprecate when only SCTv2 data with new visualizations are in use
+# prep data (recorrect counts) for SCT DEG and visualization
+integrated <- PrepSCTFindMarkers(integrated, assay = "SCT")
+
+
+
+# set amount of cells used for 'downsampling' clusters during FindMarkers function (max amount of cells per cluster)
+nCellsDownsampling <- Inf
+
+# work dir should contain forward slashes (/) on Windows
+work_dir <- "C:/Users/mauri/Desktop/Single Cell RNA Sequencing/Seurat/"
+
+# load future library and set plan to run certain functions with multiprocessing
+plan("multisession", workers = 1) # DEVNOTE: n_workers > 1 for parallelization (for me, 5 is max, 4 is safe)
+
+# play system sounds, call function to alarm user that run is done!
+beep <- function(n = 5){
+  for(i in seq(n)){
+    system("rundll32 user32.dll, MessageBeep -1")
+    Sys.sleep(.5)
+  }
+}
+
+start_time <- format(Sys.time(), "%F %H-%M-%S")
+dir.create(paste0(work_dir, 'results/', start_time, '/integrated/', sample_name, "/DE_analysis/"), recursive = T)
+work_dir <- paste0(work_dir, 'results/', start_time, '/integrated/', sample_name, "/DE_analysis/")
+setwd(work_dir)
+dir.create(paste0(work_dir, "../GSE_analysis/"))
+dir.create(paste0(work_dir, "sample_markers/"))
+dir.create(paste0(work_dir, "markers/"))
+dir.create(paste0(work_dir, "conserved_markers/"))
+dir.create(paste0(work_dir, "condition_markers/"))
+### END USER PARAMETERS
 
 ### create marker dfs to count N cells used in comparisons
 ## sample markers
@@ -409,7 +436,7 @@ Idents(integrated) <- integrated$orig.ident
 # get sample vs sample markers (now: monoculture vs coculture (for neurons and astrocytes))
 ## note: p_val_adj = Adjusted p-value, based on Bonferroni correction using all genes (including non-zero expression) in the dataset
 ### adjusted both defaults: logfc.threshold = 0.25, min.pct = 0.1    to 0
-sample_markers <- FindMarkers(integrated, ident.1 = names(table(integrated$orig.ident))[1], only.pos = FALSE, verbose = T,
+sample_markers <- FindMarkers(integrated, assay = "SCT", ident.1 = names(table(integrated$orig.ident))[1], only.pos = FALSE, verbose = T,
                               logfc.threshold = 0, min.pct = 0)
 
 # set pct variable based on BL_C orig.identity index
@@ -426,17 +453,7 @@ sample_markers_pval_adj <- sample_markers %>% arrange(desc(avg_log2FC)) # DEPREC
 
 # sample_markers_pval_adj <- sample_markers %>% filter(p_val_adj <= 0.05) %>% filter(pct > 0.1) %>% arrange(desc(avg_log2FC))
 write.csv2(sample_markers_pval_adj, file = paste0("sample_markers/pct1=", names(table(integrated$orig.ident))[1], "-pct2=", names(table(integrated$orig.ident))[2], " - (nz-)p-val st 0.05.csv"), row.names = TRUE)
-FGSEA_analysis(markers = sample_markers, working_directory = work_dir, marker_type = 'sample_markers', cluster = pct)
-
-beep()
-
-
-
-
-
-
-
-
+# FGSEA_analysis(markers = sample_markers, working_directory = work_dir, marker_type = 'sample_markers', cluster = pct)
 
 # set idents back to cluster level
 Idents(integrated) <- integrated$seurat_clusters
@@ -446,6 +463,8 @@ Idents(integrated) <- integrated$seurat_clusters
 ### Note: answer to Steven specific discussion: https://github.com/satijalab/seurat/issues/4112
 # dim(integrated[which(rowSums(integrated)!=0),]) # 22056, number of nonzero expression genes
 # dim(integrated) # 23173, number of total genes, also if they have 0 expression, used for DE Bonferroni correction
+
+
 
 ## markers
 markers_columns <- c('cluster_ID', 'n_cells_cluster', 'n_all_other_cells')
@@ -468,6 +487,57 @@ colnames(condition_markers_df) <- condition_markers_columns
 
 ## get cluster IDs to loop over
 cluster_ids <- levels(integrated$seurat_clusters)
+
+
+
+
+
+
+
+
+
+# TODO test for cluster 1 (testing just 1 cluster vs 1 other cluster gives same memory error)
+nCellsDownsampling <- 100
+i <- 1
+for (thing in ls()) { message(thing); print(object.size(get(thing)), units='auto') }
+
+
+## add amount of cells used for conserved_markers comparison to df
+df <- data.frame('orig.ident' = integrated$orig.ident, 'seurat_clusters' = integrated$seurat_clusters)
+# condition 1 & match cluster
+cm_val1 <- nrow(df %>% filter(orig.ident == names(table(integrated$orig.ident))[1] & seurat_clusters == i))
+# condition 2 & match cluster
+cm_val2 <- nrow(df %>% filter(orig.ident == names(table(integrated$orig.ident))[2] & seurat_clusters == i))
+# condition 1 & no match cluster
+cm_val3 <- nrow(df %>% filter(orig.ident == names(table(integrated$orig.ident))[1] & seurat_clusters != i))
+# condition 2 & no match cluster
+cm_val4 <- nrow(df %>% filter(orig.ident == names(table(integrated$orig.ident))[2] & seurat_clusters != i))
+conserved_markers_df[nrow(conserved_markers_df) + 1,] = c(i, cm_val1, cm_val2, cm_val3, cm_val4)
+## create markers conserved between groups (conditions) for integrated data for each cluster vs all other clusters
+conserved_markers <- FindConservedMarkers(integrated, ident.1 = i, only.pos = FALSE,
+                                          max.cells.per.ident = nCellsDownsampling,
+                                          grouping.var = "orig.ident", verbose = T)
+# filters rows (genes) if they are >0.05 for both p_val and non-zero p_val with Bonferroni correction
+conserved_markers <- conserved_markers[!(conserved_markers$p_val_adj > 0.05 & conserved_markers$nz_p_val_adj > 0.05),]
+# TODO check if filters are still correct now that order of column names is different etc
+head(conserved_markers)
+# pos_conserved_markers <- conserved_markers %>% filter((.[[2]] > 0) & (.[[7]] > 0))
+# neg_conserved_markers <- conserved_markers %>% filter((.[[2]] < 0) | (.[[7]] < 0))
+write.csv2(conserved_markers, file = paste0("conserved_markers/all_cluster", i, "_cm.csv"))
+# FGSEA_analysis(markers = conserved_markers, working_directory = work_dir, marker_type = 'conserved_markers', cluster = i)
+
+
+DefaultAssay(integrated) <- "SCT"
+VariableFeatures(integrated)
+
+
+
+
+
+
+
+
+
 for (i in cluster_ids) {
   print(paste('Cluster ID:', i))
 
@@ -476,39 +546,37 @@ for (i in cluster_ids) {
                                         table(integrated$seurat_clusters)[i],
                                         sum(table(integrated$seurat_clusters)[-as.integer(i)]))
   ## create markers for integrated data for each cluster vs all other clusters
-  markers <- FindMarkers(integrated, ident.1 = i, only.pos = FALSE, verbose = T)
+  markers <- FindMarkers(integrated, assay = "SCT", ident.1 = i, max.cells.per.ident = nCellsDownsampling, only.pos = FALSE, verbose = T)
   # filters rows (genes) if they are >0.05 for both p_val and non-zero p_val with Bonferroni correction
   markers <- markers[!(markers$p_val_adj > 0.05 & markers$nz_p_val_adj > 0.05),]
   write.csv2(markers, file = paste0("markers/all_cluster", i, "_m.csv"))
-  FGSEA_analysis(markers = markers, working_directory = work_dir, marker_type = 'markers', cluster = i)
+  # FGSEA_analysis(markers = markers, working_directory = work_dir, marker_type = 'markers', cluster = i)
 
 
 
 
-
-
-
-  # ## add amount of cells used for conserved_markers comparison to df
-  # df <- data.frame('orig.ident' = integrated$orig.ident, 'seurat_clusters' = integrated$seurat_clusters)
-  # # condition 1 & match cluster
-  # cm_val1 <- nrow(df %>% filter(orig.ident == names(table(integrated$orig.ident))[1] & seurat_clusters == i))
-  # # condition 2 & match cluster
-  # cm_val2 <- nrow(df %>% filter(orig.ident == names(table(integrated$orig.ident))[2] & seurat_clusters == i))
-  # # condition 1 & no match cluster
-  # cm_val3 <- nrow(df %>% filter(orig.ident == names(table(integrated$orig.ident))[1] & seurat_clusters != i))
-  # # condition 2 & no match cluster
-  # cm_val4 <- nrow(df %>% filter(orig.ident == names(table(integrated$orig.ident))[2] & seurat_clusters != i))
-  # conserved_markers_df[nrow(conserved_markers_df) + 1,] = c(i, cm_val1, cm_val2, cm_val3, cm_val4)
-  # ## create markers conserved between groups (conditions) for integrated data for each cluster vs all other clusters
-  # conserved_markers <- FindConservedMarkers(integrated, ident.1 = i, only.pos = FALSE,
-  #                                           grouping.var = "orig.ident", verbose = T)
-  # # filters rows (genes) if they are >0.05 for both p_val and non-zero p_val with Bonferroni correction
-  # conserved_markers <- conserved_markers[!(conserved_markers$p_val_adj > 0.05 & conserved_markers$nz_p_val_adj > 0.05),]
-  # # TODO check if filters are still correct now that order of column names is different etc
-  # head(conserved_markers)
-  # # pos_conserved_markers <- conserved_markers %>% filter((.[[2]] > 0) & (.[[7]] > 0))
-  # # neg_conserved_markers <- conserved_markers %>% filter((.[[2]] < 0) | (.[[7]] < 0))
-  # write.csv2(conserved_markers, file = paste0("conserved_markers/all_cluster", i, "_cm.csv"))
+  ## add amount of cells used for conserved_markers comparison to df
+  df <- data.frame('orig.ident' = integrated$orig.ident, 'seurat_clusters' = integrated$seurat_clusters)
+  # condition 1 & match cluster
+  cm_val1 <- nrow(df %>% filter(orig.ident == names(table(integrated$orig.ident))[1] & seurat_clusters == i))
+  # condition 2 & match cluster
+  cm_val2 <- nrow(df %>% filter(orig.ident == names(table(integrated$orig.ident))[2] & seurat_clusters == i))
+  # condition 1 & no match cluster
+  cm_val3 <- nrow(df %>% filter(orig.ident == names(table(integrated$orig.ident))[1] & seurat_clusters != i))
+  # condition 2 & no match cluster
+  cm_val4 <- nrow(df %>% filter(orig.ident == names(table(integrated$orig.ident))[2] & seurat_clusters != i))
+  conserved_markers_df[nrow(conserved_markers_df) + 1,] = c(i, cm_val1, cm_val2, cm_val3, cm_val4)
+  ## create markers conserved between groups (conditions) for integrated data for each cluster vs all other clusters
+  conserved_markers <- FindConservedMarkers(integrated, assay = "SCT", ident.1 = i, only.pos = FALSE,
+                                            max.cells.per.ident = nCellsDownsampling,
+                                            grouping.var = "orig.ident", verbose = T)
+  # filters rows (genes) if they are >0.05 for both p_val and non-zero p_val with Bonferroni correction
+  conserved_markers <- conserved_markers[!(conserved_markers$p_val_adj > 0.05 & conserved_markers$nz_p_val_adj > 0.05),]
+  # TODO check if filters are still correct now that order of column names is different etc
+  head(conserved_markers)
+  # pos_conserved_markers <- conserved_markers %>% filter((.[[2]] > 0) & (.[[7]] > 0))
+  # neg_conserved_markers <- conserved_markers %>% filter((.[[2]] < 0) | (.[[7]] < 0))
+  write.csv2(conserved_markers, file = paste0("conserved_markers/all_cluster", i, "_cm.csv"))
   # FGSEA_analysis(markers = conserved_markers, working_directory = work_dir, marker_type = 'conserved_markers', cluster = i)
 
 
@@ -520,27 +588,26 @@ for (i in cluster_ids) {
 
   # ## create condition markers for integrated data within each cluster between each condition
   # ## DEV NOTE: this is not pairwise if more than 2 conditions are integrated at the same time
-  # subset <- subset(integrated, seurat_clusters == i)
-  # # ##  change cluster identity to original identity to find markers between conditions
-  # Idents(subset) <- subset$orig.ident
-  # ## check if subset contains cells for at least 2 condtions/samples for comparison
-  # ### DEVNOTE: also need to check if a condition has ENOUGH cells for comparison?
-  # if (length(names(table(subset$orig.ident))) == 1) {
-  #   print(paste0('In cluster ', i, ' only cells for condition/sample ',
-  #                names(table(subset$orig.ident)), ' were found, cannot create condition markers for this cluster.'))
-  #   next
-  # }
-  #
-  # ## add amount of cells used for condition_markers comparison to df
-  # condition_markers_df[nrow(condition_markers_df) + 1,] = c(i, table(subset$orig.ident)[1], table(subset$orig.ident)[2])
-  # ## create condition_markers for subset data for within each cluster to compare conditions
-  # condition_markers <- FindMarkers(subset, ident.1 = "BL_C", verbose = T, only.pos = FALSE)
-  # # filters rows (genes) if they are >0.05 for both p_val and non-zero p_val with Bonferroni correction
-  # condition_markers <- condition_markers[!(condition_markers$p_val_adj > 0.05 & condition_markers$nz_p_val_adj > 0.05),]
-  # # pos_condition_markers <- condition_markers %>% filter(avg_log2FC > 0)
-  # # neg_condition_markers <- condition_markers %>% filter(avg_log2FC < 0)
-  # write.csv2(condition_markers, file = paste0("condition_markers/all_cluster", i, ".csv"))
-  # print(paste('Cluster ID:', i, ' before condition_markers FGSEA call'))
+  subset <- subset(integrated, seurat_clusters == i)
+  # ##  change cluster identity to original identity to find markers between conditions
+  Idents(subset) <- subset$orig.ident
+  ## check if subset contains cells for at least 2 condtions/samples for comparison
+  ### DEVNOTE: also need to check if a condition has ENOUGH cells for comparison?
+  if (length(names(table(subset$orig.ident))) == 1) {
+    print(paste0('In cluster ', i, ' only cells for condition/sample ',
+                 names(table(subset$orig.ident)), ' were found, cannot create condition markers for this cluster.'))
+    next
+  }
+  ## add amount of cells used for condition_markers comparison to df
+  condition_markers_df[nrow(condition_markers_df) + 1,] = c(i, table(subset$orig.ident)[1], table(subset$orig.ident)[2])
+  ## create condition_markers for subset data for within each cluster to compare conditions
+  condition_markers <- FindMarkers(subset, assay = "SCT", recorrect_umi = FALSE, ident.1 = "BL_C", verbose = T, only.pos = FALSE)
+  # filters rows (genes) if they are >0.05 for both p_val and non-zero p_val with Bonferroni correction
+  condition_markers <- condition_markers[!(condition_markers$p_val_adj > 0.05 & condition_markers$nz_p_val_adj > 0.05),]
+  # pos_condition_markers <- condition_markers %>% filter(avg_log2FC > 0)
+  # neg_condition_markers <- condition_markers %>% filter(avg_log2FC < 0)
+  write.csv2(condition_markers, file = paste0("condition_markers/all_cluster", i, ".csv"))
+  print(paste('Cluster ID:', i, ' before condition_markers FGSEA call'))
   # FGSEA_analysis(markers = condition_markers, working_directory = work_dir, marker_type = 'condition_markers', cluster = i)
 
   # DEVNOTE if want to assign each table to its own variable, use assign() and get()
@@ -555,27 +622,7 @@ write.csv2(condition_markers_df, file = "condition_markers/n_cells_for_compariso
 
 beep()
 
-# TODO run BL_A + BL_C
-## markers memory error
-## conserved_markers memory error
-
-
-# TODO Seurat answer is to downsample: using max.cells.per.ident (and random.seed for max.cells.per.ident)
-table(integrated$seurat_clusters) # show n_cells per cluster
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+Seurat::FindMarkers()
 
 
 
