@@ -386,14 +386,14 @@ assignInNamespace("FindMarkers.default", FindMarkers.default.adjusted, ns = "Seu
 
 ### USER PARAMETERS
 # read an integrated saved RDS file
-sample_name <- "BL_A"
-integrated <- readRDS("C:/Users/Kushner Stereology/Desktop/Maurits/EMC_SKlab_scRNA data/results/Pipe_SCTv2_corrected_13-06/BL_A/BL_A.rds")
+sample_name <- "BL_A + BL_C"
+integrated <- readRDS("F:/Maurits/EMC_SKlab_scRNA data/results/Pipe_SCTv2_corrected_13-06/integrated - old selection/BL_A + BL_C/after_selection/BL_A + BL_C.rds")
 
 # set amount of cells used for 'downsampling' clusters during FindMarkers function (max amount of cells per cluster)
 nCellsDownsampling <- Inf
 
 # work dir should contain forward slashes (/) on Windows
-work_dir <- "C:/Users/Kushner Stereology/Desktop/Maurits/EMC_SKlab_scRNA data/"
+work_dir <- "F:/Maurits/EMC_SKlab_scRNA data/"
 
 # load future library and set plan to run certain functions with multiprocessing
 plan("multisession", workers = 1) # DEVNOTE: n_workers > 1 for parallelization (for me, 5 is max, 4 is safe)
