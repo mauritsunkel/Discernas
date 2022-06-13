@@ -21,11 +21,11 @@ annotations <- c("age", "structure", "custom.clusterv2")
 ## pre-selection data
 sample_names <- c("BL_A", "BL_C", "BL_N", "BL_A + BL_C", "BL_N + BL_C")
 rds.files <- c(
-  "C:/Users/mauri/Desktop/Single Cell RNA Sequencing/Seurat/results/Pipe SCTv2 +new_panel_selection +01-06-2022/BL_A/BL_A.rds",
-  "C:/Users/mauri/Desktop/Single Cell RNA Sequencing/Seurat/results/Pipe SCTv2 +new_panel_selection +01-06-2022/BL_C/BL_C.rds",
-  "C:/Users/mauri/Desktop/Single Cell RNA Sequencing/Seurat/results/Pipe SCTv2 +new_panel_selection +01-06-2022/BL_N/BL_N.rds",
-  "C:/Users/mauri/Desktop/Single Cell RNA Sequencing/Seurat/results/Pipe SCTv2 +new_panel_selection +01-06-2022/integrated - old selection/BL_A + BL_C/BL_A + BL_C.rds",
-  "C:/Users/mauri/Desktop/Single Cell RNA Sequencing/Seurat/results/Pipe SCTv2 +new_panel_selection +01-06-2022/integrated - old selection/BL_N + BL_C/BL_N + BL_C.rds"
+  "C:/Users/mauri/Desktop/Single Cell RNA Sequencing/Seurat/results/Pipe_SCTv2_corrected_13-06/BL_A/BL_A.rds",
+  "C:/Users/mauri/Desktop/Single Cell RNA Sequencing/Seurat/results/Pipe_SCTv2_corrected_13-06/BL_C/BL_C.rds",
+  "C:/Users/mauri/Desktop/Single Cell RNA Sequencing/Seurat/results/Pipe_SCTv2_corrected_13-06/BL_N/BL_N.rds",
+  "C:/Users/mauri/Desktop/Single Cell RNA Sequencing/Seurat/results/Pipe_SCTv2_corrected_13-06/integrated - old selection/BL_A + BL_C/BL_A + BL_C.rds",
+  "C:/Users/mauri/Desktop/Single Cell RNA Sequencing/Seurat/results/Pipe_SCTv2_corrected_13-06/integrated - old selection/BL_N + BL_C/BL_N + BL_C.rds"
 )
 
 

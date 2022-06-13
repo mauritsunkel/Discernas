@@ -21,8 +21,8 @@ annotations <- c("age", "structure", "custom.clusterv2")
 ## pre-selection data
 sample_names <- c("BL_A + BL_C", "BL_N + BL_C")
 rds.files <- c(
-  "C:/Users/mauri/Desktop/Single Cell RNA Sequencing/Seurat/results/Pipe SCTv2 +new_panel_selection +01-06-2022/integrated - old selection/BL_A + BL_C/after_selection/BL_A + BL_C.rds",
-  "C:/Users/mauri/Desktop/Single Cell RNA Sequencing/Seurat/results/Pipe SCTv2 +new_panel_selection +01-06-2022/integrated - old selection/BL_N + BL_C/after_selection/BL_N + BL_C.rds"
+  "C:/Users/mauri/Desktop/Single Cell RNA Sequencing/Seurat/results/SingleR_RData_2022-06-13 14-55-08/integrated - old selection/BL_A + BL_C/after_selection/BL_A + BL_C.rds",
+  "C:/Users/mauri/Desktop/Single Cell RNA Sequencing/Seurat/results/SingleR_RData_2022-06-13 14-55-08/integrated - old selection/BL_N + BL_C/after_selection/BL_N + BL_C.rds"
 )
 
 
