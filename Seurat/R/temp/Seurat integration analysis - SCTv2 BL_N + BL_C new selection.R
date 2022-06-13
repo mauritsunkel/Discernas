@@ -32,7 +32,7 @@ perform_selection <- TRUE
 
 ## SELECTION PARAMETERS FOR NEURONS
 # define selection panel (varies per selection type)
-selection_panel <- c("MAP2", "NEUROG2", "DCX") # RBFOX3 <-> DCX
+selection_panel <- c("MAP2", "DCX", "NEUROG2") # RBFOX3 <-> DCX
 # define panel type
 selection_panel_type <- "neuronal"
 ## SELECTION PARAMETERS FOR ASTROCYTES
@@ -45,9 +45,9 @@ selection_panel_type <- "neuronal"
 selection_percent_expressed <- 20
 
 # files and sample names
-rds.files <- c("C:/Users/mauri/Desktop/Single Cell RNA Sequencing/Seurat/results/Pipe SCTv2 +new_panel_selection +01-06-2022/BL_A/BL_A.rds",
-               "C:/Users/mauri/Desktop/Single Cell RNA Sequencing/Seurat/results/Pipe SCTv2 +new_panel_selection +01-06-2022/BL_C/BL_C.rds")
-sample_name <- "BL_A + BL_C"
+rds.files <- c("C:/Users/mauri/Desktop/Single Cell RNA Sequencing/Seurat/results/Pipe_SCTv2_corrected_13-06/BL_N/BL_N.rds",
+               "C:/Users/mauri/Desktop/Single Cell RNA Sequencing/Seurat/results/Pipe_SCTv2_corrected_13-06/BL_C/BL_C.rds")
+sample_name <- "BL_N + BL_C"
 ref_sample <- "BL_C"
 
 # initialize start time and directories
