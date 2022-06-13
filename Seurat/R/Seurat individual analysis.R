@@ -324,7 +324,7 @@ dev.off()
 
 # find markers for every cluster compared to all remaining cells
 ## report only the positive ones because otherwise unclear in what specific cluster the gene is more expressed!
-data.markers <- FindAllMarkers(data, only.pos = TRUE, min.pct = 0.1)
+data.markers <- FindAllMarkers(data, assay = "SCT", only.pos = TRUE, min.pct = 0.1)
 write.csv2(data.markers, file = paste0("DE_analysis/marker-list_", sample_name, ".csv"))
 
 # select top X genes per cluster for quick plots
