@@ -383,8 +383,8 @@ message("loaded custom DE functions that overwrite Seurat namespace")
 
 ### USER PARAMETERS
 # read an integrated saved RDS file
-sample_name <- "BL_A + BL_C"
-integrated <- readRDS("F:/Maurits/EMC_SKlab_scRNA data/results/Pipe_SCTv2_corrected_13-06/integrated - old selection/BL_A + BL_C/after_selection/BL_A + BL_C.rds")
+sample_name <- "BL_N + BL_C"
+integrated <- readRDS("F:/Maurits/EMC_SKlab_scRNA data/results/Pipe_SCTv2_corrected_13-06/integrated - old selection/BL_N + BL_C/BL_N + BL_C.rds")
 # set default assay to SCT
 DefaultAssay(integrated) <- "SCT"
 

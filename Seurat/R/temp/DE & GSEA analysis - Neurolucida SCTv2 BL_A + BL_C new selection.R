@@ -384,7 +384,7 @@ message("loaded custom DE functions that overwrite Seurat namespace")
 ### USER PARAMETERS
 # read an integrated saved RDS file
 sample_name <- "BL_A + BL_C"
-integrated <- readRDS("F:/Maurits/EMC_SKlab_scRNA data/results/Pipe_SCTv2_corrected_13-06/integrated - old selection/BL_A + BL_C/after_selection/BL_A + BL_C.rds")
+integrated <- readRDS("F:/Maurits/EMC_SKlab_scRNA data/results/Pipe_SCTv2_corrected_13-06/integrated - old selection/BL_A + BL_C/BL_A + BL_C.rds")
 # set default assay to SCT
 DefaultAssay(integrated) <- "SCT"
 
@@ -433,9 +433,10 @@ Idents(integrated) <- integrated$orig.ident
 # get sample vs sample markers (now: monoculture vs coculture (for neurons and astrocytes))
 ## note: p_val_adj = Adjusted p-value, based on Bonferroni correction using all genes (including non-zero expression) in the dataset
 ### adjusted both defaults: logfc.threshold = 0.25, min.pct = 0.1    to 0
+message("starting findmarkers")
 sample_markers <- FindMarkers(integrated, assay = "SCT", ident.1 = names(table(integrated$orig.ident))[1], only.pos = FALSE, verbose = T,
                               logfc.threshold = 0, min.pct = 0)
-
+message("finished findmarkers")
 # set pct variable based on BL_C orig.identity index
 if (names(table(integrated$orig.ident))[1] == "BL_C") {
   pct <- "pct.1"
