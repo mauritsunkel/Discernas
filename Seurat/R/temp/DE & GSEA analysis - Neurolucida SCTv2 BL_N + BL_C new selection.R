@@ -384,7 +384,7 @@ message("loaded custom DE functions that overwrite Seurat namespace")
 ### USER PARAMETERS
 # read an integrated saved RDS file
 sample_name <- "BL_N + BL_C"
-integrated <- readRDS("C:/Users/mauri/Desktop/Single Cell RNA Sequencing/Seurat/results/Pipe_SCTv2_corrected_13-06/integrated - new selection/BL_N + BL_C/BL_N + BL_C.rds")
+integrated <- readRDS("F:/Maurits/EMC_SKlab_scRNA data/results/Pipe_SCTv2_corrected_13-06/integrated - new selection/BL_N + BL_C/BL_N + BL_C.rds")
 # set default assay to SCT
 DefaultAssay(integrated) <- "SCT"
 
@@ -392,7 +392,7 @@ DefaultAssay(integrated) <- "SCT"
 nCellsDownsampling <- Inf
 
 # work dir should contain forward slashes (/) on Windows
-work_dir <- "C:/Users/mauri/Desktop/Single Cell RNA Sequencing/Seurat/"
+work_dir <- "F:/Maurits/EMC_SKlab_scRNA data/"
 
 # load future library and set plan to run certain functions with multiprocessing
 plan("multisession", workers = 1) # DEVNOTE: n_workers > 1 for parallelization (for me, 5 is max, 4 is safe)
