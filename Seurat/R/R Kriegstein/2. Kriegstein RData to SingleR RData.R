@@ -12,7 +12,6 @@ library(data.table)
 
 
 
-
 ### USER PARAMETERS ###
 # set annotations for training
 annotations <- c("age", "structure", "custom.clusterv2")
@@ -92,9 +91,10 @@ for (j in 1:length(rds.files)) {
   # overwrite rds file with new misc(elleneous) annotation (note: NOT metadata, as that is about cells here)
   saveRDS(sample_data, file = rds.files[j])
 
-  # set SO to SCE object
+  # set SO to SCE object while getting raw counts
   message("create Seurat sample -> sce")
-  sample_data <- Seurat::as.SingleCellExperiment(sample_data, assay = 'SCT')
+  sample_data <- Seurat::as.SingleCellExperiment(sample_data, assay = 'RNA')
+
   # subset after convert to sce
   sample_data <- sample_data[intersect(rownames(sample_data), overlapping_genes),]
 

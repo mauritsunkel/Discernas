@@ -2,8 +2,7 @@ library(Seurat)
 library(SingleR)
 library(pheatmap)
 library(data.table)
-
-
+library(scuttle)
 
 ### USER PARAMETERS ###
 # set seed (SingleR aggregation has randomness)
@@ -313,8 +312,11 @@ for (i in 1:n_chunks) {
   rownames(cell_data) <- genes
   # convert table to SO and add metadata (use cell names to match metadata stored in meta)
   cell_data <- SeuratObject::CreateSeuratObject(counts = cell_data, meta.data = meta[names(cell_data),])
+
   # convert SO to SCE object
   cell_data <- Seurat::as.SingleCellExperiment(cell_data)
+  # SingleR() expects REFERENCE datasets to be normalized and log-transformed
+  cell_data <- scuttle::logNormCounts(cell_data)
 
   if (saveChunks) {
     save(cell_data, file = paste0(RData.chunks.output.folder, "chunk.", i, ".RData"))
