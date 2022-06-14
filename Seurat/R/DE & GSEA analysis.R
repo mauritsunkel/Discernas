@@ -387,7 +387,7 @@ assignInNamespace("FindMarkers.default", FindMarkers.default.adjusted, ns = "Seu
 ### USER PARAMETERS
 # read an integrated saved RDS file
 sample_name <- "BL_A + BL_C"
-integrated <- readRDS("C:/Users/mauri/Desktop/Single Cell RNA Sequencing/Seurat/results/Pipe +SCT +Leiden -Cellcycle +SingleR +Autoselection +05-05-2022/integrated/BL_A + BL_C/after_selection/BL_A + BL_C.rds")
+integrated <- readRDS("C:/Users/mauri/Desktop/Single Cell RNA Sequencing/Seurat/results/Pipe_SCTv2_corrected_13-06/integrated - old selection/BL_A + BL_C/after_selection/BL_A + BL_C.rds")
 
 # set amount of cells used for 'downsampling' clusters during FindMarkers function (max amount of cells per cluster)
 nCellsDownsampling <- Inf
@@ -484,55 +484,6 @@ colnames(condition_markers_df) <- condition_markers_columns
 cluster_ids <- levels(integrated$seurat_clusters)
 
 
-
-
-
-
-
-
-
-# TODO test for cluster 1 (testing just 1 cluster vs 1 other cluster gives same memory error)
-nCellsDownsampling <- 100
-i <- 1
-for (thing in ls()) { message(thing); print(object.size(get(thing)), units='auto') }
-
-
-## add amount of cells used for conserved_markers comparison to df
-df <- data.frame('orig.ident' = integrated$orig.ident, 'seurat_clusters' = integrated$seurat_clusters)
-# condition 1 & match cluster
-cm_val1 <- nrow(df %>% filter(orig.ident == names(table(integrated$orig.ident))[1] & seurat_clusters == i))
-# condition 2 & match cluster
-cm_val2 <- nrow(df %>% filter(orig.ident == names(table(integrated$orig.ident))[2] & seurat_clusters == i))
-# condition 1 & no match cluster
-cm_val3 <- nrow(df %>% filter(orig.ident == names(table(integrated$orig.ident))[1] & seurat_clusters != i))
-# condition 2 & no match cluster
-cm_val4 <- nrow(df %>% filter(orig.ident == names(table(integrated$orig.ident))[2] & seurat_clusters != i))
-conserved_markers_df[nrow(conserved_markers_df) + 1,] = c(i, cm_val1, cm_val2, cm_val3, cm_val4)
-## create markers conserved between groups (conditions) for integrated data for each cluster vs all other clusters
-conserved_markers <- FindConservedMarkers(integrated, ident.1 = i, only.pos = FALSE,
-                                          max.cells.per.ident = nCellsDownsampling,
-                                          grouping.var = "orig.ident", verbose = T)
-# filters rows (genes) if they are >0.05 for both p_val and non-zero p_val with Bonferroni correction
-conserved_markers <- conserved_markers[!(conserved_markers$p_val_adj > 0.05 & conserved_markers$nz_p_val_adj > 0.05),]
-# TODO check if filters are still correct now that order of column names is different etc
-head(conserved_markers)
-# pos_conserved_markers <- conserved_markers %>% filter((.[[2]] > 0) & (.[[7]] > 0))
-# neg_conserved_markers <- conserved_markers %>% filter((.[[2]] < 0) | (.[[7]] < 0))
-write.csv2(conserved_markers, file = paste0("conserved_markers/all_cluster", i, "_cm.csv"))
-# FGSEA_analysis(markers = conserved_markers, working_directory = work_dir, marker_type = 'conserved_markers', cluster = i)
-
-
-DefaultAssay(integrated) <- "SCT"
-VariableFeatures(integrated)
-
-
-
-
-
-
-
-
-
 for (i in cluster_ids) {
   print(paste('Cluster ID:', i))
 
@@ -616,12 +567,6 @@ write.csv2(conserved_markers_df, file = "conserved_markers/n_cells_for_compariso
 write.csv2(condition_markers_df, file = "condition_markers/n_cells_for_comparison.csv", row.names = FALSE)
 
 beep()
-
-Seurat::FindMarkers()
-
-
-
-
 
 
 
