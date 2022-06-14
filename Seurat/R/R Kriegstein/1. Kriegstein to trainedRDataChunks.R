@@ -23,7 +23,7 @@ n_chunks <- 25
 trainData <- FALSE
 
 if (saveChunks) {
-  RData.chunks.output.folder <- paste0("RData/", startTime, "_chunks_test/")
+  RData.chunks.output.folder <- paste0("RData/", startTime, "_chunks/")
   dir.create(RData.chunks.output.folder)
 }
 if (trainData) {
