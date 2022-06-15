@@ -492,15 +492,18 @@ for (i in cluster_ids) {
   markers_df[nrow(markers_df) + 1,] = c(i,
                                         table(integrated$seurat_clusters)[i],
                                         sum(table(integrated$seurat_clusters)[-as.integer(i)]))
-  ## create markers for integrated data for each cluster vs all other clusters
-  markers <- FindMarkers(integrated, assay = "SCT", ident.1 = i, max.cells.per.ident = nCellsDownsampling, only.pos = FALSE, verbose = T)
-  # filters rows (genes) if they are >0.05 for both p_val and non-zero p_val with Bonferroni correction
-  markers <- markers[!(markers$p_val_adj > 0.05 & markers$nz_p_val_adj > 0.05),]
-  write.csv2(markers, file = paste0("markers/all_cluster", i, "_m.csv"))
-  # FGSEA_analysis(markers = markers, working_directory = work_dir, marker_type = 'markers', cluster = i)
-  message("wrote markers")
-
-  
+  ## check more than 2 cells in ident (cluster) before comparison
+  if (table(integrated$seurat_clusters)[i] < 3) {
+    message("For markers, skipping ident (cluster) ", i, " comparison because < 3 cells")
+  } else {
+    ## create markers for integrated data for each cluster vs all other clusters
+    markers <- FindMarkers(integrated, assay = "SCT", ident.1 = i, max.cells.per.ident = nCellsDownsampling, only.pos = FALSE, verbose = T)
+    # filters rows (genes) if they are >0.05 for both p_val and non-zero p_val with Bonferroni correction
+    markers <- markers[!(markers$p_val_adj > 0.05 & markers$nz_p_val_adj > 0.05),]
+    write.csv2(markers, file = paste0("markers/all_cluster", i, "_m.csv"))
+    # FGSEA_analysis(markers = markers, working_directory = work_dir, marker_type = 'markers', cluster = i)
+    message("wrote markers")
+  }
   
   ## add amount of cells used for conserved_markers comparison to df
   df <- data.frame('orig.ident' = integrated$orig.ident, 'seurat_clusters' = integrated$seurat_clusters)
@@ -513,6 +516,7 @@ for (i in cluster_ids) {
   # condition 2 & no match cluster
   cm_val4 <- nrow(df %>% filter(orig.ident == names(table(integrated$orig.ident))[2] & seurat_clusters != i))
   conserved_markers_df[nrow(conserved_markers_df) + 1,] = c(i, cm_val1, cm_val2, cm_val3, cm_val4)
+  ## check more than 2 cells in ident (cluster) for each group before comparison
   if (any(c(cm_val1, cm_val2, cm_val3, cm_val4) < 3)) {
     message("For conserved markers, skipping ident (cluster) ", i, " comparison because < 3 cells")
   } else {
@@ -547,18 +551,21 @@ for (i in cluster_ids) {
   }
   ## add amount of cells used for condition_markers comparison to df
   condition_markers_df[nrow(condition_markers_df) + 1,] = c(i, table(subset$orig.ident)[1], table(subset$orig.ident)[2])
-  ## create condition_markers for subset data for within each cluster to compare conditions
-  condition_markers <- FindMarkers(subset, assay = "SCT", recorrect_umi = FALSE, ident.1 = "BL_C", verbose = T, only.pos = FALSE)
-  # filters rows (genes) if they are >0.05 for both p_val and non-zero p_val with Bonferroni correction
-  condition_markers <- condition_markers[!(condition_markers$p_val_adj > 0.05 & condition_markers$nz_p_val_adj > 0.05),]
-  # pos_condition_markers <- condition_markers %>% filter(avg_log2FC > 0)
-  # neg_condition_markers <- condition_markers %>% filter(avg_log2FC < 0)
-  write.csv2(condition_markers, file = paste0("condition_markers/all_cluster", i, ".csv"))
-  print(paste('Cluster ID:', i, ' before condition_markers FGSEA call'))
-  # FGSEA_analysis(markers = condition_markers, working_directory = work_dir, marker_type = 'condition_markers', cluster = i)
-  message("wrote condition markers")
-  
-  
+  ## check more than 2 cells in subset ident (cluster) before comparison
+  if (any(c(subset$orig.ident)[1], subset$orig.ident)[2] < 3) {
+    message("For condition markers, skipping ident (cluster) ", i, " comparison because < 3 cells")
+  } else {
+    ## create condition_markers for subset data for within each cluster to compare conditions
+    condition_markers <- FindMarkers(subset, assay = "SCT", recorrect_umi = FALSE, ident.1 = "BL_C", verbose = T, only.pos = FALSE)
+    # filters rows (genes) if they are >0.05 for both p_val and non-zero p_val with Bonferroni correction
+    condition_markers <- condition_markers[!(condition_markers$p_val_adj > 0.05 & condition_markers$nz_p_val_adj > 0.05),]
+    # pos_condition_markers <- condition_markers %>% filter(avg_log2FC > 0)
+    # neg_condition_markers <- condition_markers %>% filter(avg_log2FC < 0)
+    write.csv2(condition_markers, file = paste0("condition_markers/all_cluster", i, ".csv"))
+    print(paste('Cluster ID:', i, ' before condition_markers FGSEA call'))
+    # FGSEA_analysis(markers = condition_markers, working_directory = work_dir, marker_type = 'condition_markers', cluster = i)
+    message("wrote condition markers")
+  } 
   
   # DEVNOTE if want to assign each table to its own variable, use assign() and get()
   # assign(paste0("cluster", i, "_markers"), markers)
