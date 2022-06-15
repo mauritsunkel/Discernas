@@ -12,7 +12,6 @@ library(data.table)
 
 
 
-
 ### USER PARAMETERS ###
 # set annotations for training
 annotations <- c("age", "structure", "custom.clusterv2")
@@ -24,7 +23,12 @@ rds.files <- c(
   "C:/Users/mauri/Desktop/Single Cell RNA Sequencing/Seurat/results/Pipe_SCTv2_corrected_13-06/integrated - new selection/BL_A + BL_C/after_selection/BL_A + BL_C.rds",
   "C:/Users/mauri/Desktop/Single Cell RNA Sequencing/Seurat/results/Pipe_SCTv2_corrected_13-06/integrated - new selection/BL_N + BL_C/after_selection/BL_N + BL_C.rds"
 )
-
+## post-selection data
+# sample_names <- c("BL_A + BL_C", "BL_N + BL_C")
+# rds.files <- c(
+#   "C:/Users/mauri/Desktop/Single Cell RNA Sequencing/Seurat/results/Pipe +SCT +Leiden -Cellcycle +SingleR +Autoselection +05-05-2022/integrated/BL_A + BL_C/after_selection/BL_A + BL_C.rds",
+#   "C:/Users/mauri/Desktop/Single Cell RNA Sequencing/Seurat/results/Pipe +SCT +Leiden -Cellcycle +SingleR +Autoselection +05-05-2022/integrated/BL_N + BL_C/after_selection/BL_N + BL_C.rds"
+# )
 
 # get start time
 startTime <- format(Sys.time(), "%F %H-%M-%S")
@@ -84,9 +88,10 @@ for (j in 1:length(rds.files)) {
   # overwrite rds file with new misc(elleneous) annotation (note: NOT metadata, as that is about cells here)
   saveRDS(sample_data, file = rds.files[j])
 
-  # set SO to SCE object
+  # set SO to SCE object while getting raw counts
   message("create Seurat sample -> sce")
-  sample_data <- Seurat::as.SingleCellExperiment(sample_data, assay = 'SCT')
+  sample_data <- Seurat::as.SingleCellExperiment(sample_data, assay = 'RNA')
+
   # subset after convert to sce
   sample_data <- sample_data[intersect(rownames(sample_data), overlapping_genes),]
 
