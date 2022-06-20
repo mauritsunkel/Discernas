@@ -535,9 +535,6 @@ for (i in cluster_ids) {
     message("wrote conserved markers")
   }
   
-  
-  
-  
   # ## create condition markers for integrated data within each cluster between each condition
   # ## DEV NOTE: this is not pairwise if more than 2 conditions are integrated at the same time
   subset <- subset(integrated, seurat_clusters == i)
