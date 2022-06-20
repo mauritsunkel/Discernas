@@ -552,7 +552,7 @@ for (i in cluster_ids) {
   ## add amount of cells used for condition_markers comparison to df
   condition_markers_df[nrow(condition_markers_df) + 1,] = c(i, table(subset$orig.ident)[1], table(subset$orig.ident)[2])
   ## check more than 2 cells in subset ident (cluster) before comparison
-  if (any(c(subset$orig.ident)[1], subset$orig.ident)[2] < 3) {
+  if (any(c(table(subset$orig.ident)[1], table(subset$orig.ident)[2]) < 3)) {
     message("For condition markers, skipping ident (cluster) ", i, " comparison because < 3 cells")
   } else {
     ## create condition_markers for subset data for within each cluster to compare conditions
