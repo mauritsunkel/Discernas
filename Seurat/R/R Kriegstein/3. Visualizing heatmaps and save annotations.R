@@ -6,7 +6,7 @@ library(Seurat)
 
 
 
-# TODO look at COMBINED result , save labels and first.labels in Seurat object meta after
+# TODO look at COMBINED result, save labels and first.labels in Seurat object meta after
 # add overlapping genes as misc(elleneous) annotation to Seurat object (sample_data@misc$Kriegstein.gene.overlap)
 SeuratObject::Misc(object = orig.data, slot = "Kriegstein.gene.overlap") <- result$labels
 # TODO and first.labels
@@ -31,14 +31,35 @@ custom_colors <- my.color.palettes(type = 'mixed')
 # set work dir
 work_dir <- 'C:/Users/mauri/Desktop/Single Cell RNA Sequencing/Seurat/data/Kriegstein/'
 setwd(work_dir)
-# get meta
-meta <- read.table("custom.meta.tsv", header=T, sep="\t", as.is=T, row.names=1)
+
+# initialize function and get meta data
+getMeta <- function() {
+  metaFile <- "custom.meta.tsv"
+  if (!file.exists(metaFile)) {
+    stop(metaFile, " does not exist, this file is generated during data chunking.")
+  } else {
+    return(read.table(metaFile, header = TRUE, sep = "\t", as.is = TRUE, row.names = 1))
+  }
+}
+meta <- getMeta()
 
 # set RData folder
-RData_folder <- 'C:/Users/mauri/Desktop/Single Cell RNA Sequencing/Seurat/data/Kriegstein/RData/SingleR_RData +custom.reference +04-05-2022/'
+RData_folder <- 'C:/Users/mauri/Desktop/Single Cell RNA Sequencing/Seurat/data/Kriegstein/RData/Pipe_SCTv2_corrected_13-06/SingleR_RData SCTv2 +old_panel/'
 
 # set annotations
 annotations <- c("age", "structure", "custom.clusterv2")
+
+
+
+
+# TODO testing
+samples <- c("BL_N")
+rds.files <- c("C:/Users/mauri/Desktop/Single Cell RNA Sequencing/Seurat/results/Pipe_SCTv2_corrected_13-06/BL_N/BL_N.rds")
+
+
+
+
+
 
 ## pre-selection data
 # # set sample names (NOTE: same order as rds.files)
@@ -52,11 +73,11 @@ annotations <- c("age", "structure", "custom.clusterv2")
 #   "C:/Users/mauri/Desktop/Single Cell RNA Sequencing/Seurat/results/Pipe +SCT +Leiden -Cellcycle +SingleR +Autoselection +05-05-2022/integrated/BL_N + BL_C/BL_N + BL_C.rds"
 # )
 ## post-selection data
-samples <- c("BL_A + BL_C", "BL_N + BL_C")
-rds.files <- c(
-  "C:/Users/mauri/Desktop/Single Cell RNA Sequencing/Seurat/results/Pipe +SCT +Leiden -Cellcycle +SingleR +Autoselection +05-05-2022/integrated/BL_A + BL_C/after_selection/BL_A + BL_C.rds",
-  "C:/Users/mauri/Desktop/Single Cell RNA Sequencing/Seurat/results/Pipe +SCT +Leiden -Cellcycle +SingleR +Autoselection +05-05-2022/integrated/BL_N + BL_C/after_selection/BL_N + BL_C.rds"
-  )
+# samples <- c("BL_A + BL_C", "BL_N + BL_C")
+# rds.files <- c(
+#   "C:/Users/mauri/Desktop/Single Cell RNA Sequencing/Seurat/results/Pipe +SCT +Leiden -Cellcycle +SingleR +Autoselection +05-05-2022/integrated/BL_A + BL_C/after_selection/BL_A + BL_C.rds",
+#   "C:/Users/mauri/Desktop/Single Cell RNA Sequencing/Seurat/results/Pipe +SCT +Leiden -Cellcycle +SingleR +Autoselection +05-05-2022/integrated/BL_N + BL_C/after_selection/BL_N + BL_C.rds"
+#   )
 names(rds.files) <- samples
 
 start_time <- format(Sys.time(), "%F %H-%M-%S")
@@ -72,32 +93,85 @@ data.list <- lapply(X = rds.files, FUN = function(x) {
 # add sample names to rds data
 names(data.list) <- samples
 
+
+## TODO TESTING AGGR PARAMETER, uncomment old loop after testing
 # initialize list to store results
 results.list <- list()
+
 # iterate samples and annotations: grab all corresponding files, then load and return corresponding data
+## TODO OLD LOOP
+# for (sample in samples) {
+#   for (anno in annotations) {
+#     # list all files in RData_folder based on sample and annotation
+#     files <- list.files(path = RData_folder, pattern = paste0(stringr::str_replace(sample, " \\+ ", " .* "), ".*", anno), full.names=T)
+#
+#     # if '+' not in sample (name), then
+#     if (!grepl("+", sample, fixed = T)) {
+#       # if '+' in stems of files, then remove those files from list (separate individual from integrated files)
+#       files <- files[!grepl("+", sapply(stringr::str_split(files, "/"), tail, 1), fixed = T)]
+#     }
+#
+#     # load each file, return its actual object
+#     results <- sapply(files, function(file) {
+#       load(file) # result (name of R object)
+#       return(result)
+#     })
+#
+#     # put loaded objects into results.list
+#     results.list[[paste(sample, anno)]] <- results
+#   }
+# }
+## TODO NEW LOOP for testing
 for (sample in samples) {
   for (anno in annotations) {
-    # list all files in RData_folder based on sample and annotation
-    files <- list.files(path = RData_folder, pattern = paste0(stringr::str_replace(sample, " \\+ ", " .* "), ".*", anno), full.names=T)
+    for (aggr in c(TRUE, FALSE)) {
+      # list all files in RData_folder based on sample and annotation
+      files <- list.files(path = RData_folder, pattern = paste0(stringr::str_replace(sample, " \\+ ", " .* "), ".*", anno, ".*", aggr), full.names=T)
+      print(files)
+      # if '+' not in sample (name), then
+      if (!grepl("+", sample, fixed = T)) {
+        # if '+' in stems of files, then remove those files from list (separate individual from integrated files)
+        files <- files[!grepl("+", sapply(stringr::str_split(files, "/"), tail, 1), fixed = T)]
+      }
 
-    # if '+' not in sample (name), then
-    if (!grepl("+", sample, fixed = T)) {
-      # if '+' in stems of files, then remove those files from list (separate individual from integrated files)
-      files <- files[!grepl("+", sapply(stringr::str_split(files, "/"), tail, 1), fixed = T)]
+
+
+      # load each file, return its actual object
+      results <- sapply(files, function(file) {
+        load(file) # result (name of R object)
+        return(result)
+      })
+
+      # put loaded objects into results.list
+      results.list[[paste(sample, anno, aggr)]] <- results
     }
-
-    # load each file, return its actual object
-    results <- sapply(files, function(file) {
-      load(file) # result (name of R object)
-      return(result)
-    })
-
-    # put loaded objects into results.list
-    results.list[[paste(sample, anno)]] <- results
   }
 }
 
+## TODO TESTING AGGR PARAMETER, uncomment old loop after testing
 # CombineCommonResults of corresponding data for each single sample-reference comparison
+## TODO old loop
+# combined.results <- lapply(X = results.list, FUN = function(x) {
+#   # use SingleR::combineCommonResults (instead of combineRecomputedResults) because
+#   ## from combineRecomputedResults docs: It is strongly recommended that the
+#   ## universe of genes be the same across all references
+#   ### because if the intersection of all genes over all references is highly
+#   ### different, the availability between refs may have unpredictable results
+#   combined <- SingleR::combineCommonResults(x)
+#
+#   # set scores (cbind of different refs (iterations) to combined.scores)
+#   combined$combined.scores <- combined$scores
+#   # take row mean for each ref and label as visualization score
+#   df <- as.data.frame(combined$scores)
+#   combined$scores <- as.matrix( # sapply returns a list here, so we convert it to a data.frame
+#     sapply(unique(names(df)), # for each unique column name
+#            function(col) rowMeans(df[names(df) == col]) # calculate row means
+#     )
+#   )
+#
+#   return(combined)
+# })
+## TODO new loop
 combined.results <- lapply(X = results.list, FUN = function(x) {
   # use SingleR::combineCommonResults (instead of combineRecomputedResults) because
   ## from combineRecomputedResults docs: It is strongly recommended that the
@@ -106,18 +180,40 @@ combined.results <- lapply(X = results.list, FUN = function(x) {
   ### different, the availability between refs may have unpredictable results
   combined <- SingleR::combineCommonResults(x)
 
-  # set scores (cbind of different refs (iterations) to combined.scores)
-  combined$combined.scores <- combined$scores
-  # take row mean for each ref and label as visualization score
-  df <- as.data.frame(combined$scores)
-  combined$scores <- as.matrix( # sapply returns a list here, so we convert it to a data.frame
-    sapply(unique(names(df)), # for each unique column name
-           function(col) rowMeans(df[names(df) == col]) # calculate row means
-    )
-  )
+  # # set scores (cbind of different refs (iterations) to combined.scores)
+  # combined$combined.scores <- combined$scores
+  # # take row mean for each ref and label as visualization score
+  # df <- as.data.frame(combined$scores)
+  # combined$scores <- as.matrix( # sapply returns a list here, so we convert it to a data.frame
+  #   sapply(unique(names(df)), # for each unique column name
+  #          function(col) rowMeans(df[names(df) == col]) # calculate row means
+  #   )
+  # )
 
   return(combined)
 })
+
+
+
+
+
+
+
+# TODO check in loop above if need to pick higest score (but shouldn't algorithm have done that for me?)
+## TODO otherwise, make issue in LTLA github as well
+combined.results$`BL_N age TRUE`$scores
+
+
+
+
+
+
+
+
+
+
+
+
 
 # save Kriegstein cluster labels into Seurat object --> rds
 for (sample in samples) {
