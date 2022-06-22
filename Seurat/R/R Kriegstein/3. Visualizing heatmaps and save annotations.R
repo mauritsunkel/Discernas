@@ -73,7 +73,7 @@ rds.files <- c(
 # samples <- c("BL_A + BL_C", "BL_N + BL_C")
 # rds.files <- c(
 #   "C:/Users/mauri/Desktop/Single Cell RNA Sequencing/Seurat/results/Pipe_SCTv2_corrected_13-06/integrated/BL_A + BL_C/after_selection/BL_A + BL_C.rds",
-#   "C:/Users/mauri/Desktop/Single Cell RNA Sequencing/Seurat/results/Pipe_SCTv2_corrected_13-06/integrated/BL_N + BL_C/áfter_selection/BL_N + BL_C.rds"
+#   "C:/Users/mauri/Desktop/Single Cell RNA Sequencing/Seurat/results/Pipe_SCTv2_corrected_13-06/integrated/BL_N + BL_C/after_selection/BL_N + BL_C.rds"
 #   )
 names(rds.files) <- samples
 
