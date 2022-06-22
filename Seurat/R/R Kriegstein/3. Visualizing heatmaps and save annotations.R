@@ -6,10 +6,7 @@ library(Seurat)
 
 
 
-# TODO look at COMBINED result, save labels and first.labels in Seurat object meta after
-# add overlapping genes as misc(elleneous) annotation to Seurat object (sample_data@misc$Kriegstein.gene.overlap)
-SeuratObject::Misc(object = orig.data, slot = "Kriegstein.gene.overlap") <- result$labels
-# TODO and first.labels
+
 
 
 
@@ -52,33 +49,41 @@ annotations <- c("age", "structure", "custom.clusterv2")
 
 
 
-# TODO testing
-samples <- c("BL_N")
-rds.files <- c("C:/Users/mauri/Desktop/Single Cell RNA Sequencing/Seurat/results/Pipe_SCTv2_corrected_13-06/BL_N/BL_N.rds")
 
 
 
 
+## TODO TESTING AGGR PARAMETER - remove either aggrTRUE or aggrFALSE in individual runs
+aggrRefTrue <- FALSE
+## TODO in visualization code block, also change to using first.labels and pruned.labels to see differences
 
 
 ## pre-selection data
-# # set sample names (NOTE: same order as rds.files)
-# samples <- c("BL_A", "BL_C", "BL_N", "BL_A + BL_C", "BL_N + BL_C")
-# # set rds files ((NOTE: same order as samples))
-# rds.files <- c(
-#   "C:/Users/mauri/Desktop/Single Cell RNA Sequencing/Seurat/results/Pipe +SCT +Leiden -Cellcycle +SingleR +Autoselection +05-05-2022/BL_A/BL_A.rds",
-#   "C:/Users/mauri/Desktop/Single Cell RNA Sequencing/Seurat/results/Pipe +SCT +Leiden -Cellcycle +SingleR +Autoselection +05-05-2022/BL_C/BL_C.rds",
-#   "C:/Users/mauri/Desktop/Single Cell RNA Sequencing/Seurat/results/Pipe +SCT +Leiden -Cellcycle +SingleR +Autoselection +05-05-2022/BL_N/BL_N.rds",
-#   "C:/Users/mauri/Desktop/Single Cell RNA Sequencing/Seurat/results/Pipe +SCT +Leiden -Cellcycle +SingleR +Autoselection +05-05-2022/integrated/BL_A + BL_C/BL_A + BL_C.rds",
-#   "C:/Users/mauri/Desktop/Single Cell RNA Sequencing/Seurat/results/Pipe +SCT +Leiden -Cellcycle +SingleR +Autoselection +05-05-2022/integrated/BL_N + BL_C/BL_N + BL_C.rds"
-# )
+# set sample names (NOTE: same order as rds.files)
+samples <- c("BL_A", "BL_C", "BL_N", "BL_A + BL_C", "BL_N + BL_C")
+# set rds files ((NOTE: same order as samples))
+rds.files <- c(
+  "C:/Users/mauri/Desktop/Single Cell RNA Sequencing/Seurat/results/Pipe_SCTv2_corrected_13-06/BL_A/BL_A.rds",
+  "C:/Users/mauri/Desktop/Single Cell RNA Sequencing/Seurat/results/Pipe_SCTv2_corrected_13-06/BL_C/BL_C.rds",
+  "C:/Users/mauri/Desktop/Single Cell RNA Sequencing/Seurat/results/Pipe_SCTv2_corrected_13-06/BL_N/BL_N.rds",
+  "C:/Users/mauri/Desktop/Single Cell RNA Sequencing/Seurat/results/Pipe_SCTv2_corrected_13-06/integrated/BL_A + BL_C/BL_A + BL_C.rds",
+  "C:/Users/mauri/Desktop/Single Cell RNA Sequencing/Seurat/results/Pipe_SCTv2_corrected_13-06/integrated/BL_N + BL_C/BL_N + BL_C.rds"
+  )
 ## post-selection data
 # samples <- c("BL_A + BL_C", "BL_N + BL_C")
 # rds.files <- c(
-#   "C:/Users/mauri/Desktop/Single Cell RNA Sequencing/Seurat/results/Pipe +SCT +Leiden -Cellcycle +SingleR +Autoselection +05-05-2022/integrated/BL_A + BL_C/after_selection/BL_A + BL_C.rds",
-#   "C:/Users/mauri/Desktop/Single Cell RNA Sequencing/Seurat/results/Pipe +SCT +Leiden -Cellcycle +SingleR +Autoselection +05-05-2022/integrated/BL_N + BL_C/after_selection/BL_N + BL_C.rds"
+#   "C:/Users/mauri/Desktop/Single Cell RNA Sequencing/Seurat/results/Pipe_SCTv2_corrected_13-06/integrated/BL_A + BL_C/after_selection/BL_A + BL_C.rds",
+#   "C:/Users/mauri/Desktop/Single Cell RNA Sequencing/Seurat/results/Pipe_SCTv2_corrected_13-06/integrated/BL_N + BL_C/áfter_selection/BL_N + BL_C.rds"
 #   )
 names(rds.files) <- samples
+
+
+
+
+
+
+
+
 
 start_time <- format(Sys.time(), "%F %H-%M-%S")
 work_dir <- "C:/Users/mauri/Desktop/Single Cell RNA Sequencing/Seurat/"
@@ -94,84 +99,42 @@ data.list <- lapply(X = rds.files, FUN = function(x) {
 names(data.list) <- samples
 
 
-## TODO TESTING AGGR PARAMETER, uncomment old loop after testing
+
 # initialize list to store results
 results.list <- list()
-
 # iterate samples and annotations: grab all corresponding files, then load and return corresponding data
-## TODO OLD LOOP
-# for (sample in samples) {
-#   for (anno in annotations) {
-#     # list all files in RData_folder based on sample and annotation
-#     files <- list.files(path = RData_folder, pattern = paste0(stringr::str_replace(sample, " \\+ ", " .* "), ".*", anno), full.names=T)
-#
-#     # if '+' not in sample (name), then
-#     if (!grepl("+", sample, fixed = T)) {
-#       # if '+' in stems of files, then remove those files from list (separate individual from integrated files)
-#       files <- files[!grepl("+", sapply(stringr::str_split(files, "/"), tail, 1), fixed = T)]
-#     }
-#
-#     # load each file, return its actual object
-#     results <- sapply(files, function(file) {
-#       load(file) # result (name of R object)
-#       return(result)
-#     })
-#
-#     # put loaded objects into results.list
-#     results.list[[paste(sample, anno)]] <- results
-#   }
-# }
-## TODO NEW LOOP for testing
 for (sample in samples) {
   for (anno in annotations) {
-    for (aggr in c(TRUE, FALSE)) {
-      # list all files in RData_folder based on sample and annotation
-      files <- list.files(path = RData_folder, pattern = paste0(stringr::str_replace(sample, " \\+ ", " .* "), ".*", anno, ".*", aggr), full.names=T)
-      print(files)
-      # if '+' not in sample (name), then
-      if (!grepl("+", sample, fixed = T)) {
-        # if '+' in stems of files, then remove those files from list (separate individual from integrated files)
-        files <- files[!grepl("+", sapply(stringr::str_split(files, "/"), tail, 1), fixed = T)]
-      }
+    # list all files in RData_folder based on sample and annotation
+    files <- list.files(path = RData_folder, pattern = paste0(stringr::str_replace(sample, " \\+ ", " .* "), ".*", anno), full.names=T)
 
-
-
-      # load each file, return its actual object
-      results <- sapply(files, function(file) {
-        load(file) # result (name of R object)
-        return(result)
-      })
-
-      # put loaded objects into results.list
-      results.list[[paste(sample, anno, aggr)]] <- results
+    ## TODO TESTING AGGR PARAMETER - remove either aggrTRUE or aggrFALSE in individual runs
+    if (aggrRefTrue) {
+      files <- files[grepl("aggrRefTRUE", files, fixed = T)]
+    } else {
+      files <- files[!grepl("aggrRefTRUE", files, fixed = T)]
     }
+
+
+    # if '+' not in sample (name), then
+    if (!grepl("+", sample, fixed = T)) {
+      # if '+' in stems of files, then remove those files from list (separate individual from integrated files)
+      files <- files[!grepl("+", sapply(stringr::str_split(files, "/"), tail, 1), fixed = T)]
+    }
+
+    # load each file, return its actual object
+    results <- sapply(files, function(file) {
+      load(file) # result (name of R object)
+      return(result)
+    })
+
+    # put loaded objects into results.list
+    results.list[[paste(sample, anno)]] <- results
   }
 }
 
-## TODO TESTING AGGR PARAMETER, uncomment old loop after testing
+
 # CombineCommonResults of corresponding data for each single sample-reference comparison
-## TODO old loop
-# combined.results <- lapply(X = results.list, FUN = function(x) {
-#   # use SingleR::combineCommonResults (instead of combineRecomputedResults) because
-#   ## from combineRecomputedResults docs: It is strongly recommended that the
-#   ## universe of genes be the same across all references
-#   ### because if the intersection of all genes over all references is highly
-#   ### different, the availability between refs may have unpredictable results
-#   combined <- SingleR::combineCommonResults(x)
-#
-#   # set scores (cbind of different refs (iterations) to combined.scores)
-#   combined$combined.scores <- combined$scores
-#   # take row mean for each ref and label as visualization score
-#   df <- as.data.frame(combined$scores)
-#   combined$scores <- as.matrix( # sapply returns a list here, so we convert it to a data.frame
-#     sapply(unique(names(df)), # for each unique column name
-#            function(col) rowMeans(df[names(df) == col]) # calculate row means
-#     )
-#   )
-#
-#   return(combined)
-# })
-## TODO new loop
 combined.results <- lapply(X = results.list, FUN = function(x) {
   # use SingleR::combineCommonResults (instead of combineRecomputedResults) because
   ## from combineRecomputedResults docs: It is strongly recommended that the
@@ -179,36 +142,24 @@ combined.results <- lapply(X = results.list, FUN = function(x) {
   ### because if the intersection of all genes over all references is highly
   ### different, the availability between refs may have unpredictable results
   combined <- SingleR::combineCommonResults(x)
+  # set scores (cbind of different refs (iterations) to combined.scores)
+  combined$combined.scores <- combined$scores
 
-  # # set scores (cbind of different refs (iterations) to combined.scores)
-  # combined$combined.scores <- combined$scores
-  # # take row mean for each ref and label as visualization score
-  # df <- as.data.frame(combined$scores)
-  # combined$scores <- as.matrix( # sapply returns a list here, so we convert it to a data.frame
-  #   sapply(unique(names(df)), # for each unique column name
-  #          function(col) rowMeans(df[names(df) == col]) # calculate row means
-  #   )
-  # )
+  # create dataframe to select values of the highest scoring reference
+  df <- as.data.frame(combined$scores)
+  # for each unique column name select all columns
+  combined$scores <- sapply(unique(names(df)), function(col) {
+    # for each row (cluster)
+    sapply(1:nrow(df), function(row) {
+      # get the column by highest row-wise value within the subset of selected columns
+      col2 <- max.col(df[names(df) == col])[row]
+      # select the highest score (value) based on the defined column and row within the subset of selected columns
+      df[names(df) == col][row, col2]
+    })
+  })
 
   return(combined)
 })
-
-
-
-
-
-
-
-# TODO check in loop above if need to pick higest score (but shouldn't algorithm have done that for me?)
-## TODO otherwise, make issue in LTLA github as well
-combined.results$`BL_N age TRUE`$scores
-
-
-
-
-
-
-
 
 
 
@@ -220,25 +171,34 @@ for (sample in samples) {
   for (anno in annotations) {
     # Kriegstein data and labels from sample-annotation correlation overlap
     misc_data <- combined.results[[paste(sample, anno)]]
-    misc_label_data <- combined.results[[paste(sample, anno)]]$labels
     # add as miscellaneous data to Seurat object
     SeuratObject::Misc(object = data.list[[sample]], slot = paste0("Kriegstein.SingleR.", anno)) <- misc_data
-    SeuratObject::Misc(object = data.list[[sample]], slot = paste0("Kriegstein.", anno)) <- misc_label_data
   }
   # copy seurat clusters metadata to aggregate with Kriegstein labels
   data.list[[sample]]$kriegstein.seurat.custom.clusters <- data.list[[sample]]$seurat_clusters
   # overwrite copied metadata to an aggregation of Kriegstein.Seurat custom cluster labels
   levels(data.list[[sample]]$kriegstein.seurat.custom.clusters) <- paste0(combined.results[[paste(sample, "custom.clusterv2")]]$labels, ".", levels(data.list[[sample]]$kriegstein.seurat.custom.clusters))
 
+
+
+
+
+
+
+  ## TODO uncomment after testing aggr parameter and (first) labels vs pruned labels
   # overwrite rds file with new misc(elleneous) annotation (note: NOT metadata, as that is about cells in SO)
   saveRDS(data.list[[sample]], file = rds.files[[sample]])
+
+
+
+
 }
 
 
 
 
-# TODO put this (visualizing) in its own script, just need rds data + meta now as SingleR results are stored in misc
 
+# TODO put this (visualizing) in its own script, just need rds data + meta now as SingleR results are stored in misc
 # custom visualizations per sample-reference comparison for each annotation
 for (sample in samples) {
   annotation_col <- data.frame(row.names = levels(data.list[[sample]]$seurat_clusters))
