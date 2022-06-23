@@ -45,30 +45,36 @@ RData_folder <- 'C:/Users/mauri/Desktop/Single Cell RNA Sequencing/Seurat/data/K
 
 # set annotations
 annotations <- c("age", "structure", "custom.clusterv2")
+annotations.to.plot <- c("custom.clusterv2")
 
 
 
 
 
-
-
+## TODO testing
+rds.files <- c("C:/Users/mauri/Desktop/Single Cell RNA Sequencing/Seurat/results/Pipe_SCTv2_corrected_13-06/BL_C/BL_C.rds")
+samples <- c("BL_C")
 
 ## TODO TESTING AGGR PARAMETER - remove either aggrTRUE or aggrFALSE in individual runs
 aggrRefTrue <- FALSE
-## TODO in visualization code block, also change to using first.labels and pruned.labels to see differences
+## TODO in visualization code block, also change mean or max scores
+user.labels <- "mean.labels" # mean.labels or max.labels
+user.scores <- "mean.scores" # mean.scores or max.scores
+
+
 
 
 ## pre-selection data
-# set sample names (NOTE: same order as rds.files)
-samples <- c("BL_A", "BL_C", "BL_N", "BL_A + BL_C", "BL_N + BL_C")
-# set rds files ((NOTE: same order as samples))
-rds.files <- c(
-  "C:/Users/mauri/Desktop/Single Cell RNA Sequencing/Seurat/results/Pipe_SCTv2_corrected_13-06/BL_A/BL_A.rds",
-  "C:/Users/mauri/Desktop/Single Cell RNA Sequencing/Seurat/results/Pipe_SCTv2_corrected_13-06/BL_C/BL_C.rds",
-  "C:/Users/mauri/Desktop/Single Cell RNA Sequencing/Seurat/results/Pipe_SCTv2_corrected_13-06/BL_N/BL_N.rds",
-  "C:/Users/mauri/Desktop/Single Cell RNA Sequencing/Seurat/results/Pipe_SCTv2_corrected_13-06/integrated/BL_A + BL_C/BL_A + BL_C.rds",
-  "C:/Users/mauri/Desktop/Single Cell RNA Sequencing/Seurat/results/Pipe_SCTv2_corrected_13-06/integrated/BL_N + BL_C/BL_N + BL_C.rds"
-  )
+# # set sample names (NOTE: same order as rds.files)
+# samples <- c("BL_A", "BL_C", "BL_N", "BL_A + BL_C", "BL_N + BL_C")
+# # set rds files ((NOTE: same order as samples))
+# rds.files <- c(
+#   "C:/Users/mauri/Desktop/Single Cell RNA Sequencing/Seurat/results/Pipe_SCTv2_corrected_13-06/BL_A/BL_A.rds",
+#   "C:/Users/mauri/Desktop/Single Cell RNA Sequencing/Seurat/results/Pipe_SCTv2_corrected_13-06/BL_C/BL_C.rds",
+#   "C:/Users/mauri/Desktop/Single Cell RNA Sequencing/Seurat/results/Pipe_SCTv2_corrected_13-06/BL_N/BL_N.rds",
+#   "C:/Users/mauri/Desktop/Single Cell RNA Sequencing/Seurat/results/Pipe_SCTv2_corrected_13-06/integrated/BL_A + BL_C/BL_A + BL_C.rds",
+#   "C:/Users/mauri/Desktop/Single Cell RNA Sequencing/Seurat/results/Pipe_SCTv2_corrected_13-06/integrated/BL_N + BL_C/BL_N + BL_C.rds"
+#   )
 ## post-selection data
 # samples <- c("BL_A + BL_C", "BL_N + BL_C")
 # rds.files <- c(
@@ -133,7 +139,6 @@ for (sample in samples) {
   }
 }
 
-
 # CombineCommonResults of corresponding data for each single sample-reference comparison
 combined.results <- lapply(X = results.list, FUN = function(x) {
   # use SingleR::combineCommonResults (instead of combineRecomputedResults) because
@@ -142,29 +147,36 @@ combined.results <- lapply(X = results.list, FUN = function(x) {
   ### because if the intersection of all genes over all references is highly
   ### different, the availability between refs may have unpredictable results
   combined <- SingleR::combineCommonResults(x)
-  # set scores (cbind of different refs (iterations) to combined.scores)
-  combined$combined.scores <- combined$scores
 
   # create dataframe to select values of the highest scoring reference
   df <- as.data.frame(combined$scores)
+  ## get max score and label for each highest scoring reference
   # for each unique column name select all columns
-  combined$scores <- sapply(unique(names(df)), function(col) {
+  combined$max.scores <- sapply(unique(names(df)), function(cols) {
     # for each row (cluster)
     sapply(1:nrow(df), function(row) {
       # get the column by highest row-wise value within the subset of selected columns
-      col2 <- max.col(df[names(df) == col])[row]
+      col <- max.col(df[names(df) == cols])[row]
       # select the highest score (value) based on the defined column and row within the subset of selected columns
-      df[names(df) == col][row, col2]
+      df[names(df) == cols][row, col]
     })
   })
+  combined$max.labels <- colnames(combined$max.scores)[max.col(combined$max.scores)]
+  ## get mean score and label of all references
+  # for each unique column name select all columns
+  combined$mean.scores <- sapply(unique(names(df)), function(cols) {
+    rowMeans(df[names(df) == cols]) # mean per cluster (row) per set of columns (label)
+  })
+  combined$mean.labels <- colnames(combined$mean.scores)[max.col(combined$mean.scores)]
 
   return(combined)
 })
 
-
-
-
-
+combined.results$`BL_C custom.clusterv2`$max.labels
+combined.results$`BL_C custom.clusterv2`$mean.labels
+combined.results$`BL_C custom.clusterv2`$first.labels
+combined.results$`BL_C custom.clusterv2`$labels
+combined.results$`BL_C custom.clusterv2`$pruned.labels
 
 # save Kriegstein cluster labels into Seurat object --> rds
 for (sample in samples) {
@@ -175,9 +187,11 @@ for (sample in samples) {
     SeuratObject::Misc(object = data.list[[sample]], slot = paste0("Kriegstein.SingleR.", anno)) <- misc_data
   }
   # copy seurat clusters metadata to aggregate with Kriegstein labels
-  data.list[[sample]]$kriegstein.seurat.custom.clusters <- data.list[[sample]]$seurat_clusters
+  data.list[[sample]]$kriegstein.seurat.custom.clusters.max <- data.list[[sample]]$seurat_clusters
+  data.list[[sample]]$kriegstein.seurat.custom.clusters.mean <- data.list[[sample]]$seurat_clusters
   # overwrite copied metadata to an aggregation of Kriegstein.Seurat custom cluster labels
-  levels(data.list[[sample]]$kriegstein.seurat.custom.clusters) <- paste0(combined.results[[paste(sample, "custom.clusterv2")]]$labels, ".", levels(data.list[[sample]]$kriegstein.seurat.custom.clusters))
+  levels(data.list[[sample]]$kriegstein.seurat.custom.clusters.max) <- paste0(combined.results[[paste(sample, "custom.clusterv2")]]$max.labels, ".", levels(data.list[[sample]]$kriegstein.seurat.custom.clusters))
+  levels(data.list[[sample]]$kriegstein.seurat.custom.clusters.mean) <- paste0(combined.results[[paste(sample, "custom.clusterv2")]]$mean.labels, ".", levels(data.list[[sample]]$kriegstein.seurat.custom.clusters))
 
 
 
@@ -187,12 +201,10 @@ for (sample in samples) {
 
   ## TODO uncomment after testing aggr parameter and (first) labels vs pruned labels
   # overwrite rds file with new misc(elleneous) annotation (note: NOT metadata, as that is about cells in SO)
-  saveRDS(data.list[[sample]], file = rds.files[[sample]])
-
-
-
-
+  # saveRDS(data.list[[sample]], file = rds.files[[sample]])
 }
+
+
 
 
 
@@ -206,7 +218,7 @@ for (sample in samples) {
 
   for (anno in annotations) {
     # set annotation column for transferred labels from reference data
-    annotation_col[ , ncol(annotation_col) + 1] <- data.list[[sample]]@misc[[paste0("Kriegstein.SingleR.", anno)]]$labels
+    annotation_col[ , ncol(annotation_col) + 1] <- data.list[[sample]]@misc[[paste0("Kriegstein.SingleR.", anno)]][[user.labels]]
     colnames(annotation_col)[ncol(annotation_col)] <- paste0("ref.", anno)
 
     # get ordered and unique label names from reference data
@@ -228,15 +240,15 @@ for (sample in samples) {
   names(annotation_col) <- c("fetal.brain.age", "fetal.brain.structure", "fetal.brain.celltype")
   annotation_col <- annotation_col[, c("fetal.brain.celltype", "fetal.brain.structure", "fetal.brain.age")]
 
-  for (anno in annotations) {
+  for (anno in annotations.to.plot) {
     filename <- paste0("heatmap_clusters_scores=first_labels=tuned_", sample, "_", anno ,".png")
     print(paste("plotting:", filename))
 
     # set rownames for identification of rows during plotting
-    rownames(combined.results[[paste(sample, anno)]]$scores) <- levels((data.list[[sample]]$seurat_clusters))
+    rownames(combined.results[[paste(sample, anno)]][[user.scores]]) <- levels((data.list[[sample]]$seurat_clusters))
 
     # plot pretty heatmap
-    p <- pheatmap::pheatmap(t(combined.results[[paste(sample, anno)]]$scores),
+    p <- pheatmap::pheatmap(t(combined.results[[paste(sample, anno)]][[user.scores]]),
                   fontsize = 9,
                   color = colorRampPalette(RColorBrewer::brewer.pal(n = 7, name = "PRGn"))(100),
                   labels_col = paste0(levels(data.list[[sample]]$seurat_clusters), " (n=", table(data.list[[sample]]$seurat_clusters), ")"),
