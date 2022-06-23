@@ -111,22 +111,19 @@ for (j in 1:length(rds.files)) {
     # set filename base for RData saving
     filename_base <- paste0(RData.output.folder, sample_name, ".iter.", i)
     for (annotation in annotations) {
-      # TODO test if want to use aggr.ref param, delete other, don't keep both data saves
-      for (bool in c(TRUE, FALSE)) {
-        message("sample=", sample_name, " iter=", i, " annotation=", annotation, " aggrRef=", bool)
-        # TODO go from chunked data to SingleR RData (train + classify)
-        result <- SingleR::SingleR(
-          test = sample_data,
-          ref = cell_data,
-          labels = colData(cell_data)[, annotation],
-          clusters = colData(sample_data)[, "seurat_clusters"],
-          de.method = 'wilcox',
-          aggr.ref = bool)
-        save(result, file = paste0(filename_base, ".", annotation, ".aggrRef", bool, ".RData"))
+      message("sample=", sample_name, " iter=", i, " annotation=", annotation)
+      # run SingleR (train + classify) to generate RData
+      result <- SingleR::SingleR(
+        test = sample_data,
+        ref = cell_data,
+        labels = colData(cell_data)[, annotation],
+        clusters = colData(sample_data)[, "seurat_clusters"],
+        de.method = 'wilcox',
+        aggr.ref = FALSE)
+      save(result, file = paste0(filename_base, ".", annotation, ".RData"))
 
-        # remove result before next iteration to save memory
-        rm(result)
-      }
+      # remove result before next iteration to save memory
+      rm(result)
     }
 
 
