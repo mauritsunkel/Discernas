@@ -386,14 +386,15 @@ assignInNamespace("FindMarkers.default", FindMarkers.default.adjusted, ns = "Seu
 
 ### USER PARAMETERS
 # read an integrated saved RDS file
-sample_name <- "BL_N + BL_C"
-integrated <- readRDS("F:/Maurits/EMC_SKlab_scRNA data/results/Pipe_SCTv2_corrected_13-06/integrated - old selection/BL_N + BL_C/BL_N + BL_C.rds")
+sample_name <- "BL_A + BL_C"
+rds.file <- "C:/Users/mauri/Desktop/Single Cell RNA Sequencing/Seurat/results/Pipe_SCTv2_23-06/integrated - new selection/BL_A + BL_C/BL_A + BL_C.rds"
+integrated <- readRDS(rds.file)
 
 # set amount of cells used for 'downsampling' clusters during FindMarkers function (max amount of cells per cluster)
 nCellsDownsampling <- Inf
 
 # work dir should contain forward slashes (/) on Windows
-work_dir <- "F:/Maurits/EMC_SKlab_scRNA data/"
+work_dir <- "C:/Users/mauri/Desktop/Single Cell RNA Sequencing/Seurat/"
 
 # load future library and set plan to run certain functions with multiprocessing
 plan("multisession", workers = 1) # DEVNOTE: n_workers > 1 for parallelization (for me, 5 is max, 4 is safe)
@@ -504,7 +505,7 @@ for (i in cluster_ids) {
     # FGSEA_analysis(markers = markers, working_directory = work_dir, marker_type = 'markers', cluster = i)
     message("wrote markers")
   }
-  
+
   ## add amount of cells used for conserved_markers comparison to df
   df <- data.frame('orig.ident' = integrated$orig.ident, 'seurat_clusters' = integrated$seurat_clusters)
   # condition 1 & match cluster
@@ -534,9 +535,9 @@ for (i in cluster_ids) {
     # FGSEA_analysis(markers = conserved_markers, working_directory = work_dir, marker_type = 'conserved_markers', cluster = i)
     message("wrote conserved markers")
   }
-  
-  
-  
+
+
+
   # ## create condition markers for integrated data within each cluster between each condition
   # ## DEV NOTE: this is not pairwise if more than 2 conditions are integrated at the same time
   subset <- subset(integrated, seurat_clusters == i)
@@ -565,8 +566,8 @@ for (i in cluster_ids) {
     print(paste('Cluster ID:', i, ' before condition_markers FGSEA call'))
     # FGSEA_analysis(markers = condition_markers, working_directory = work_dir, marker_type = 'condition_markers', cluster = i)
     message("wrote condition markers")
-  } 
-  
+  }
+
   # DEVNOTE if want to assign each table to its own variable, use assign() and get()
   # assign(paste0("cluster", i, "_markers"), markers)
   ## get(paste0("cluster", i, "_markers"))
@@ -576,6 +577,17 @@ write.csv2(sample_markers_df, file = "sample_markers/n_cells_for_comparison_m.cs
 write.csv2(markers_df, file = "markers/n_cells_for_comparison_m.csv", row.names = FALSE)
 write.csv2(conserved_markers_df, file = "conserved_markers/n_cells_for_comparison_cm.csv", row.names = FALSE)
 write.csv2(condition_markers_df, file = "condition_markers/n_cells_for_comparison.csv", row.names = FALSE)
+
+# add as miscellaneous data to Seurat object
+SeuratObject::Misc(object = integrated, slot = paste0("DEG.sample_markers")) <- sample_markers
+SeuratObject::Misc(object = integrated, slot = paste0("DEG.markers")) <- markers
+SeuratObject::Misc(object = integrated, slot = paste0("DEG.conserved_markers")) <- conserved_markers
+SeuratObject::Misc(object = integrated, slot = paste0("DEG.condition_markers")) <- condition_markers
+SeuratObject::Misc(object = integrated, slot = paste0("DEG.sample_markers_n")) <- sample_markers_df
+SeuratObject::Misc(object = integrated, slot = paste0("DEG.markers_n")) <- markers_df
+SeuratObject::Misc(object = integrated, slot = paste0("DEG.conserved_markers_n")) <- conserved_markers_df
+SeuratObject::Misc(object = integrated, slot = paste0("DEG.condition_markers_n")) <- condition_markers_df
+saveRDS(integrated, file = rds.file)
 
 beep()
 
