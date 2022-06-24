@@ -6,6 +6,8 @@ library(patchwork)
 library(magrittr)
 library(ggplot2)
 
+
+
 plot_cells.adjusted <- function(cds, x = 1, y = 2,
                                  reduction_method = c("UMAP", "tSNE", "PCA", "LSI", "Aligned"),
                                  color_cells_by = "cluster", group_cells_by = c("cluster", "partition"),
@@ -470,7 +472,14 @@ work_dir <- "C:/Users/mauri/Desktop/Single Cell RNA Sequencing/Seurat/"
 start_time <- format(Sys.time(), "%F %H-%M-%S")
 dir.create(paste0(work_dir, 'results/', start_time, '/monocle-pseudotime/'), recursive = TRUE)
 
+
+
+
 ## pre-selection rds files
+### TODO testing
+sample_names <- c("BL_A + BL_C")
+rds.files <- c("C:/Users/mauri/Desktop/Single Cell RNA Sequencing/Seurat/results/Pipe_SCTv2_23-06/integrated - old selection/BL_A + BL_C/after_selection/BL_A + BL_C.rds")
+
 # sample_names <- c("BL_C", "BL_A", "BL_N", "BL_A + BL_C", "BL_N + BL_C")
 # rds.files <- c(
 #   "C:/Users/mauri/Desktop/Single Cell RNA Sequencing/Seurat/results/Pipe +SCT +Leiden -Cellcycle +SingleR +Autoselection +05-05-2022/BL_C/BL_C.rds",
@@ -480,18 +489,19 @@ dir.create(paste0(work_dir, 'results/', start_time, '/monocle-pseudotime/'), rec
 #   "C:/Users/mauri/Desktop/Single Cell RNA Sequencing/Seurat/results/Pipe +SCT +Leiden -Cellcycle +SingleR +Autoselection +05-05-2022/integrated/BL_N + BL_C/BL_N + BL_C.rds"
 # )
 ## after selection rds files
-sample_names <- c("BL_A + BL_C", "BL_N + BL_C")
-rds.files <- c(
-  "C:/Users/mauri/Desktop/Single Cell RNA Sequencing/Seurat/results/Pipe +SCT +Leiden -Cellcycle +SingleR +Autoselection +05-05-2022/integrated/BL_A + BL_C/after_selection/BL_A + BL_C.rds",
-  "C:/Users/mauri/Desktop/Single Cell RNA Sequencing/Seurat/results/Pipe +SCT +Leiden -Cellcycle +SingleR +Autoselection +05-05-2022/integrated/BL_N + BL_C/after_selection/BL_N + BL_C.rds")
-
+# sample_names <- c("BL_A + BL_C", "BL_N + BL_C")
+# rds.files <- c(
+#   "C:/Users/mauri/Desktop/Single Cell RNA Sequencing/Seurat/results/Pipe +SCT +Leiden -Cellcycle +SingleR +Autoselection +05-05-2022/integrated/BL_A + BL_C/after_selection/BL_A + BL_C.rds",
+#   "C:/Users/mauri/Desktop/Single Cell RNA Sequencing/Seurat/results/Pipe +SCT +Leiden -Cellcycle +SingleR +Autoselection +05-05-2022/integrated/BL_N + BL_C/after_selection/BL_N + BL_C.rds"
+# )
 names(rds.files) <- sample_names
 
 # set genes of interest for trajectory starting point selection
 astrocytical_interest_markers <- c("VIM", "S100B", "SOX9", "SLC1A3")
 neuronal_interest_markers <- c("MAP2", "RBFOX3", "NEUROG2")
-
 ### end initialization ###
+
+
 
 # initialize plots to wrap
 plots <- list()
@@ -515,13 +525,9 @@ for (sample_name in sample_names) {
 
   # read an integrated saved RDS file
   integrated <- readRDS(rds.files[[sample_name]])
-  # if integrated sample, set integrated assay
-  if (grepl("\\+", sample_name)) {
-    SeuratObject::DefaultAssay(integrated) <- "integrated"
-  }
 
   ## convert from Seurat to Monocle3 object
-  cds <- SeuratWrappers::as.cell_data_set(integrated)
+  cds <- SeuratWrappers::as.cell_data_set(integrated, assay = "SCT")
 
   ## Monocle 3 requires to run it's own clustering (flag in custom function allows to match Seurat_n_clusters)
   match_clustering <- function(seurat_obj, monocle_obj, match_seurat_clustering) {
@@ -598,8 +604,8 @@ for (sample_name in sample_names) {
       p3 <- p3 + labs(title="Monocle clusters + trajectory")
       plots[[length(plots)+1]] <- p3
       p4 <- plot_cells.adjusted(cds,
-                                color_cells_by = "kriegstein.seurat.custom.clusters",
-                                group_cells_by = "kriegstein.seurat.custom.clusters",
+                                color_cells_by = "kriegstein.seurat.custom.clusters.mean",
+                                group_cells_by = "kriegstein.seurat.custom.clusters.mean",
                                 show_trajectory_graph = FALSE,
                                 label_cell_groups = FALSE, # if false, show legend
                                 label_groups_by_cluster = TRUE,
@@ -611,8 +617,8 @@ for (sample_name in sample_names) {
       p4 <- p4 + labs(title="Kriegstein clusters UMAP")
       plots[[length(plots)+1]] <- p4
       p5 <- plot_cells.adjusted(cds,
-                                color_cells_by = "kriegstein.seurat.custom.clusters",
-                                group_cells_by = "kriegstein.seurat.custom.clusters",
+                                color_cells_by = "kriegstein.seurat.custom.clusters.mean",
+                                group_cells_by = "kriegstein.seurat.custom.clusters.mean",
                                 show_trajectory_graph = TRUE,
                                 label_cell_groups = FALSE, # if false, show legend
                                 label_groups_by_cluster = TRUE,
