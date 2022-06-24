@@ -4,63 +4,14 @@ library(Seurat)
 
 
 
-
-
-
-
-
-
-
-
-# TODO rds files need to be saved to their own folder per sample
-## because after_selection sample names for integrated samples are the same as pre-selection samples
-### loop per sample, cut off filename and keep foldername
-
-
-
 ### USER PARAMETERS ###
-# source my custom color palettes from utils
-source(file="C:/Users/mauri/Desktop/Single Cell RNA Sequencing/Seurat/R/my_utils/color_palettes.R")
-my.color.palettes <- my.color.palettes
-# get custom colors
-custom_colors <- my.color.palettes(type = 'mixed')
-
-# set work dir
-work_dir <- 'C:/Users/mauri/Desktop/Single Cell RNA Sequencing/Seurat/data/Kriegstein/'
-setwd(work_dir)
-
-# initialize function and get meta data
-getMeta <- function() {
-  metaFile <- "custom.meta.tsv"
-  if (!file.exists(metaFile)) {
-    stop(metaFile, " does not exist, this file is generated during data chunking.")
-  } else {
-    return(read.table(metaFile, header = TRUE, sep = "\t", as.is = TRUE, row.names = 1))
-  }
-}
-meta <- getMeta()
-
-# set RData folder
-RData_folder <- 'C:/Users/mauri/Desktop/Single Cell RNA Sequencing/Seurat/data/Kriegstein/RData/Pipe_SCTv2_corrected_13-06/SingleR_RData SCTv2 +old_panel/'
-
-# set annotations
-annotations <- c("age", "structure", "custom.clusterv2")
-annotations.to.plot <- c("custom.clusterv2")
-
-
-
-
-
 ## TODO testing
-rds.files <- c("C:/Users/mauri/Desktop/Single Cell RNA Sequencing/Seurat/results/Pipe_SCTv2_corrected_13-06/BL_C/BL_C.rds")
-samples <- c("BL_C")
-
-## TODO TESTING AGGR PARAMETER - remove either aggrTRUE or aggrFALSE in individual runs
-aggrRefTrue <- FALSE
-## TODO in visualization code block, also change mean or max scores
-user.labels <- "mean.labels" # mean.labels or max.labels
-user.scores <- "mean.scores" # mean.scores or max.scores
-
+# set RData folder
+RData_folder <-"C:/Users/mauri/Desktop/Single Cell RNA Sequencing/Seurat/data/Kriegstein/RData/Pipe_SCTv2_23-06/A+C newPostSelect"
+# set sample(s)
+samples <- c("BL_A + BL_C")
+# set file(s)
+rds.files <- c("C:/Users/mauri/Desktop/Single Cell RNA Sequencing/Seurat/results/Pipe_SCTv2_23-06/integrated - new selection/BL_A + BL_C/after_selection/BL_A + BL_C.rds")
 
 
 
@@ -89,8 +40,33 @@ names(rds.files) <- samples
 
 
 
+# source my custom color palettes from utils
+source(file="C:/Users/mauri/Desktop/Single Cell RNA Sequencing/Seurat/R/my_utils/color_palettes.R")
+my.color.palettes <- my.color.palettes
+# get custom colors
+custom_colors <- my.color.palettes(type = 'mixed')
+
+# set work dir
+work_dir <- 'C:/Users/mauri/Desktop/Single Cell RNA Sequencing/Seurat/data/Kriegstein/'
+setwd(work_dir)
+
+# initialize function and get meta data
+getMeta <- function() {
+  metaFile <- "custom.meta.tsv"
+  if (!file.exists(metaFile)) {
+    stop(metaFile, " does not exist, this file is generated during data chunking.")
+  } else {
+    return(read.table(metaFile, header = TRUE, sep = "\t", as.is = TRUE, row.names = 1))
+  }
+}
+meta <- getMeta()
 
 
+# set annotations
+annotations <- c("age", "structure", "custom.clusterv2")
+annotations.to.plot <- c("custom.clusterv2")
+
+# set start time and create output directories
 start_time <- format(Sys.time(), "%F %H-%M-%S")
 work_dir <- "C:/Users/mauri/Desktop/Single Cell RNA Sequencing/Seurat/"
 dir.create(paste0(work_dir, 'results/', 'Kriegstein/', start_time, '/'), recursive = TRUE)
@@ -113,14 +89,6 @@ for (sample in samples) {
   for (anno in annotations) {
     # list all files in RData_folder based on sample and annotation
     files <- list.files(path = RData_folder, pattern = paste0(stringr::str_replace(sample, " \\+ ", " .* "), ".*", anno), full.names=T)
-
-    ## TODO TESTING AGGR PARAMETER - remove either aggrTRUE or aggrFALSE in individual runs
-    if (aggrRefTrue) {
-      files <- files[grepl("aggrRefTRUE", files, fixed = T)]
-    } else {
-      files <- files[!grepl("aggrRefTRUE", files, fixed = T)]
-    }
-
 
     # if '+' not in sample (name), then
     if (!grepl("+", sample, fixed = T)) {
@@ -172,12 +140,6 @@ combined.results <- lapply(X = results.list, FUN = function(x) {
   return(combined)
 })
 
-combined.results$`BL_C custom.clusterv2`$max.labels
-combined.results$`BL_C custom.clusterv2`$mean.labels
-combined.results$`BL_C custom.clusterv2`$first.labels
-combined.results$`BL_C custom.clusterv2`$labels
-combined.results$`BL_C custom.clusterv2`$pruned.labels
-
 # save Kriegstein cluster labels into Seurat object --> rds
 for (sample in samples) {
   for (anno in annotations) {
@@ -187,26 +149,13 @@ for (sample in samples) {
     SeuratObject::Misc(object = data.list[[sample]], slot = paste0("Kriegstein.SingleR.", anno)) <- misc_data
   }
   # copy seurat clusters metadata to aggregate with Kriegstein labels
-  data.list[[sample]]$kriegstein.seurat.custom.clusters.max <- data.list[[sample]]$seurat_clusters
   data.list[[sample]]$kriegstein.seurat.custom.clusters.mean <- data.list[[sample]]$seurat_clusters
   # overwrite copied metadata to an aggregation of Kriegstein.Seurat custom cluster labels
-  levels(data.list[[sample]]$kriegstein.seurat.custom.clusters.max) <- paste0(combined.results[[paste(sample, "custom.clusterv2")]]$max.labels, ".", levels(data.list[[sample]]$kriegstein.seurat.custom.clusters))
-  levels(data.list[[sample]]$kriegstein.seurat.custom.clusters.mean) <- paste0(combined.results[[paste(sample, "custom.clusterv2")]]$mean.labels, ".", levels(data.list[[sample]]$kriegstein.seurat.custom.clusters))
+  levels(data.list[[sample]]$kriegstein.seurat.custom.clusters.mean) <- paste0(combined.results[[paste(sample, "custom.clusterv2")]]$mean.labels, ".", levels(data.list[[sample]]$kriegstein.seurat.custom.clusters.mean))
 
-
-
-
-
-
-
-  ## TODO uncomment after testing aggr parameter and (first) labels vs pruned labels
   # overwrite rds file with new misc(elleneous) annotation (note: NOT metadata, as that is about cells in SO)
-  # saveRDS(data.list[[sample]], file = rds.files[[sample]])
+  saveRDS(data.list[[sample]], file = rds.files[[sample]])
 }
-
-
-
-
 
 
 
@@ -218,7 +167,7 @@ for (sample in samples) {
 
   for (anno in annotations) {
     # set annotation column for transferred labels from reference data
-    annotation_col[ , ncol(annotation_col) + 1] <- data.list[[sample]]@misc[[paste0("Kriegstein.SingleR.", anno)]][[user.labels]]
+    annotation_col[ , ncol(annotation_col) + 1] <- data.list[[sample]]@misc[[paste0("Kriegstein.SingleR.", anno)]][["mean.labels"]]
     colnames(annotation_col)[ncol(annotation_col)] <- paste0("ref.", anno)
 
     # get ordered and unique label names from reference data
@@ -241,14 +190,14 @@ for (sample in samples) {
   annotation_col <- annotation_col[, c("fetal.brain.celltype", "fetal.brain.structure", "fetal.brain.age")]
 
   for (anno in annotations.to.plot) {
-    filename <- paste0("heatmap_clusters_scores=first_labels=tuned_", sample, "_", anno ,".png")
+    filename <- paste0("Kriegstein_heatmap_", sample, "_", anno ,".png")
     print(paste("plotting:", filename))
 
     # set rownames for identification of rows during plotting
-    rownames(combined.results[[paste(sample, anno)]][[user.scores]]) <- levels((data.list[[sample]]$seurat_clusters))
+    rownames(combined.results[[paste(sample, anno)]][["mean.scores"]]) <- levels((data.list[[sample]]$seurat_clusters))
 
     # plot pretty heatmap
-    p <- pheatmap::pheatmap(t(combined.results[[paste(sample, anno)]][[user.scores]]),
+    p <- pheatmap::pheatmap(t(combined.results[[paste(sample, anno)]][["mean.scores"]]),
                   fontsize = 9,
                   color = colorRampPalette(RColorBrewer::brewer.pal(n = 7, name = "PRGn"))(100),
                   labels_col = paste0(levels(data.list[[sample]]$seurat_clusters), " (n=", table(data.list[[sample]]$seurat_clusters), ")"),
