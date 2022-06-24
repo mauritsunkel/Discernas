@@ -199,7 +199,7 @@ for (sample in samples) {
     # plot pretty heatmap
     p <- pheatmap::pheatmap(t(combined.results[[paste(sample, anno)]][["mean.scores"]]),
                   fontsize = 9,
-                  color = colorRampPalette(RColorBrewer::brewer.pal(n = 7, name = "PRGn"))(100),
+                  color = colorRampPalette(RColorBrewer::brewer.pal(n = 7, name = "PiYG"))(100),
                   labels_col = paste0(levels(data.list[[sample]]$seurat_clusters), " (n=", table(data.list[[sample]]$seurat_clusters), ")"),
                   annotation_col = annotation_col,
                   annotation_colors = annotation_colors,
