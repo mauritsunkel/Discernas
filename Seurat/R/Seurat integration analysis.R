@@ -262,7 +262,7 @@ integration_analysis <- function(integrated, selection_performed = FALSE) {
   ## perform visualization
   astrocyte_interest <- c("GFAP", "VIM", "S100B", "SOX9", "CD44", "AQP4", "ALDH1L1",
                           "HIST1H4C", "FABP7", "SLC1A2", "SLC1A3", "GJA1", "APOE")
-  neuron_interest <- c("TUBB3", "MAP2", "CAMK2A", "GAD2", "NEUROG2", "SYN1", "RBFOX3", "GJA1")
+  neuron_interest <- c("TUBB3", "MAP2", "CAMK2A", "GAD2", "NEUROG2", "SYN1", "RBFOX3", "GJA1", "DCX")
   schema_psych_interest <- c("SETD1A", "CUL1", "XPO7", "TRIO", "CACNA1G", "SP4",
                              "GRIA3", "GRIN2A", "HERC1", "RB1CC1", "HCN4", "AKAP11")
   sloan_2017_interest <- c("AQP4", "ALDH1L1", "RANBP3L", "IGFBP7", "TOP2A", "TMSB15A", "NNAT", "HIST1H3B",
