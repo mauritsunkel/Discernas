@@ -5,13 +5,6 @@ library(data.table)
 
 
 
-# TODO test if want to use aggr.ref/all.genes params, delete other, don't keep both data saves
-
-# TODO rds files need to be saved to their own folder per sample
-## because after_selection sample names for integrated samples are the same as pre-selection samples
-
-
-
 ### USER PARAMETERS ###
 # set annotations for training
 annotations <- c("age", "structure", "custom.clusterv2")
@@ -126,72 +119,6 @@ for (j in 1:length(rds.files)) {
       rm(result)
     }
 
-
-
-
-    ## perform SingleR label transfer
-    # # clusterv2
-    # print("custom.clusterv2")
-    # result <- SingleR::SingleR(test=sample_data, ref=cell_data, labels=cell_data$custom.clusterv2,
-    #                            clusters=sample_data$seurat_clusters, de.method='wilcox')
-    # save(result, file = paste0(filename_base, ".custom.clusterv2.RData"))
-    #
-    # print("celltype")
-    # # celltype
-    # result <- SingleR::SingleR(test=sample_data, ref=cell_data, labels=cell_data$celltype,
-    #                            clusters=sample_data$seurat_clusters, de.method='wilcox')
-    # save(result, file = paste0(filename_base, ".celltype.RData"))
-    # print("age")
-    # # age
-    # result <- SingleR::SingleR(test=sample_data, ref=cell_data, labels=cell_data$age,
-    #                            clusters=sample_data$seurat_clusters, de.method='wilcox')
-    # save(result, file = paste0(filename_base, ".age.RData"))
-    # print("individual")
-    # # individual
-    # result <- SingleR::SingleR(test=sample_data, ref=cell_data, labels=cell_data$individual,
-    #                            clusters=sample_data$seurat_clusters, de.method='wilcox')
-    # save(result, file = paste0(filename_base, ".individual.RData"))
-    # print("structure")
-    # # structure
-    # result <- SingleR::SingleR(test=sample_data, ref=cell_data, labels=cell_data$structure,
-    #                            clusters=sample_data$seurat_clusters, de.method='wilcox')
-    # save(result, file = paste0(filename_base, ".structure.RData"))
-    # print("area")
-    # # area
-    # result <- SingleR::SingleR(test=sample_data, ref=cell_data, labels=cell_data$area,
-    #                            clusters=sample_data$seurat_clusters, de.method='wilcox')
-    # save(result, file = paste0(filename_base, ".area.RData"))
-    # print("cell.type.v2")
-    # # cell.type.v2
-    # result <- SingleR::SingleR(test=sample_data, ref=cell_data, labels=cell_data$cell.type.v2,
-    #                            clusters=sample_data$seurat_clusters, de.method='wilcox')
-    # save(result, file = paste0(filename_base, ".cell.type.v2.RData"))
-
-
-
-    ## DEVNOTE: commented out features that were too large for 16GB of RAM individually in a single run
-    # print("cellabbreviation")
-    # # cellabbreviation
-    # result <- SingleR(test=sample_data, ref=cell_data, labels=cell_data$cellabbreviation,
-    #                   clusters=sample_data$seurat_clusters, de.method='wilcox')
-    # save(result, file = paste0(filename_base, ".cellabbreviation.RData"))
-
-    # clusterv1
-    # print("clusterv1")
-    # result <- SingleR(test=sample_data, ref=cell_data, labels=cell_data$clusterv1,
-    #                   clusters=sample_data$seurat_clusters, de.method='wilcox')
-    # save(result, file = paste0(filename_base, ".clusterv1.RData"))
-    # clusterv2
-    # print("clusterv2")
-    # result <- SingleR(test=sample_data, ref=cell_data, labels=cell_data$clusterv2,
-    #                   clusters=sample_data$seurat_clusters, de.method='wilcox')
-    # save(result, file = paste0(filename_base, ".clusterv2.RData"))
-
-    # print("celltype.structure")
-    # # celltype.structure
-    # result <- SingleR(test=sample_data, ref=cell_data, labels=cell_data$celltype.structure,
-    #                   clusters=sample_data$seurat_clusters, de.method='wilcox')
-    # save(result, file = paste0(filename_base, ".celltype.structure.RData"))
   }
   for (thing in ls()) { message(thing); print(object.size(get(thing)), units='auto') }
 
