@@ -29,6 +29,8 @@ future::plan("multisession", workers = 1) # DEVNOTE: n_workers > 1 for paralleli
 run_label_transfer <- FALSE
 # set to perform selection after integration pre-selection
 perform_selection <- TRUE
+perform_cell_level_selection <- TRUE
+perform_cluster_level_selection <- FALSE
 
 ## SELECTION PARAMETERS FOR NEURONS
 # # define selection panel (varies per selection type)
@@ -333,16 +335,25 @@ integrated <- integration_analysis(integrated, selection_performed = FALSE)
 # perform marker selection & rerun integration analysis?
 if (perform_selection) {
   print("start performing marker selection and then integration on selected data")
-  # create dotplot to extract percent expressed (and average expression) data
-  p <- Seurat::DotPlot(integrated, features = selection_panel)
-  # get cluster names where percent expressed is above (25)% for each feature (gene) of selection_panel
-  cluster_selection <- names(which(table(p$data[p$data$pct.exp > selection_percent_expressed,]$id) == length(selection_panel)))
-  # if no clusters selected, set selection to NULL
-  if (length(cluster_selection) == 0) {
-    cluster_selection <- NULL
+  integrated <- GetAssayData(integrated, slot = "data", assay = "SCT")
+
+  if (perform_cell_level_selection) {
+    cellsToSelect <- sapply(as.data.frame(integrated[selection_panel, ] > 0), sum)
+    integrated <- integrated[, cellsToSelect == length(selection_panel)]
   }
-  # subset/keep only clusters based on cluster_selection
-  integrated <- subset(integrated, idents = cluster_selection)
+  if (perform_cluster_level_selection) {
+    # create dotplot to extract percent expressed (and average expression) data
+    p <- Seurat::DotPlot(integrated, features = selection_panel)
+    # get cluster names where percent expressed is above (25)% for each feature (gene) of selection_panel
+    cluster_selection <- names(which(table(p$data[p$data$pct.exp > selection_percent_expressed,]$id) == length(selection_panel)))
+    # if no clusters selected, set selection to NULL
+    if (length(cluster_selection) == 0) {
+      cluster_selection <- NULL
+    }
+    # subset/keep only clusters based on cluster_selection
+    integrated <- subset(integrated, idents = cluster_selection)
+  }
+
   # remove empty clusters from original seurat_clusters
   integrated$seurat_clusters <- factor(integrated$seurat_clusters)
   # add selection panel and type to subset file as metadata (for later reference)
