@@ -579,7 +579,7 @@ for (sample_name in sample_names) {
   ## learn principal graph and plot the trajectory
   cds <- monocle3::learn_graph(cds, use_partition = TRUE)
 
-  for (partition in levels(partitions(cds))) {
+  for (partition in seq_along(table(partitions(cds)))) {
     # create df of cell names and marker of interest values
     df <- SeuratObject::FetchData(integrated, genes_of_interest)
     # get cell name with highest summed expression for marker(s) of interest
