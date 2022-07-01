@@ -47,8 +47,8 @@ selection_panel_type <- "astrocytical"
 selection_percent_expressed <- 20
 
 # files and sample names
-rds.files <- c("C:/Users/mauri/Desktop/Single Cell RNA Sequencing/Seurat/results/Pipe_29-06/BL_A/BL_A.rds",
-               "C:/Users/mauri/Desktop/Single Cell RNA Sequencing/Seurat/results/Pipe_29-06/BL_C/BL_C.rds")
+rds.files <- c("C:/Users/mauri/Desktop/Single Cell RNA Sequencing/Seurat/results/Pipe_29-06 cell_level_selection/BL_A/BL_A.rds",
+               "C:/Users/mauri/Desktop/Single Cell RNA Sequencing/Seurat/results/Pipe_29-06 cell_level_selection/BL_C/BL_C.rds")
 sample_name <- "BL_A + BL_C"
 ref_sample <- "BL_C"
 
