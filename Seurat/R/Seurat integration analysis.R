@@ -39,7 +39,7 @@ perform_cluster_level_selection <- FALSE
 # selection_panel_type <- "neuronal"
 ## SELECTION PARAMETERS FOR ASTROCYTES
 # define selection panel (varies per selection type)
-selection_panel <- c("VIM", "S100B", "FABP7") # SOX9 <-> FABP7
+selection_panel <- c("VIM", "S100B", "SOX9") # SOX9 <-> FABP7
 # define panel type
 selection_panel_type <- "astrocytical"
 ## SELECTION PARAMETERS IN GENERAL
@@ -335,11 +335,11 @@ integrated <- integration_analysis(integrated, selection_performed = FALSE)
 # perform marker selection & rerun integration analysis?
 if (perform_selection) {
   print("start performing marker selection and then integration on selected data")
-  integrated <- GetAssayData(integrated, slot = "data", assay = "SCT")
 
   if (perform_cell_level_selection) {
-    cellsToSelect <- sapply(as.data.frame(integrated[selection_panel, ] > 0), sum)
-    integrated <- integrated[, cellsToSelect == length(selection_panel)]
+    assay_data <- GetAssayData(integrated, slot = "data", assay = "SCT")
+    cellsToSelect <- sapply(as.data.frame(assay_data[selection_panel, ] > 0), sum) == length(selection_panel)
+    integrated <- integrated[, cellsToSelect]
   }
   if (perform_cluster_level_selection) {
     # create dotplot to extract percent expressed (and average expression) data
