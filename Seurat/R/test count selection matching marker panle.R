@@ -11,7 +11,7 @@ selection_panel <- c("MAP2", "NEUROG2", "RBFOX3")
 
 # initialize matrix
 rownames <- c(levels(data$seurat_clusters), "all")
-colnames <- c("cluster", "total", "match 3", "match 2 additionally")
+colnames <- c("total", "match 3", "match 2 additionally")
 m <- matrix(NA, nrow = length(rownames), ncol = length(colnames), dimnames = list(rownames, colnames))
 
 # initialize update matrix function
@@ -22,7 +22,7 @@ update_matrix <- function(matrix, data, selection_panel, cluster = 0) {
   n_cells_3 <- sum(sapply(as.data.frame(assay_data[selection_panel, ] > 0), sum) == length(selection_panel))
   n_cells_total <- dim(data)[2]
 
-  matrix[cluster, ] <- c(cluster, n_cells_total, n_cells_3, n_cells_2-n_cells_3)
+  matrix[cluster, ] <- c(n_cells_total, n_cells_3, n_cells_2-n_cells_3)
 
   return(matrix)
 }
@@ -44,4 +44,4 @@ write.csv(m, file = paste0(selection_panel, ".csv"))
 
 # TODO dit zijn CSV voor selectie op cel level vanuit cluster level
 ## dus ook nog kijken naar welke clusters worden geselecteerd met heoveel cellen etc?
-### TODO zet sowieso dus ook een kolom pet percentages er bij
+### TODO zet sowieso dus ook een kolom met percentages er bij
