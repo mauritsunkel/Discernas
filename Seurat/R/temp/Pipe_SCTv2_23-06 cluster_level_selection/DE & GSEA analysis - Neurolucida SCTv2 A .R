@@ -386,8 +386,8 @@ assignInNamespace("FindMarkers.default", FindMarkers.default.adjusted, ns = "Seu
 
 ### USER PARAMETERS
 # read an integrated saved RDS file
-sample_name <- "BL_N"
-rds.file <- "F:/Maurits/EMC_SKlab_scRNA data/results/Pipe_SCTv2_23-06/BL_N/BL_N.rds"
+sample_name <- "BL_A"
+rds.file <- "F:/Maurits/EMC_SKlab_scRNA data/results/Pipe_SCTv2_23-06/BL_A/BL_A.rds"
 integrated <- readRDS(rds.file)
 
 # set amount of cells used for 'downsampling' clusters during FindMarkers function (max amount of cells per cluster)
@@ -412,49 +412,66 @@ dir.create(paste0(work_dir, 'results/', start_time, '/integrated/', sample_name,
 work_dir <- paste0(work_dir, 'results/', start_time, '/integrated/', sample_name, "/DE_analysis/")
 setwd(work_dir)
 dir.create(paste0(work_dir, "../GSE_analysis/"))
-dir.create(paste0(work_dir, "sample_markers/"))
 dir.create(paste0(work_dir, "markers/"))
-dir.create(paste0(work_dir, "conserved_markers/"))
-dir.create(paste0(work_dir, "condition_markers/"))
+if (length(table(integrated$orig.ident)) != 1) {
+  dir.create(paste0(work_dir, "sample_markers/"))
+  dir.create(paste0(work_dir, "conserved_markers/"))
+  dir.create(paste0(work_dir, "condition_markers/"))
+}
 message(start_time)
 ### END USER PARAMETERS
 
-### create marker dfs to count N cells used in comparisons
-## sample markers
-sample_markers_columns <- c(paste0("n_cells_", names(table(integrated$orig.ident))[1]),
-                            paste0("n_cells_", names(table(integrated$orig.ident))[2]))
-sample_markers_df <- data.frame(matrix(nrow = 0, ncol = length(sample_markers_columns)))
-colnames(sample_markers_df) <- sample_markers_columns
-sample_markers_df[nrow(sample_markers_df) + 1,] = c(table(integrated$orig.ident)[1],
-                                                    table(integrated$orig.ident)[2])
 
-# set idents to compare cells at sample level instead of cluster level
-Idents(integrated) <- integrated$orig.ident
-# get sample vs sample markers (now: monoculture vs coculture (for neurons and astrocytes))
-## note: p_val_adj = Adjusted p-value, based on Bonferroni correction using all genes (including non-zero expression) in the dataset
-### adjusted both defaults: logfc.threshold = 0.25, min.pct = 0.1    to 0
-sample_markers <- FindMarkers(integrated, assay = "SCT", ident.1 = names(table(integrated$orig.ident))[1], only.pos = FALSE, verbose = T,
-                              logfc.threshold = 0, min.pct = 0)
 
-# set pct variable based on BL_C orig.identity index
-if (names(table(integrated$orig.ident))[1] == "BL_C") {
-  pct <- "pct.1"
-} else {
-  pct <- "pct.2"
+## perform sample level comparison for integration
+# check if all samples for comparison have more then 3 cells 
+if (any(table(integrated$orig.ident) < 3)) {
+  # check if multiple samples
+  if (length(table(integrated$orig.ident)) != 1) {
+    # set idents to compare cells at sample level instead of cluster level
+    Idents(integrated) <- integrated$orig.ident
+    ### create marker dfs to count N cells used in comparisons
+    ## sample markers
+    sample_markers_columns <- c(paste0("n_cells_", names(table(integrated$orig.ident))[1]),
+                                paste0("n_cells_", names(table(integrated$orig.ident))[2]))
+    sample_markers_df <- data.frame(matrix(nrow = 0, ncol = length(sample_markers_columns)))
+    colnames(sample_markers_df) <- sample_markers_columns
+    sample_markers_df[nrow(sample_markers_df) + 1,] = c(table(integrated$orig.ident)[1],
+                                                        table(integrated$orig.ident)[2])
+    # write n cells for comparison to CSV files
+    write.csv2(sample_markers_df, file = "sample_markers/n_cells_for_comparison_m.csv", row.names = FALSE)
+    
+    # get sample vs sample markers (now: monoculture vs coculture (for neurons and astrocytes))
+    ## note: p_val_adj = Adjusted p-value, based on Bonferroni correction using all genes (including non-zero expression) in the dataset
+    ### adjusted both defaults: logfc.threshold = 0.25, min.pct = 0.1    to 0
+    sample_markers <- FindMarkers(integrated, assay = "SCT", ident.1 = names(table(integrated$orig.ident))[1], only.pos = FALSE, verbose = T,
+                                  logfc.threshold = 0, min.pct = 0)
+    
+    # set pct variable based on BL_C orig.identity index
+    if (names(table(integrated$orig.ident))[1] == "BL_C") {
+      pct <- "pct.1"
+    } else {
+      pct <- "pct.2"
+    }
+    
+    # filters rows (genes) if they are >0.05 for both p_val and non-zero p_val with Bonferronu correction
+    sample_markers <- sample_markers[!(sample_markers$p_val_adj > 0.05 & sample_markers$nz_p_val_adj > 0.05),]
+    # filter on pct.ref and order by avg_log2FC
+    sample_markers_pval_adj <- sample_markers %>% arrange(desc(avg_log2FC)) # DEPRECATED: filter(pct > 0.1)
+    
+    # sample_markers_pval_adj <- sample_markers %>% filter(p_val_adj <= 0.05) %>% filter(pct > 0.1) %>% arrange(desc(avg_log2FC))
+    write.csv2(sample_markers_pval_adj, file = paste0("sample_markers/pct1=", names(table(integrated$orig.ident))[1], "-pct2=", names(table(integrated$orig.ident))[2], " - (nz-)p-val st 0.05.csv"), row.names = TRUE)
+    # FGSEA_analysis(markers = sample_markers, working_directory = work_dir, marker_type = 'sample_markers', cluster = pct)
+    # add as miscellaneous data to Seurat object
+    SeuratObject::Misc(object = integrated, slot = paste0("DEG.sample_markers")) <- sample_markers
+    SeuratObject::Misc(object = integrated, slot = paste0("DEG.sample_markers_n")) <- sample_markers_df
+  }
 }
 
-# filters rows (genes) if they are >0.05 for both p_val and non-zero p_val with Bonferronu correction
-sample_markers <- sample_markers[!(sample_markers$p_val_adj > 0.05 & sample_markers$nz_p_val_adj > 0.05),]
-# filter on pct.ref and order by avg_log2FC
-sample_markers_pval_adj <- sample_markers %>% arrange(desc(avg_log2FC)) # DEPRECATED: filter(pct > 0.1)
 
-# sample_markers_pval_adj <- sample_markers %>% filter(p_val_adj <= 0.05) %>% filter(pct > 0.1) %>% arrange(desc(avg_log2FC))
-write.csv2(sample_markers_pval_adj, file = paste0("sample_markers/pct1=", names(table(integrated$orig.ident))[1], "-pct2=", names(table(integrated$orig.ident))[2], " - (nz-)p-val st 0.05.csv"), row.names = TRUE)
-# FGSEA_analysis(markers = sample_markers, working_directory = work_dir, marker_type = 'sample_markers', cluster = pct)
 
 # set idents back to cluster level
 Idents(integrated) <- integrated$seurat_clusters
-
 # Note: Custom Bonferroni correction based on amount of genes TESTED would be way less stringent then using n_genes in dataset, as we filter features for downstream processing before DE
 ## Note: alternatives to this stringent Bonferroni are not supported by Seurat but can be custom made on the output p-values of FindMarkers functions
 ### Note: answer to Steven specific discussion: https://github.com/satijalab/seurat/issues/4112
@@ -493,6 +510,8 @@ for (i in cluster_ids) {
   markers_df[nrow(markers_df) + 1,] = c(i,
                                         table(integrated$seurat_clusters)[i],
                                         sum(table(integrated$seurat_clusters)[-as.integer(i)]))
+  ## write n cells for comparison to CSV files
+  write.csv2(markers_df, file = "markers/n_cells_for_comparison_m.csv", row.names = FALSE)
   ## check more than 2 cells in ident (cluster) before comparison
   if (table(integrated$seurat_clusters)[i] < 3) {
     message("For markers, skipping ident (cluster) ", i, " comparison because < 3 cells")
@@ -503,91 +522,94 @@ for (i in cluster_ids) {
     markers <- markers[!(markers$p_val_adj > 0.05 & markers$nz_p_val_adj > 0.05),]
     write.csv2(markers, file = paste0("markers/all_cluster", i, "_m.csv"))
     # FGSEA_analysis(markers = markers, working_directory = work_dir, marker_type = 'markers', cluster = i)
+    # add as miscellaneous data to Seurat object
+    SeuratObject::Misc(object = integrated, slot = paste0("DEG.markers")) <- markers
+    SeuratObject::Misc(object = integrated, slot = paste0("DEG.markers_n")) <- markers_df
     message("wrote markers")
   }
 
-  ## add amount of cells used for conserved_markers comparison to df
-  df <- data.frame('orig.ident' = integrated$orig.ident, 'seurat_clusters' = integrated$seurat_clusters)
-  # condition 1 & match cluster
-  cm_val1 <- nrow(df %>% filter(orig.ident == names(table(integrated$orig.ident))[1] & seurat_clusters == i))
-  # condition 2 & match cluster
-  cm_val2 <- nrow(df %>% filter(orig.ident == names(table(integrated$orig.ident))[2] & seurat_clusters == i))
-  # condition 1 & no match cluster
-  cm_val3 <- nrow(df %>% filter(orig.ident == names(table(integrated$orig.ident))[1] & seurat_clusters != i))
-  # condition 2 & no match cluster
-  cm_val4 <- nrow(df %>% filter(orig.ident == names(table(integrated$orig.ident))[2] & seurat_clusters != i))
-  conserved_markers_df[nrow(conserved_markers_df) + 1,] = c(i, cm_val1, cm_val2, cm_val3, cm_val4)
-  ## check more than 2 cells in ident (cluster) for each group before comparison
-  if (any(c(cm_val1, cm_val2, cm_val3, cm_val4) < 3)) {
-    message("For conserved markers, skipping ident (cluster) ", i, " comparison because < 3 cells")
-  } else {
-    ## create markers conserved between groups (conditions) for integrated data for each cluster vs all other clusters
-    conserved_markers <- FindConservedMarkers(integrated, assay = "SCT", ident.1 = i, only.pos = FALSE,
-                                              max.cells.per.ident = nCellsDownsampling,
-                                              grouping.var = "orig.ident", verbose = T)
-    # filters rows (genes) if they are >0.05 for both p_val and non-zero p_val with Bonferroni correction
-    conserved_markers <- conserved_markers[!(conserved_markers$p_val_adj > 0.05 & conserved_markers$nz_p_val_adj > 0.05),]
-    # TODO check if filters are still correct now that order of column names is different etc
-    head(conserved_markers)
-    # pos_conserved_markers <- conserved_markers %>% filter((.[[2]] > 0) & (.[[7]] > 0))
-    # neg_conserved_markers <- conserved_markers %>% filter((.[[2]] < 0) | (.[[7]] < 0))
-    write.csv2(conserved_markers, file = paste0("conserved_markers/all_cluster", i, "_cm.csv"))
-    # FGSEA_analysis(markers = conserved_markers, working_directory = work_dir, marker_type = 'conserved_markers', cluster = i)
-    message("wrote conserved markers")
+  # check if multiple samples
+  if (length(table(integrated$orig.ident)) != 1) {
+    ## add amount of cells used for conserved_markers comparison to df
+    df <- data.frame('orig.ident' = integrated$orig.ident, 'seurat_clusters' = integrated$seurat_clusters)
+    # condition 1 & match cluster
+    cm_val1 <- nrow(df %>% filter(orig.ident == names(table(integrated$orig.ident))[1] & seurat_clusters == i))
+    # condition 2 & match cluster
+    cm_val2 <- nrow(df %>% filter(orig.ident == names(table(integrated$orig.ident))[2] & seurat_clusters == i))
+    # condition 1 & no match cluster
+    cm_val3 <- nrow(df %>% filter(orig.ident == names(table(integrated$orig.ident))[1] & seurat_clusters != i))
+    # condition 2 & no match cluster
+    cm_val4 <- nrow(df %>% filter(orig.ident == names(table(integrated$orig.ident))[2] & seurat_clusters != i))
+    conserved_markers_df[nrow(conserved_markers_df) + 1,] = c(i, cm_val1, cm_val2, cm_val3, cm_val4)
+    ## write n cells for comparison to CSV files
+    write.csv2(conserved_markers_df, file = "conserved_markers/n_cells_for_comparison_cm.csv", row.names = FALSE)
+    ## check more than 2 cells in ident (cluster) for each group before comparison
+    if (any(c(cm_val1, cm_val2, cm_val3, cm_val4) < 3)) {
+      message("For conserved markers, skipping ident (cluster) ", i, " comparison because < 3 cells")
+    } else {
+      ## create markers conserved between groups (conditions) for integrated data for each cluster vs all other clusters
+      conserved_markers <- FindConservedMarkers(integrated, assay = "SCT", ident.1 = i, only.pos = FALSE,
+                                                max.cells.per.ident = nCellsDownsampling,
+                                                grouping.var = "orig.ident", verbose = T)
+      # filters rows (genes) if they are >0.05 for both p_val and non-zero p_val with Bonferroni correction
+      conserved_markers <- conserved_markers[!(conserved_markers$p_val_adj > 0.05 & conserved_markers$nz_p_val_adj > 0.05),]
+      # TODO check if filters are still correct now that order of column names is different etc
+      head(conserved_markers)
+      # pos_conserved_markers <- conserved_markers %>% filter((.[[2]] > 0) & (.[[7]] > 0))
+      # neg_conserved_markers <- conserved_markers %>% filter((.[[2]] < 0) | (.[[7]] < 0))
+      write.csv2(conserved_markers, file = paste0("conserved_markers/all_cluster", i, "_cm.csv"))
+      # FGSEA_analysis(markers = conserved_markers, working_directory = work_dir, marker_type = 'conserved_markers', cluster = i)
+      # add as miscellaneous data to Seurat object
+      SeuratObject::Misc(object = integrated, slot = paste0("DEG.conserved_markers")) <- conserved_markers
+      SeuratObject::Misc(object = integrated, slot = paste0("DEG.conserved_markers_n")) <- conserved_markers_df
+      message("wrote conserved markers")
+    }
+    
+    ## create condition markers for integrated data within each cluster between each condition
+    ## DEV NOTE: this is not pairwise if more than 2 conditions are integrated at the same time
+    subset <- subset(integrated, seurat_clusters == i)
+    ##  change cluster identity to original identity to find markers between conditions
+    Idents(subset) <- subset$orig.ident
+    ## check if subset contains cells for at least 2 condtions/samples for comparison
+    ### DEVNOTE: also need to check if a condition has ENOUGH cells for comparison?
+    if (length(names(table(subset$orig.ident))) == 1) {
+      print(paste0('In cluster ', i, ' only cells for condition/sample ',
+                   names(table(subset$orig.ident)), ' were found, cannot create condition markers for this cluster.'))
+      next
+    }
+    ## add amount of cells used for condition_markers comparison to df
+    condition_markers_df[nrow(condition_markers_df) + 1,] = c(i, table(subset$orig.ident)[1], table(subset$orig.ident)[2])
+    ## write n cells for comparison to CSV files
+    write.csv2(condition_markers_df, file = "condition_markers/n_cells_for_comparison.csv", row.names = FALSE)
+    ## check more than 2 cells in subset ident (cluster) before comparison
+    if (any(c(table(subset$orig.ident)[1], table(subset$orig.ident)[2]) < 3)) {
+      message("For condition markers, skipping ident (cluster) ", i, " comparison because < 3 cells")
+    } else {
+      ## create condition_markers for subset data for within each cluster to compare conditions
+      condition_markers <- FindMarkers(subset, assay = "SCT", recorrect_umi = FALSE, ident.1 = "BL_C", verbose = T, only.pos = FALSE)
+      # filters rows (genes) if they are >0.05 for both p_val and non-zero p_val with Bonferroni correction
+      condition_markers <- condition_markers[!(condition_markers$p_val_adj > 0.05 & condition_markers$nz_p_val_adj > 0.05),]
+      # pos_condition_markers <- condition_markers %>% filter(avg_log2FC > 0)
+      # neg_condition_markers <- condition_markers %>% filter(avg_log2FC < 0)
+      write.csv2(condition_markers, file = paste0("condition_markers/all_cluster", i, ".csv"))
+      print(paste('Cluster ID:', i, ' before condition_markers FGSEA call'))
+      # FGSEA_analysis(markers = condition_markers, working_directory = work_dir, marker_type = 'condition_markers', cluster = i)
+      # add as miscellaneous data to Seurat object
+      SeuratObject::Misc(object = integrated, slot = paste0("DEG.condition_markers")) <- condition_markers
+      SeuratObject::Misc(object = integrated, slot = paste0("DEG.condition_markers_n")) <- condition_markers_df
+      message("wrote condition markers")
+    }
   }
-
-
-
-  # ## create condition markers for integrated data within each cluster between each condition
-  # ## DEV NOTE: this is not pairwise if more than 2 conditions are integrated at the same time
-  subset <- subset(integrated, seurat_clusters == i)
-  # ##  change cluster identity to original identity to find markers between conditions
-  Idents(subset) <- subset$orig.ident
-  ## check if subset contains cells for at least 2 condtions/samples for comparison
-  ### DEVNOTE: also need to check if a condition has ENOUGH cells for comparison?
-  if (length(names(table(subset$orig.ident))) == 1) {
-    print(paste0('In cluster ', i, ' only cells for condition/sample ',
-                 names(table(subset$orig.ident)), ' were found, cannot create condition markers for this cluster.'))
-    next
-  }
-  ## add amount of cells used for condition_markers comparison to df
-  condition_markers_df[nrow(condition_markers_df) + 1,] = c(i, table(subset$orig.ident)[1], table(subset$orig.ident)[2])
-  ## check more than 2 cells in subset ident (cluster) before comparison
-  if (any(c(table(subset$orig.ident)[1], table(subset$orig.ident)[2]) < 3)) {
-    message("For condition markers, skipping ident (cluster) ", i, " comparison because < 3 cells")
-  } else {
-    ## create condition_markers for subset data for within each cluster to compare conditions
-    condition_markers <- FindMarkers(subset, assay = "SCT", recorrect_umi = FALSE, ident.1 = "BL_C", verbose = T, only.pos = FALSE)
-    # filters rows (genes) if they are >0.05 for both p_val and non-zero p_val with Bonferroni correction
-    condition_markers <- condition_markers[!(condition_markers$p_val_adj > 0.05 & condition_markers$nz_p_val_adj > 0.05),]
-    # pos_condition_markers <- condition_markers %>% filter(avg_log2FC > 0)
-    # neg_condition_markers <- condition_markers %>% filter(avg_log2FC < 0)
-    write.csv2(condition_markers, file = paste0("condition_markers/all_cluster", i, ".csv"))
-    print(paste('Cluster ID:', i, ' before condition_markers FGSEA call'))
-    # FGSEA_analysis(markers = condition_markers, working_directory = work_dir, marker_type = 'condition_markers', cluster = i)
-    message("wrote condition markers")
-  }
-
+    
   # DEVNOTE if want to assign each table to its own variable, use assign() and get()
   # assign(paste0("cluster", i, "_markers"), markers)
   ## get(paste0("cluster", i, "_markers"))
 }
-## write n cells for comparison to CSV files
-write.csv2(sample_markers_df, file = "sample_markers/n_cells_for_comparison_m.csv", row.names = FALSE)
-write.csv2(markers_df, file = "markers/n_cells_for_comparison_m.csv", row.names = FALSE)
-write.csv2(conserved_markers_df, file = "conserved_markers/n_cells_for_comparison_cm.csv", row.names = FALSE)
-write.csv2(condition_markers_df, file = "condition_markers/n_cells_for_comparison.csv", row.names = FALSE)
 
-# add as miscellaneous data to Seurat object
-SeuratObject::Misc(object = integrated, slot = paste0("DEG.sample_markers")) <- sample_markers
-SeuratObject::Misc(object = integrated, slot = paste0("DEG.markers")) <- markers
-SeuratObject::Misc(object = integrated, slot = paste0("DEG.conserved_markers")) <- conserved_markers
-SeuratObject::Misc(object = integrated, slot = paste0("DEG.condition_markers")) <- condition_markers
-SeuratObject::Misc(object = integrated, slot = paste0("DEG.sample_markers_n")) <- sample_markers_df
-SeuratObject::Misc(object = integrated, slot = paste0("DEG.markers_n")) <- markers_df
-SeuratObject::Misc(object = integrated, slot = paste0("DEG.conserved_markers_n")) <- conserved_markers_df
-SeuratObject::Misc(object = integrated, slot = paste0("DEG.condition_markers_n")) <- condition_markers_df
+# save data for possible adjustments
 saveRDS(integrated, file = rds.file)
+
+
 
 beep()
 
