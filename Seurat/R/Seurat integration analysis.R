@@ -283,9 +283,13 @@ integration_analysis <- function(integrated, selection_performed = FALSE) {
   # juliette_paper <- c("BCOR", "BCORL1", "BCL6", "MLLT3", "TFAP2A", "KDM2B")
   plot_DEF <- function(data, features, name) {
     dir.create(paste0("Plots/", name, "/"))
+    dir.create(paste0("Plots/", name, "/Feature/"))
     dir.create(paste0("Plots/", name, "/Feature_split/"))
 
     for (i in seq_along(features)) {
+      p <- Seurat::FeaturePlot(data, features = features[i])
+      ggplot2::ggsave(file=paste0("Plots/", name ,"/Feature/", features[i], ".png"), width = 30, height = 20, units = "cm")
+
       p <- Seurat::FeaturePlot(data, features = features[i], split.by = "orig.ident", cols = c("grey", "red"))
       ggplot2::ggsave(file=paste0("Plots/", name ,"/Feature_split/", features[i], ".png"), width = 30, height = 20, units = "cm")
     }
