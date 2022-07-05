@@ -1,17 +1,18 @@
 library(Seurat)
 
 ### USER SETTINGS
-file <- "C:/Users/mauri/Desktop/Single Cell RNA Sequencing/Seurat/results/Pipe_SCTv2_23-06 cluster_level_selection/integrated - old selection/BL_N + BL_C/BL_N + BL_C.rds"
+file <- "C:/Users/mauri/Desktop/Single Cell RNA Sequencing/Seurat/results/Pipe_SCTv2_23-06 cluster_level_selection/integrated - old selection/BL_A + BL_C/BL_A + BL_C.rds"
 data <- readRDS(file)
 
-selection_panel <- c("MAP2", "NEUROG2", "RBFOX3")
+# selection_panel <- c("MAP2", "NEUROG2", "DCX") # RBFOX3 <-> DCX
+selection_panel <- c("VIM", "S100B", "FABP7") # SOX9 <-> FABP7
 ### END USER SETTINGS
 
 
 
-# initialize matrix
+# initialize matrixS
 rownames <- c(levels(data$seurat_clusters), "all")
-colnames <- c("total", "match 3", "match 2 additionally")
+colnames <- c("total", "match 3", "match 3%", "match 2 additionally", "match 2 additionally%")
 m <- matrix(NA, nrow = length(rownames), ncol = length(colnames), dimnames = list(rownames, colnames))
 
 # initialize update matrix function
@@ -22,7 +23,7 @@ update_matrix <- function(matrix, data, selection_panel, cluster = 0) {
   n_cells_3 <- sum(sapply(as.data.frame(assay_data[selection_panel, ] > 0), sum) == length(selection_panel))
   n_cells_total <- dim(data)[2]
 
-  matrix[cluster, ] <- c(n_cells_total, n_cells_3, n_cells_2-n_cells_3)
+  matrix[cluster, ] <- c(n_cells_total, n_cells_3, n_cells_3/n_cells_total*100, n_cells_2, (n_cells_2)/n_cells_total*100)
 
   return(matrix)
 }
@@ -35,13 +36,5 @@ for (cluster in seq_along(levels(data$seurat_clusters))) {
 }
 m <- update_matrix(m, data, selection_panel, length(levels(data$seurat_clusters))+1)
 
-
-
-
-
-# TODO hier mee verder
-write.csv(m, file = paste0(selection_panel, ".csv"))
-
-# TODO dit zijn CSV voor selectie op cel level vanuit cluster level
-## dus ook nog kijken naar welke clusters worden geselecteerd met heoveel cellen etc?
-### TODO zet sowieso dus ook een kolom met percentages er bij
+m
+message(selection_panel)
