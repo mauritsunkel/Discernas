@@ -609,6 +609,7 @@ for (sample_name in sample_names) {
                                 show_trajectory_graph = FALSE,
                                 label_cell_groups = FALSE, # if false, show legend
                                 label_groups_by_cluster = TRUE,
+                                label_roots = FALSE,
                                 label_leaves = TRUE,
                                 label_branch_points = FALSE,
                                 group_label_size = 3,
@@ -622,6 +623,7 @@ for (sample_name in sample_names) {
                                 show_trajectory_graph = TRUE,
                                 label_cell_groups = FALSE, # if false, show legend
                                 label_groups_by_cluster = TRUE,
+                                label_roots = FALSE,
                                 label_leaves = TRUE,
                                 label_branch_points = FALSE,
                                 group_label_size = 3,
@@ -633,6 +635,7 @@ for (sample_name in sample_names) {
     p6 <- monocle3::plot_cells(cds,
                                color_cells_by = "pseudotime",
                                label_cell_groups = TRUE,
+                               label_roots = FALSE,
                                label_leaves = TRUE,
                                label_branch_points = FALSE,
                                group_label_size = 3,
