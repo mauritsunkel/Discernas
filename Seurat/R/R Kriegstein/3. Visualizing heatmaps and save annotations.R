@@ -13,10 +13,9 @@ samples <- c("BL_A + BL_C")
 # set file(s)
 rds.files <- c("C:/Users/mauri/Desktop/Single Cell RNA Sequencing/Seurat/results/Pipe_SCTv2_23-06 cluster_level_selection/integrated - old selection/BL_A + BL_C/after_selection/BL_A + BL_C.rds")
 
-# "max.scores" as SingleR intended (combineCommonResults), max.scores/max.labels across references
-# "mean.scores" custom for averaging scores (and labels) across references
-collation.scores <- "max.scores"
-collation.labels <- "max.labels"
+# "max" as SingleR intended (combineCommonResults), max.scores/max.labels across references
+# "mean" custom for averaging scores (and labels) across references
+RefAggrStrategy <- "max"
 
 ## pre-selection data
 # # set sample names (NOTE: same order as rds.files)
@@ -122,34 +121,32 @@ combined.results <- lapply(X = results.list, FUN = function(x) {
   # create dataframe to select values of the highest scoring reference
   df <- as.data.frame(combined$scores)
 
-  if (collation.scores == "max.scores") {
-    ## get max score and label for each highest scoring reference
-    # for each unique column name select all its columns (scores, result chunks of SingleR)
-    combined$max.scores <- sapply(unique(names(df)), function(names) {
-      # for each row (cluster)
-      sapply(1:nrow(df), function(row) {
-        # get the column by highest row-wise value within the subset of selected columns
-        col <- max.col(df[names(df) == names])[row]
-        # select the highest score (value) based on the defined column and row within the subset of selected columns
-        df[names(df) == names][row, col]
-      })
+
+  ## get max score and label for each highest scoring reference
+  # for each unique column name select all its columns (scores, result chunks of SingleR)
+  combined$max.scores <- sapply(unique(names(df)), function(names) {
+    # for each row (cluster)
+    sapply(1:nrow(df), function(row) {
+      # get the column by highest row-wise value within the subset of selected columns
+      col <- max.col(df[names(df) == names])[row]
+      # select the highest score (value) based on the defined column and row within the subset of selected columns
+      df[names(df) == names][row, col]
     })
-    combined$max.labels <- colnames(combined$max.scores)[max.col(combined$max.scores)]
+  })
+  combined$max.labels <- colnames(combined$max.scores)[max.col(combined$max.scores)]
 
-    # write scores for figure reference
-    write.csv2(combined$max.scores, file = paste0("Kriegstein_Pearson.correlation.max_", sample, "_", anno ,".csv"))
-  } else {
-    ## get mean score and label of all references
-    # for each unique column name select all columns
-    combined$mean.scores <- sapply(unique(names(df)), function(names) {
-      rowMeans(df[names(df) == names]) # mean per cluster (row) per set of named columns (scores)
-    })
-    combined$mean.labels <- colnames(combined$mean.scores)[max.col(combined$mean.scores)]
+  # write scores for figure reference
+  write.csv2(combined$max.scores, file = paste0("Kriegstein_Pearson.correlation.max_", sample, "_", anno ,".csv"))
 
-    # write scores for figure reference
-    write.csv2(combined$mean.scores, file = paste0("Kriegstein_Pearson.correlation.mean_", sample, "_", anno ,".csv"))
-  }
+  ## get mean score and label of all references
+  # for each unique column name select all columns
+  combined$mean.scores <- sapply(unique(names(df)), function(names) {
+    rowMeans(df[names(df) == names]) # mean per cluster (row) per set of named columns (scores)
+  })
+  combined$mean.labels <- colnames(combined$mean.scores)[max.col(combined$mean.scores)]
 
+  # write scores for figure reference
+  write.csv2(combined$mean.scores, file = paste0("Kriegstein_Pearson.correlation.mean_", sample, "_", anno ,".csv"))
 
   return(combined)
 })
@@ -164,6 +161,8 @@ for (sample in samples) {
     # add as miscellaneous data to Seurat object
     SeuratObject::Misc(object = data.list[[sample]], slot = paste0("Kriegstein.SingleR.", anno)) <- misc_data
   }
+
+  SeuratObject::Misc(object = data.list[[sample]], slot = "Kriegstein.SingleR.RefAggrStrategy") <- RefAggrStrategy
   # copy seurat clusters metadata to aggregate with Kriegstein labels
   data.list[[sample]]$kriegstein.seurat.custom.clusters.mean <- data.list[[sample]]$seurat_clusters
   # overwrite copied metadata to an aggregation of Kriegstein.Seurat custom cluster labels
@@ -183,7 +182,7 @@ for (sample in samples) {
 
   for (anno in annotations) {
     # set annotation column for transferred labels from reference data
-    annotation_col[ , ncol(annotation_col) + 1] <- data.list[[sample]]@misc[[paste0("Kriegstein.SingleR.", anno)]][[collation.labels]]
+    annotation_col[ , ncol(annotation_col) + 1] <- data.list[[sample]]@misc[[paste0("Kriegstein.SingleR.", anno)]][[paste0(RefAggrStrategy, ".labels")]]
     colnames(annotation_col)[ncol(annotation_col)] <- paste0("ref.", anno)
 
     # get ordered and unique label names from reference data
@@ -210,10 +209,10 @@ for (sample in samples) {
     print(paste("plotting:", filename))
 
     # set rownames for identification of rows during plotting
-    rownames(combined.results[[paste(sample, anno)]][[collation.scores]]) <- levels((data.list[[sample]]$seurat_clusters))
+    rownames(combined.results[[paste(sample, anno)]][[paste0(RefAggrStrategy, ".scores")]]) <- levels((data.list[[sample]]$seurat_clusters))
 
     # plot pretty heatmap
-    p <- pheatmap::pheatmap(t(combined.results[[paste(sample, anno)]][[collation.scores]]),
+    p <- pheatmap::pheatmap(t(combined.results[[paste(sample, anno)]][[paste0(RefAggrStrategy, ".scores")]]),
                   fontsize = 9,
                   color = colorRampPalette(RColorBrewer::brewer.pal(n = 7, name = "PiYG"))(100),
                   labels_col = paste0(levels(data.list[[sample]]$seurat_clusters), " (n=", table(data.list[[sample]]$seurat_clusters), ")"),
