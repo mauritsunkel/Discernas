@@ -359,9 +359,14 @@ plot_DEF <- function(data, features, name) {
   dir.create(paste0("DE_analysis/", name, "/Feature/"))
 
   for (i in seq_along(features)) {
-    p <- Seurat::FeaturePlot(data, features = features[i])
-    ggplot2::ggsave(file=paste0("Plots/", name ,"/Feature/", features[i], ".png"), width = 30, height = 20, units = "cm")
-    }
+    tryCatch({
+      p <- Seurat::FeaturePlot(data, features = features[i])
+      ggplot2::ggsave(file=paste0("DE_analysis/", name ,"/Feature/", features[i], ".png"), width = 30, height = 20, units = "cm")
+    },
+    error=function(e) {
+      message(features[i], ' plot is skipped, as it was not found with FetchData')
+    })
+  }
 
   p <- FeaturePlot(data, features = features)
   ggsave(file=paste0("DE_analysis/", name, "/feature-plot_", name, "_", sample_name, ".png"), width = 30, height = 20, units = "cm")

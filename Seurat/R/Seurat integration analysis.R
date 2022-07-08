@@ -287,12 +287,18 @@ integration_analysis <- function(integrated, selection_performed = FALSE) {
     dir.create(paste0("Plots/", name, "/Feature_split/"))
 
     for (i in seq_along(features)) {
-      p <- Seurat::FeaturePlot(data, features = features[i])
-      ggplot2::ggsave(file=paste0("Plots/", name ,"/Feature/", features[i], ".png"), width = 30, height = 20, units = "cm")
+      tryCatch({
+        p <- Seurat::FeaturePlot(data, features = features[i])
+        ggplot2::ggsave(file=paste0("Plots/", name ,"/Feature/", features[i], ".png"), width = 30, height = 20, units = "cm")
 
-      p <- Seurat::FeaturePlot(data, features = features[i], split.by = "orig.ident", cols = c("grey", "red"))
-      ggplot2::ggsave(file=paste0("Plots/", name ,"/Feature_split/", features[i], ".png"), width = 30, height = 20, units = "cm")
+        p <- Seurat::FeaturePlot(data, features = features[i], split.by = "orig.ident", cols = c("grey", "red"))
+        ggplot2::ggsave(file=paste0("Plots/", name ,"/Feature_split/", features[i], ".png"), width = 30, height = 20, units = "cm")
+      },
+      error=function(e) {
+        message(features[i], ' plot is skipped, as it was not found with FetchData')
+      })
     }
+
     p <- Seurat::VlnPlot(data, features = features, split.by = "orig.ident")
     ggplot2::ggsave(file = paste0("Plots/", name, "/violin-split.png"), width = 30, height = 20, units = "cm")
     p <- Seurat::FeaturePlot(data, features = features)
