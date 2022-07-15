@@ -467,6 +467,7 @@ environment(plot_cells.adjusted) <- asNamespace("monocle3")
 
 
 ### INITIALIZE ###
+orig.wd <- getwd()
 # work dir should contain forward slashes (/) on Windows
 work_dir <- "C:/Users/mauri/Desktop/Single Cell RNA Sequencing/Seurat/"
 start_time <- format(Sys.time(), "%F %H-%M-%S")
@@ -477,9 +478,27 @@ dir.create(paste0(work_dir, 'results/', start_time, '/monocle-pseudotime/'), rec
 
 ## pre-selection rds files
 ### TODO testing
-sample_names <- c("BL_A + BL_C")
-rds.files <- c("C:/Users/mauri/Desktop/Single Cell RNA Sequencing/Seurat/results/Pipe_SCTv2_23-06/integrated - old selection/BL_A + BL_C/after_selection/BL_A + BL_C.rds")
+sample_names <- c('BL_A',
+                  'BL_C',
+                  'BL_N',
+                  'A+Cpre',
+                  'A+Cold',
+                  'A+Cnew',
+                  'N+Cpre',
+                  'N+Cold',
+                  'N+Cnew'
+)
 
+rds.files <- c("C:/Users/mauri/Desktop/Single Cell RNA Sequencing/Seurat/results/Pipe_SCTv2_23-06 cluster_level_selection/BL_A/BL_A.rds",
+               "C:/Users/mauri/Desktop/Single Cell RNA Sequencing/Seurat/results/Pipe_SCTv2_23-06 cluster_level_selection/BL_C/BL_C.rds",
+               "C:/Users/mauri/Desktop/Single Cell RNA Sequencing/Seurat/results/Pipe_SCTv2_23-06 cluster_level_selection/BL_N/BL_N.rds",
+               "C:/Users/mauri/Desktop/Single Cell RNA Sequencing/Seurat/results/Pipe_SCTv2_23-06 cluster_level_selection/integrated/BL_A + BL_C/BL_A + BL_C.rds",
+               "C:/Users/mauri/Desktop/Single Cell RNA Sequencing/Seurat/results/Pipe_SCTv2_23-06 cluster_level_selection/integrated/BL_A + BL_C/after_selection_old/BL_A + BL_C.rds",
+               "C:/Users/mauri/Desktop/Single Cell RNA Sequencing/Seurat/results/Pipe_SCTv2_23-06 cluster_level_selection/integrated/BL_A + BL_C/after_selection_new/BL_A + BL_C.rds",
+               "C:/Users/mauri/Desktop/Single Cell RNA Sequencing/Seurat/results/Pipe_SCTv2_23-06 cluster_level_selection/integrated/BL_N + BL_C/BL_N + BL_C.rds",
+               "C:/Users/mauri/Desktop/Single Cell RNA Sequencing/Seurat/results/Pipe_SCTv2_23-06 cluster_level_selection/integrated/BL_N + BL_C/after_selection_old/BL_N + BL_C.rds",
+               "C:/Users/mauri/Desktop/Single Cell RNA Sequencing/Seurat/results/Pipe_SCTv2_23-06 cluster_level_selection/integrated/BL_N + BL_C/after_selection_new/BL_N + BL_C.rds"
+)
 # sample_names <- c("BL_C", "BL_A", "BL_N", "BL_A + BL_C", "BL_N + BL_C")
 # rds.files <- c(
 #   "C:/Users/mauri/Desktop/Single Cell RNA Sequencing/Seurat/results/Pipe +SCT +Leiden -Cellcycle +SingleR +Autoselection +05-05-2022/BL_C/BL_C.rds",
@@ -506,8 +525,10 @@ neuronal_interest_markers <- c("MAP2", "RBFOX3", "NEUROG2")
 # initialize plots to wrap
 plots <- list()
 for (sample_name in sample_names) {
+  setwd(orig.wd)
+  messageE(sample_name)
   # create sample specific directory
-  dir.create(paste0(work_dir, 'results/', start_time, '/monocle-pseudotime/', sample_name, "/"))
+  dir.create(paste0(work_dir, 'results/', start_time, '/monocle-pseudotime/', sample_name, "/pseudotime/"), recursive = TRUE)
   # set working directory to sample specific directory
   setwd(paste0(work_dir, 'results/', start_time, '/monocle-pseudotime/', sample_name, "/"))
 
@@ -562,8 +583,11 @@ for (sample_name in sample_names) {
                               show_trajectory_graph = FALSE,
                               label_cell_groups = FALSE, # if false, show legend
                               group_label_size = 3,
-                              graph_label_size = 3)
+                              graph_label_size = 3,
+                              cell_size = 1,
+                              trajectory_graph_segment_size = 2)
     p1 <- p1 + labs(title="Seurat sample identity")
+    ggplot2::ggsave(file = paste0("pseudotime/seurat_sample_identity.png"), width = 30, height = 20, units = "cm")
     plots[[length(plots)+1]] <- p1
   }
 
@@ -572,14 +596,18 @@ for (sample_name in sample_names) {
                              show_trajectory_graph = FALSE,
                              label_cell_groups = FALSE, # if false, show legend
                              group_label_size = 3,
-                             graph_label_size = 3)
+                             graph_label_size = 3,
+                             cell_size = 1,
+                             trajectory_graph_segment_size = 2)
   p2 <- p2 + labs(title="Monocle partition(s)")
+  ggplot2::ggsave(file = paste0("pseudotime/monocle_partitions.png"), width = 30, height = 20, units = "cm")
   plots[[length(plots)+1]] <- p2
 
   ## learn principal graph and plot the trajectory
   cds <- monocle3::learn_graph(cds, use_partition = TRUE)
 
   for (partition in seq_along(table(partitions(cds)))) {
+    message("partition: ", partition)
     # create df of cell names and marker of interest values
     df <- SeuratObject::FetchData(integrated, genes_of_interest)
     # get cell name with highest summed expression for marker(s) of interest
@@ -596,12 +624,16 @@ for (sample_name in sample_names) {
       p3 <- monocle3::plot_cells(cds,
                                  label_cell_groups = FALSE, # if false, show legend
                                  label_groups_by_cluster = TRUE,
-                                 label_leaves = TRUE,
+                                 label_roots = TRUE,
+                                 label_leaves = FALSE,
                                  label_branch_points = FALSE,
                                  group_label_size = 3,
-                                 graph_label_size = 3)
+                                 graph_label_size = 5,
+                                 cell_size = 1,
+                                 trajectory_graph_segment_size = 2)
       p3 <- p3 + guides(color = guide_legend(title = "", ncol=2, override.aes = list(size = 4)))
       p3 <- p3 + labs(title="Monocle clusters + trajectory")
+      ggplot2::ggsave(file = paste0("pseudotime/monocle_clusters_trajectory.png"), width = 30, height = 20, units = "cm")
       plots[[length(plots)+1]] <- p3
       p4 <- plot_cells.adjusted(cds,
                                 color_cells_by = "kriegstein.seurat.custom.clusters.mean",
@@ -609,13 +641,16 @@ for (sample_name in sample_names) {
                                 show_trajectory_graph = FALSE,
                                 label_cell_groups = FALSE, # if false, show legend
                                 label_groups_by_cluster = TRUE,
-                                label_roots = FALSE,
-                                label_leaves = TRUE,
+                                label_roots = TRUE,
+                                label_leaves = FALSE,
                                 label_branch_points = FALSE,
                                 group_label_size = 3,
-                                graph_label_size = 3)
+                                graph_label_size = 5,
+                                cell_size = 1,
+                                trajectory_graph_segment_size = 2)
       p4 <- p4 + guides(color = guide_legend(title = "", ncol=2, override.aes = list(size = 4)))
       p4 <- p4 + labs(title="Kriegstein clusters UMAP")
+      ggplot2::ggsave(file = paste0("pseudotime/kriegstein clusters UMAP.png"), width = 30, height = 20, units = "cm")
       plots[[length(plots)+1]] <- p4
       p5 <- plot_cells.adjusted(cds,
                                 color_cells_by = "kriegstein.seurat.custom.clusters.mean",
@@ -623,31 +658,37 @@ for (sample_name in sample_names) {
                                 show_trajectory_graph = TRUE,
                                 label_cell_groups = FALSE, # if false, show legend
                                 label_groups_by_cluster = TRUE,
-                                label_roots = FALSE,
-                                label_leaves = TRUE,
+                                label_roots = TRUE,
+                                label_leaves = FALSE,
                                 label_branch_points = FALSE,
                                 group_label_size = 3,
-                                graph_label_size = 3)
+                                graph_label_size = 5,
+                                cell_size = 1,
+                                trajectory_graph_segment_size = 2)
       p5 <- p5 + guides(color = guide_legend(title = "", ncol=2, override.aes = list(size = 4)))
       p5 <- p5 + labs(title="Kriegstein clusters + trajectory")
+      ggplot2::ggsave(file = paste0("pseudotime/kriegstein clusters trajectory.png"), width = 30, height = 20, units = "cm")
       plots[[length(plots)+1]] <- p5
     }
     p6 <- monocle3::plot_cells(cds,
                                color_cells_by = "pseudotime",
                                label_cell_groups = TRUE,
-                               label_roots = FALSE,
-                               label_leaves = TRUE,
+                               label_roots = TRUE,
+                               label_leaves = FALSE,
                                label_branch_points = FALSE,
                                group_label_size = 3,
-                               graph_label_size = 3)
+                               graph_label_size = 5,
+                               cell_size = 1,
+                               trajectory_graph_segment_size = 2)
     p6 <- p6 + labs(title=paste0("Pseudotime + trajectory: partition ", partition))
+    ggplot2::ggsave(file = paste0("pseudotime/pseudotime_trajectory_partition_", partition, ".png"), width = 30, height = 20, units = "cm")
     plots[[length(plots)+1]] <- p6
   }
 
   # wrap plots
   pw <- patchwork::wrap_plots(plots, ncol = 2)
   ## save plots
-  ggplot2::ggsave(file = paste0("Overview_", sample_name, ".png"), width = 30, height = 20, units = "cm")
+  ggplot2::ggsave(file = paste0("pseudotime/Overview_", sample_name, ".png"), width = 30, height = 20, units = "cm")
 
   # reset plots list
   plots <- list()
