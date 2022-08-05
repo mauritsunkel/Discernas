@@ -424,8 +424,8 @@ message(start_time)
 
 
 ## perform sample level comparison for integration
-# check if all samples for comparison have more then 3 cells 
-if (any(table(integrated$orig.ident) < 3)) {
+# check if all samples for comparison have more then 3 cells
+if (!any(table(integrated$orig.ident) < 3)) {
   # check if multiple samples
   if (length(table(integrated$orig.ident)) != 1) {
     # set idents to compare cells at sample level instead of cluster level
@@ -440,25 +440,25 @@ if (any(table(integrated$orig.ident) < 3)) {
                                                         table(integrated$orig.ident)[2])
     # write n cells for comparison to CSV files
     write.csv2(sample_markers_df, file = "sample_markers/n_cells_for_comparison_m.csv", row.names = FALSE)
-    
+
     # get sample vs sample markers (now: monoculture vs coculture (for neurons and astrocytes))
     ## note: p_val_adj = Adjusted p-value, based on Bonferroni correction using all genes (including non-zero expression) in the dataset
     ### adjusted both defaults: logfc.threshold = 0.25, min.pct = 0.1    to 0
     sample_markers <- FindMarkers(integrated, assay = "SCT", ident.1 = names(table(integrated$orig.ident))[1], only.pos = FALSE, verbose = T,
                                   logfc.threshold = 0, min.pct = 0)
-    
+
     # set pct variable based on BL_C orig.identity index
     if (names(table(integrated$orig.ident))[1] == "BL_C") {
       pct <- "pct.1"
     } else {
       pct <- "pct.2"
     }
-    
+
     # filters rows (genes) if they are >0.05 for both p_val and non-zero p_val with Bonferronu correction
     sample_markers <- sample_markers[!(sample_markers$p_val_adj > 0.05 & sample_markers$nz_p_val_adj > 0.05),]
     # filter on pct.ref and order by avg_log2FC
     sample_markers_pval_adj <- sample_markers %>% arrange(desc(avg_log2FC)) # DEPRECATED: filter(pct > 0.1)
-    
+
     # sample_markers_pval_adj <- sample_markers %>% filter(p_val_adj <= 0.05) %>% filter(pct > 0.1) %>% arrange(desc(avg_log2FC))
     write.csv2(sample_markers_pval_adj, file = paste0("sample_markers/pct1=", names(table(integrated$orig.ident))[1], "-pct2=", names(table(integrated$orig.ident))[2], " - (nz-)p-val st 0.05.csv"), row.names = TRUE)
     # FGSEA_analysis(markers = sample_markers, working_directory = work_dir, marker_type = 'sample_markers', cluster = pct)
@@ -564,7 +564,7 @@ for (i in cluster_ids) {
       SeuratObject::Misc(object = integrated, slot = paste0("DEG.conserved_markers_n")) <- conserved_markers_df
       message("wrote conserved markers")
     }
-    
+
     ## create condition markers for integrated data within each cluster between each condition
     ## DEV NOTE: this is not pairwise if more than 2 conditions are integrated at the same time
     subset <- subset(integrated, seurat_clusters == i)
@@ -600,7 +600,7 @@ for (i in cluster_ids) {
       message("wrote condition markers")
     }
   }
-    
+
   # DEVNOTE if want to assign each table to its own variable, use assign() and get()
   # assign(paste0("cluster", i, "_markers"), markers)
   ## get(paste0("cluster", i, "_markers"))
