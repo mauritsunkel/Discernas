@@ -7,7 +7,7 @@ library(stringr)
 
 ### INITIALIZATION
 ## USER PARAMETERS
-sample_name <- 'BL_N'
+sample_name <- 'BL_C'
 
 # set to run cell cycle regression (based on: https://satijalab.org/seurat/articles/cell_cycle_vignette.html)
 run_cell_cycle_regression <- FALSE
