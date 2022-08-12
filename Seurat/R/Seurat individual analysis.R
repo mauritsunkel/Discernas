@@ -3,20 +3,11 @@ library(Seurat)
 library(ggplot2)
 library(stringr)
 
-## TODO test if these libraries are needed here based on a test set
-library(patchwork)
-library(data.table)
-library(celldex)
-library(scRNAseq)
-library(scuttle)
-library(scater)
-library(scran)
-
 
 
 ### INITIALIZATION
 ## USER PARAMETERS
-sample_name <- 'BL_C'
+sample_name <- 'BL_N'
 
 # set to run cell cycle regression (based on: https://satijalab.org/seurat/articles/cell_cycle_vignette.html)
 run_cell_cycle_regression <- FALSE
@@ -52,7 +43,6 @@ png(paste0("Quality_Control/QC_feature-scatter_", sample_name, ".png"))
 plot(plot1 + plot2)
 dev.off()
 # subset cells with less than 200 unique genes (NFeature_RNA)
-## TODO check if base::subset or SeuratObject::subset
 data <- subset(data, subset = nFeature_RNA > 200)
 
 ## SCTransform-v2 replaces NormalizeData + FindVariableFeatures + ScaleData & sets default assay to "SCT"
