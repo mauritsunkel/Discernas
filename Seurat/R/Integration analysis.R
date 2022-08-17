@@ -12,7 +12,7 @@ work_dir <- "C:/Users/mauri/Desktop/Single Cell RNA Sequencing/Seurat/"
 # files and sample names
 rds.files <- c("C:/Users/mauri/Desktop/Single Cell RNA Sequencing/Seurat/results/2022-08-12 13-50-22/BL_N/BL_N.rds",
                "C:/Users/mauri/Desktop/Single Cell RNA Sequencing/Seurat/results/2022-08-12 14-42-57/BL_C/BL_C.rds")
-sample_name <- "BL_N + BL_C"
+sample_name <- "BL_N-BL_C"
 ref_sample <- "BL_C"
 
 # set to perform selection after integration and re-run integration
