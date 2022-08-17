@@ -43,7 +43,7 @@ if (file.exists("custom.meta.tsv")) {
 
 # get genes, if non-existent create from reference data
 if (file.exists("genes.csv") & file.exists("n_cols.txt")) {
-  genes = read.table("genes.csv", sep = "\t", col.names = 'gene')
+  genes = utils::read.table("genes.csv", sep = "\t", col.names = 'gene')
   genes = genes$gene
   n_cols <- read.csv2("n_cols.txt", header = F)
   n_cols <- n_cols$V1
@@ -55,7 +55,7 @@ if (file.exists("genes.csv") & file.exists("n_cols.txt")) {
   initial <- data.table::fread("exprMatrix.tsv.gz", select=c(1), colClasses=c("gene"="character"))
   genes = initial[,1][[1]]
   genes = gsub(".+[|]", "", genes)
-  utils::write.csv2(genes, file = paste0("genes.csv"))
+  utils::write.csv2(genes, file = paste0("genes.csv"), row.names = FALSE)
   write(n_cols, "n_cols.txt")
 }
 
