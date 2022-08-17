@@ -63,9 +63,8 @@ rm(anchors)
 
 integration_analysis <- function(integrated, selection_performed = FALSE) {
   if (selection_performed) {
-    dir.create(paste0(getwd(), '/after_selection/'))
-    dir.create(paste0(getwd(), '/after_selection/Plots/'))
-    setwd(paste0(getwd(), '/after_selection/'))
+    dir.create(paste0(getwd(), '/postSelect/Plots/'), recursive = TRUE)
+    setwd(paste0(getwd(), '/postSelect/'))
   }
 
   # run the workflow for visualization and clustering on integrated assay
