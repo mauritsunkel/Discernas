@@ -7,7 +7,8 @@ library(magrittr)
 library(ggplot2)
 
 
-
+### INITIALIZE ###
+# overwrite Monocle3::plot_cells function with custom adjustments, change to original namespace for use
 plot_cells.adjusted <- function(cds, x = 1, y = 2,
                                  reduction_method = c("UMAP", "tSNE", "PCA", "LSI", "Aligned"),
                                  color_cells_by = "cluster", group_cells_by = c("cluster", "partition"),
@@ -407,77 +408,15 @@ plot_cells.adjusted <- function(cds, x = 1, y = 2,
     theme(panel.background = element_rect(fill = "white"))
   g
 }
-# DEVNOTE: use if want to overwrite original function namespace
-# namespace of customFunction is R_globalenv, where it is defined, bur should be Seurat as that is ns of my targeted function
 environment(plot_cells.adjusted) <- asNamespace("monocle3")
-# # then with assignInNameSpace I can basically inject my code their copied function and then substitute it back in their environment
-# assignInNamespace("plot_cells", plot_cells.adjusted, ns = "monocle3")
 
-# Monocle 3 docs: https://cole-trapnell-lab.github.io/monocle3/docs/differential/
-## Seurat to Monocle 3 vignette (OLD): https://htmlpreview.github.io/?https://github.com/satijalab/seurat-wrappers/blob/master/docs/monocle3.html
-# Monocle 3 Google group issues: https://groups.google.com/g/monocle-3-users
-
-# From Seurat: when to use which assay (intuitive):
-## Use integrated assay when 'aligning' cell states shared across datasets (i.e. clustering, plotting, pseudotime).
-### Use RNA assay when exploring genes that change either across clusters, trajectories, or conditions.
-## In this case: assay and NORMALIZED data used for pseudo-time analysis (in this case these 2 options are analogous for pseudo-time trajectory)
-### RNA assay --> data slot (NormalizeData(object, normalization.method = "LogNormalize") = treated as log-normalized, corrected data
-### integrated assay --> scale.data slot (IntegrateData(object, normalization.method = "SCT") = treated as centered, corrected Pearson residuals
-
-# Seurat --> Monocle 3 for pseudo time analysis - main site: https://cole-trapnell-lab.github.io/monocle3/
-# Monocle theory - from paper: https://www.nature.com/articles/s41586-019-0969-x
-## reduce dimensionality with UMAP (> t-SNE, also preserves global distance AND complexity O(N) versus O(Nlog[N]))
-## organize into partitioned approximate graph abstraction (PAGA) (construct k-nearest neighbor graph)
-## identify 'communities' (clusters) with Louvain (or Leiden) algorithm
-## PAGA -> graph where clusters = nodes, edged when more neighborly vs expected binomial (coarse-grained trajectory)
-## Monocle3 -> principal graph (SimplePPT-like, +faster, +large datasets, +trajectory loops, +prune branches)
-### SimplePPT paper coined reverse graph embedding (heavy math, I do not understand most of it)
-### uses 'landmark' cells (locally dense k-mean representation), more cells -> higher resolution but also runtime
-### pruning for smoothing and adding loops is performed at the end
-## compute pseudotime: geodesic distance (shortest-path edge distances) from node to root node (principal node)
-### map each cell to closest principal point with Euclidean distance in UMAP space
-### for each principal graph edge: map similarly to it's endpoints orthogonally (ref 22)
-### then order is defined and geodesic distance is computed as pseudotime
-## identify genes that vary in expression over a trajectory (spatial pseudotime)
-### Use Moran's I statistic: multi-directional and multi-dimensional spatial autocorrelation
-#### intuitive explanation: for each cell pair and therein each gene
-##### sum(multiply differences of gene expression vs gene mean expression for cell pairs & multiply by cell connection weight)
-###### multiply sum by total cell pairs, normalize by total weight of cell interactions and static gene expression for each cell
-####### 0 = no change over trajectory, higher = relatively more change over trajectory
-
-
-
-
-
-
-
-
-
-
-### practical questions to test in code
-# TODO after testing practical questions and applications, finish docs @DEA applied to trajectories especially
-## TODO create kinetics plots for these
-### h: https://www.nature.com/articles/s41586-019-0969-x/figures/3
-## TODO select subset of cells based on principal edge/node
-### TODO Monocle 3 selecting cells/segments manually
-#### choose_cells()
-#### choose_graph_segments()
-
-
-
-
-### INITIALIZE ###
-orig.wd <- getwd()
-# work dir should contain forward slashes (/) on Windows
+## USER PARAMETERS ##
+# set and create work directory
 work_dir <- "C:/Users/mauri/Desktop/Single Cell RNA Sequencing/Seurat/"
 start_time <- format(Sys.time(), "%F %H-%M-%S")
 dir.create(paste0(work_dir, 'results/', start_time, '/monocle-pseudotime/'), recursive = TRUE)
 
-
-
-
-## pre-selection rds files
-### TODO testing
+## set samples and their rds.files
 sample_names <- c('BL_A',
                   'BL_C',
                   'BL_N',
@@ -488,7 +427,6 @@ sample_names <- c('BL_A',
                   'N+Cold',
                   'N+Cnew'
 )
-
 rds.files <- c("C:/Users/mauri/Desktop/Single Cell RNA Sequencing/Seurat/results/Pipe_SCTv2_23-06 cluster_level_selection/BL_A/BL_A.rds",
                "C:/Users/mauri/Desktop/Single Cell RNA Sequencing/Seurat/results/Pipe_SCTv2_23-06 cluster_level_selection/BL_C/BL_C.rds",
                "C:/Users/mauri/Desktop/Single Cell RNA Sequencing/Seurat/results/Pipe_SCTv2_23-06 cluster_level_selection/BL_N/BL_N.rds",
@@ -499,37 +437,22 @@ rds.files <- c("C:/Users/mauri/Desktop/Single Cell RNA Sequencing/Seurat/results
                "C:/Users/mauri/Desktop/Single Cell RNA Sequencing/Seurat/results/Pipe_SCTv2_23-06 cluster_level_selection/integrated/BL_N + BL_C/after_selection_old/BL_N + BL_C.rds",
                "C:/Users/mauri/Desktop/Single Cell RNA Sequencing/Seurat/results/Pipe_SCTv2_23-06 cluster_level_selection/integrated/BL_N + BL_C/after_selection_new/BL_N + BL_C.rds"
 )
-# sample_names <- c("BL_C", "BL_A", "BL_N", "BL_A + BL_C", "BL_N + BL_C")
-# rds.files <- c(
-#   "C:/Users/mauri/Desktop/Single Cell RNA Sequencing/Seurat/results/Pipe +SCT +Leiden -Cellcycle +SingleR +Autoselection +05-05-2022/BL_C/BL_C.rds",
-#   "C:/Users/mauri/Desktop/Single Cell RNA Sequencing/Seurat/results/Pipe +SCT +Leiden -Cellcycle +SingleR +Autoselection +05-05-2022/BL_A/BL_A.rds",
-#   "C:/Users/mauri/Desktop/Single Cell RNA Sequencing/Seurat/results/Pipe +SCT +Leiden -Cellcycle +SingleR +Autoselection +05-05-2022/BL_N/BL_N.rds",
-#   "C:/Users/mauri/Desktop/Single Cell RNA Sequencing/Seurat/results/Pipe +SCT +Leiden -Cellcycle +SingleR +Autoselection +05-05-2022/integrated/BL_A + BL_C/BL_A + BL_C.rds",
-#   "C:/Users/mauri/Desktop/Single Cell RNA Sequencing/Seurat/results/Pipe +SCT +Leiden -Cellcycle +SingleR +Autoselection +05-05-2022/integrated/BL_N + BL_C/BL_N + BL_C.rds"
-# )
-## after selection rds files
-# sample_names <- c("BL_A + BL_C", "BL_N + BL_C")
-# rds.files <- c(
-#   "C:/Users/mauri/Desktop/Single Cell RNA Sequencing/Seurat/results/Pipe +SCT +Leiden -Cellcycle +SingleR +Autoselection +05-05-2022/integrated/BL_A + BL_C/after_selection/BL_A + BL_C.rds",
-#   "C:/Users/mauri/Desktop/Single Cell RNA Sequencing/Seurat/results/Pipe +SCT +Leiden -Cellcycle +SingleR +Autoselection +05-05-2022/integrated/BL_N + BL_C/after_selection/BL_N + BL_C.rds"
-# )
 names(rds.files) <- sample_names
 
 # set genes of interest for trajectory starting point selection
 astrocytical_interest_markers <- c("VIM", "S100B", "SOX9", "SLC1A3")
 neuronal_interest_markers <- c("MAP2", "RBFOX3", "NEUROG2")
-### end initialization ###
+## END USER PARAMETERS ##
+### END INITIALIZATION ###
 
 
 
 # initialize plots to wrap
 plots <- list()
 for (sample_name in sample_names) {
-  setwd(orig.wd)
-  messageE(sample_name)
-  # create sample specific directory
+  message(sample_name)
+  # set and create sample specific directory
   dir.create(paste0(work_dir, 'results/', start_time, '/monocle-pseudotime/', sample_name, "/pseudotime/"), recursive = TRUE)
-  # set working directory to sample specific directory
   setwd(paste0(work_dir, 'results/', start_time, '/monocle-pseudotime/', sample_name, "/"))
 
   # set genes of interest
@@ -537,24 +460,21 @@ for (sample_name in sample_names) {
     genes_of_interest <- astrocytical_interest_markers
   } else if ("BL_N" %in% sample_name) {
     genes_of_interest <- neuronal_interest_markers
-    # TODO hoogste SOX2 (voorlopen cellen marker) proberen
-
-    # TODO kleur som marker panels in Seurat (visuele validatie)
   } else {
     genes_of_interest <- c(astrocytical_interest_markers, neuronal_interest_markers)
   }
 
-  # read an integrated saved RDS file
+  # get data
   integrated <- readRDS(rds.files[[sample_name]])
 
-  ## convert from Seurat to Monocle3 object
+  # convert from Seurat to cell data set object
   cds <- SeuratWrappers::as.cell_data_set(integrated, assay = "SCT")
 
-  ## Monocle 3 requires to run it's own clustering (flag in custom function allows to match Seurat_n_clusters)
+  # Monocle 3 requires to run its own clustering
   match_clustering <- function(seurat_obj, monocle_obj, match_seurat_clustering) {
     cds <- monocle3::cluster_cells(monocle_obj, cluster_method = "leiden", resolution = NULL, num_iter = 10, verbose = F)
     if (match_seurat_clustering) {
-      ## in wanting to match clustering, iterate with different resolutions, converging to Seurat_n_clusters
+      # in wanting to match clustering, iterate with different resolutions, converging to Seurat_n_clusters
       resolution = 1e-03
       n_clusters_seurat <- length(levels(Seurat::Idents(seurat_obj)))
       n_clusters_monocle <- length(levels(clusters(cds)))
@@ -576,6 +496,8 @@ for (sample_name in sample_names) {
     }
   }
   cds <- match_clustering(integrated, cds, match_seurat_clustering = FALSE)
+
+  # if integrated sample, plot sample identity
   if (grepl("\\+", sample_name)) {
     p1 <- plot_cells.adjusted(cds,
                               color_cells_by = "orig.ident",
@@ -591,6 +513,7 @@ for (sample_name in sample_names) {
     plots[[length(plots)+1]] <- p1
   }
 
+  # plot Monocle3 partitions
   p2 <- monocle3::plot_cells(cds,
                              color_cells_by = "partition",
                              show_trajectory_graph = FALSE,
@@ -603,16 +526,16 @@ for (sample_name in sample_names) {
   ggplot2::ggsave(file = paste0("pseudotime/monocle_partitions.png"), width = 30, height = 20, units = "cm")
   plots[[length(plots)+1]] <- p2
 
-  ## learn principal graph and plot the trajectory
+  # learn principal graph
   cds <- monocle3::learn_graph(cds, use_partition = TRUE)
 
   for (partition in seq_along(table(partitions(cds)))) {
     message("partition: ", partition)
-    # create df of cell names and marker of interest values
+    # create df of cell names and gene(s) of interest values
     df <- SeuratObject::FetchData(integrated, genes_of_interest)
-    # get cell name with highest summed expression for marker(s) of interest
+    # get cell name with highest summed expression for gene(s) of interest
     cell_name <- names(which.max(apply(df[partitions(cds) == partition, ], 1, sum)))
-    # calculate pseudo-time from cell with highest expression
+    # calculate pseudo-time from the cell with highest expression
     cds <- monocle3::order_cells(cds, root_cells = cell_name)
     # get cell name at furthest point to invert pseudo-time calculations
     cell_name <- names(which.max(pseudotime(cds)[partitions(cds) == partition]))
@@ -621,6 +544,7 @@ for (sample_name in sample_names) {
 
     # plot once
     if (partition == "1") {
+      # plot Monocle3 clusters and trajectory
       p3 <- monocle3::plot_cells(cds,
                                  label_cell_groups = FALSE, # if false, show legend
                                  label_groups_by_cluster = TRUE,
@@ -635,6 +559,8 @@ for (sample_name in sample_names) {
       p3 <- p3 + labs(title="Monocle clusters + trajectory")
       ggplot2::ggsave(file = paste0("pseudotime/monocle_clusters_trajectory.png"), width = 30, height = 20, units = "cm")
       plots[[length(plots)+1]] <- p3
+
+      # plot reference clusters UMAP
       p4 <- plot_cells.adjusted(cds,
                                 color_cells_by = "kriegstein.seurat.custom.clusters.mean",
                                 group_cells_by = "kriegstein.seurat.custom.clusters.mean",
@@ -652,6 +578,8 @@ for (sample_name in sample_names) {
       p4 <- p4 + labs(title="Kriegstein clusters UMAP")
       ggplot2::ggsave(file = paste0("pseudotime/kriegstein clusters UMAP.png"), width = 30, height = 20, units = "cm")
       plots[[length(plots)+1]] <- p4
+
+      # plot reference data trajectory
       p5 <- plot_cells.adjusted(cds,
                                 color_cells_by = "kriegstein.seurat.custom.clusters.mean",
                                 group_cells_by = "kriegstein.seurat.custom.clusters.mean",
@@ -670,6 +598,8 @@ for (sample_name in sample_names) {
       ggplot2::ggsave(file = paste0("pseudotime/kriegstein clusters trajectory.png"), width = 30, height = 20, units = "cm")
       plots[[length(plots)+1]] <- p5
     }
+
+    # plot pseudotime and trajectory per Monocle3 partition
     p6 <- monocle3::plot_cells(cds,
                                color_cells_by = "pseudotime",
                                label_cell_groups = TRUE,
@@ -685,95 +615,10 @@ for (sample_name in sample_names) {
     plots[[length(plots)+1]] <- p6
   }
 
-  # wrap plots
+  # wrap and save plots
   pw <- patchwork::wrap_plots(plots, ncol = 2)
-  ## save plots
   ggplot2::ggsave(file = paste0("pseudotime/Overview_", sample_name, ".png"), width = 30, height = 20, units = "cm")
 
   # reset plots list
   plots <- list()
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-## add a feature to Monocle3/cell_data_set object manually
-# colData(cds)$monoculture_coculture <- colData(cds)$orig.ident
-
-## get data back to Seurat object
-# integrated.sub <- Seurat::as.Seurat(cds, counts = "counts", data = "logcounts", assay = NULL, project = "SingleCellExperiment")
-
-### TODO (?) for doing marker gene (differential?) expression analysis in Monocle 3
-# marker_test_res <- monocle3::top_markers(cds, group_cells_by="cluster", cores=1)
-#
-# top_specific_markers <- marker_test_res %>%
-#   dplyr::filter(fraction_expressing >= 0.10) %>%
-#   dplyr::group_by(cell_group) %>%
-#   dplyr::top_n(1, pseudo_R2)
-#
-# top_specific_marker_ids <- unique(top_specific_markers %>% dplyr::pull(gene_id))
-#
-# rowData(cds)$gene_short_name <- row.names(rowData(cds))
-# plot_genes_by_group(cds,
-#                     top_specific_marker_ids,
-#                     group_cells_by="cluster",
-#                     ordering_type="none",
-#                     max.size=3)
-
-## TODO check aggregating gene expression to create cluster-level pseudobulk samples to create schematic trajectory
-# cell_group_df <- data.frame("cell_ids" = names(clusters(cds)),
-#                             "seurat_clusters" = clusters(cds))
-# monocle3::aggregate_gene_expression(cds, cell_group_df = cell_group_df)
-
-## TODO check Monocle3 3d plotting - Github issued: https://github.com/cole-trapnell-lab/monocle3/issues/590
-## inspiration: https://www.nature.com/articles/s41586-019-0969-x/figures/4
-# cds_3d <- reduce_dimension(cds, max_components = 3, preprocess_method = "PCA")
-# match_clustering <- function(seurat_obj, monocle_obj, match_seurat_clustering) {
-#   cds <- monocle3::cluster_cells(monocle_obj, cluster_method = "leiden", resolution = NULL, num_iter = 10, verbose = F)
-#   if (match_seurat_clustering) {
-#     ## in wanting to match clustering, iterate with different resolutions, converging to Seurat_n_clusters
-#     resolution = 1e-03
-#     n_clusters_seurat <- length(levels(Seurat::Idents(seurat_obj)))
-#     n_clusters_monocle <- length(levels(clusters(cds)))
-#     while (n_clusters_seurat != n_clusters_monocle) {
-#       if (n_clusters_seurat > n_clusters_monocle) {
-#         resolution <- resolution * 2
-#       } else {
-#         resolution <- resolution / 5
-#       }
-#       cds <- monocle3::cluster_cells(monocle_obj, cluster_method = "leiden", resolution = resolution, num_iter = 10, verbose = F)
-#       n_clusters_seurat <- length(levels(Seurat::Idents(seurat_obj)))
-#       n_clusters_monocle <- length(levels(clusters(cds)))
-#       print(paste0("resolution: ", resolution, " - n_seurat_clusters: ", n_clusters_seurat, " - n_monocle_clusters: ", n_clusters_monocle))
-#     }
-#     colData(cds)$monocle3_clustering_resolution <- resolution
-#     return(cds)
-#   } else {
-#     return(cds)
-#   }
-# }
-# cds_3d <- match_clustering(integrated, cds_3d, match_seurat_clustering = TRUE)
-# cds_3d <- learn_graph(cds_3d)
-# cds_3d <- order_cells(cds_3d)
-# source(file="C:/Users/mauri/Desktop/M/Work & Education/Erasmus MC PhD/Projects/Single Cell RNA Sequencing/Seurat/R/my_utils/color_palettes.R")
-# my.color.palettes <- my.color.palettes # TODO check if works: explicit mention because of scoping error
-# # get custom colors
-# custom_colors <- my.color.palettes(type = 'mixed')
-# plot_cells_3d(cds_3d,
-#               color_cells_by="cluster",
-#               color_palette = custom_colors[2:2+length(levels(clusters(cds_3d)))],
-#               show_trajectory_graph = T,
-#               trajectory_graph_segment_size = 5,
-#               norm_method = "log",
-#               alpha=0.5,
-#               min_expr=0)
