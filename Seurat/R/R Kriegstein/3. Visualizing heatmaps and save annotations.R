@@ -1,56 +1,32 @@
 library(SingleR)
 library(pheatmap)
 library(Seurat)
+library(stringr)
+library(grDevices)
 
 
 
 ### USER PARAMETERS ###
-## TODO testing
 # set RData folder
 RData_folder <-"C:/Users/mauri/Desktop/Single Cell RNA Sequencing/Seurat/data/Kriegstein/RData/Pipe_SCTv2_23-06/A+C newPostSelect"
 # set sample(s)
 samples <- c("BL_A + BL_C")
 # set file(s)
 rds.files <- c("C:/Users/mauri/Desktop/Single Cell RNA Sequencing/Seurat/results/Pipe_SCTv2_23-06 cluster_level_selection/integrated - old selection/BL_A + BL_C/after_selection/BL_A + BL_C.rds")
+names(rds.files) <- samples
+
+# set work dir
+work_dir <- 'C:/Users/mauri/Desktop/Single Cell RNA Sequencing/Seurat/data/Kriegstein/'
+setwd(work_dir)
 
 # "max" as SingleR intended (combineCommonResults), max.scores/max.labels across references
 # "mean" custom for averaging scores (and labels) across references
 RefAggrStrategy <- "max"
 
-## pre-selection data
-# # set sample names (NOTE: same order as rds.files)
-# samples <- c("BL_A", "BL_C", "BL_N", "BL_A + BL_C", "BL_N + BL_C")
-# # set rds files ((NOTE: same order as samples))
-# rds.files <- c(
-#   "C:/Users/mauri/Desktop/Single Cell RNA Sequencing/Seurat/results/Pipe_SCTv2_corrected_13-06/BL_A/BL_A.rds",
-#   "C:/Users/mauri/Desktop/Single Cell RNA Sequencing/Seurat/results/Pipe_SCTv2_corrected_13-06/BL_C/BL_C.rds",
-#   "C:/Users/mauri/Desktop/Single Cell RNA Sequencing/Seurat/results/Pipe_SCTv2_corrected_13-06/BL_N/BL_N.rds",
-#   "C:/Users/mauri/Desktop/Single Cell RNA Sequencing/Seurat/results/Pipe_SCTv2_corrected_13-06/integrated/BL_A + BL_C/BL_A + BL_C.rds",
-#   "C:/Users/mauri/Desktop/Single Cell RNA Sequencing/Seurat/results/Pipe_SCTv2_corrected_13-06/integrated/BL_N + BL_C/BL_N + BL_C.rds"
-#   )
-## post-selection data
-# samples <- c("BL_A + BL_C", "BL_N + BL_C")
-# rds.files <- c(
-#   "C:/Users/mauri/Desktop/Single Cell RNA Sequencing/Seurat/results/Pipe_SCTv2_corrected_13-06/integrated/BL_A + BL_C/after_selection/BL_A + BL_C.rds",
-#   "C:/Users/mauri/Desktop/Single Cell RNA Sequencing/Seurat/results/Pipe_SCTv2_corrected_13-06/integrated/BL_N + BL_C/after_selection/BL_N + BL_C.rds"
-#   )
-names(rds.files) <- samples
-
-
-
-
-
-
-
-# source my custom color palettes from utils
-source(file="C:/Users/mauri/Desktop/Single Cell RNA Sequencing/Seurat/R/my_utils/color_palettes.R")
+# source and get custom color palette from utils
+source(file="C:/Users/mauri/Desktop/Single Cell RNA Sequencing/Seurat/R/utils/color_palettes.R")
 my.color.palettes <- my.color.palettes
-# get custom colors
 custom_colors <- my.color.palettes(type = 'mixed')
-
-# set work dir
-work_dir <- 'C:/Users/mauri/Desktop/Single Cell RNA Sequencing/Seurat/data/Kriegstein/'
-setwd(work_dir)
 
 # initialize function and get meta data
 getMeta <- function() {
@@ -58,13 +34,12 @@ getMeta <- function() {
   if (!file.exists(metaFile)) {
     stop(metaFile, " does not exist, this file is generated during data chunking.")
   } else {
-    return(read.table(metaFile, header = TRUE, sep = "\t", as.is = TRUE, row.names = 1))
+    return(utils::read.table(metaFile, header = TRUE, sep = "\t", as.is = TRUE, row.names = 1))
   }
 }
 meta <- getMeta()
 
-
-# set annotations
+# set annotations (used as meta plot data and/or used for plotting its values)
 annotations <- c("age", "structure", "custom.clusterv2")
 annotations.to.plot <- c("custom.clusterv2")
 
@@ -75,18 +50,17 @@ dir.create(paste0(work_dir, 'results/', 'Kriegstein/', start_time, '/'), recursi
 setwd(paste0(work_dir, 'results/', 'Kriegstein/', start_time, '/'))
 ### END USER PARAMETERS ###
 
-# read and return rds data
+
+
+# read and get .rds data
 data.list <- lapply(X = rds.files, FUN = function(x) {
   return(readRDS(file = x))
 })
-# add sample names to rds data
 names(data.list) <- samples
 
-
-
-# initialize list to store results
+# initialize list to store SingleR results
 results.list <- list()
-# iterate samples and annotations: grab all corresponding files, then load and return corresponding data
+# iterate samples and annotations: grab all corresponding files, then load and get corresponding data
 for (sample in samples) {
   for (anno in annotations) {
     # list all files in RData_folder based on sample and annotation
@@ -111,32 +85,25 @@ for (sample in samples) {
 
 # CombineCommonResults of corresponding data for each single sample-reference comparison
 combined.results <- lapply(X = results.list, FUN = function(x) {
-  # use SingleR::combineCommonResults (instead of combineRecomputedResults) because
-  ## from combineRecomputedResults docs: It is strongly recommended that the
-  ## universe of genes be the same across all references
-  ### because if the intersection of all genes over all references is highly
-  ### different, the availability between refs may have unpredictable results
+  # get scores from combined results
   combined <- SingleR::combineCommonResults(x)
-
-  # create dataframe to select values of the highest scoring reference
   df <- as.data.frame(combined$scores)
 
-
   ## get max score and label for each highest scoring reference
-  # for each unique column name select all its columns (scores, result chunks of SingleR)
+  # for each unique column name, select all its corresponding columns (scores, result chunks of SingleR)
   combined$max.scores <- sapply(unique(names(df)), function(names) {
     # for each row (cluster)
     sapply(1:nrow(df), function(row) {
       # get the column by highest row-wise value within the subset of selected columns
       col <- max.col(df[names(df) == names])[row]
-      # select the highest score (value) based on the defined column and row within the subset of selected columns
+      # select the highest score (value)
       df[names(df) == names][row, col]
     })
   })
   combined$max.labels <- colnames(combined$max.scores)[max.col(combined$max.scores)]
 
   # write scores for figure reference
-  write.csv2(combined$max.scores, file = paste0("Kriegstein_Pearson.correlation.max_", sample, "_", anno ,".csv"))
+  utils::write.csv2(combined$max.scores, file = paste0("Kriegstein_Pearson.correlation.max_", sample, "_", anno ,".csv"))
 
   ## get mean score and label of all references
   # for each unique column name select all columns
@@ -151,7 +118,6 @@ combined.results <- lapply(X = results.list, FUN = function(x) {
   return(combined)
 })
 
-combined.results[[3]]$mean.scores
 
 # save Kriegstein cluster labels into Seurat object --> rds
 for (sample in samples) {
@@ -168,13 +134,10 @@ for (sample in samples) {
   # overwrite copied metadata to an aggregation of Kriegstein.Seurat custom cluster labels
   levels(data.list[[sample]]$kriegstein.seurat.custom.clusters.mean) <- paste0(combined.results[[paste(sample, "custom.clusterv2")]]$mean.labels, ".", levels(data.list[[sample]]$kriegstein.seurat.custom.clusters.mean))
 
-  # overwrite rds file with new misc(elleneous) annotation (note: NOT metadata, as that is about cells in SO)
+  # overwrite rds file with new misc annotation
   saveRDS(data.list[[sample]], file = rds.files[[sample]])
 }
 
-
-
-# TODO put this (visualizing) in its own script, just need rds data + meta now as SingleR results are stored in misc
 # custom visualizations per sample-reference comparison for each annotation
 for (sample in samples) {
   annotation_col <- data.frame(row.names = levels(data.list[[sample]]$seurat_clusters))
@@ -194,7 +157,7 @@ for (sample in samples) {
     names(annotation_colors[[paste0("ref.", anno)]]) <- my.color.palettes(type = 'mixed', n = length(annotation_colors[[paste0("ref.", anno)]]))
 
     # swap names and values of named vector to proper formatting
-    annotation_colors[[paste0("ref.", anno)]] <- setNames(names(annotation_colors[[paste0("ref.", anno)]]), annotation_colors[[paste0("ref.", anno)]])
+    annotation_colors[[paste0("ref.", anno)]] <- stats::setNames(names(annotation_colors[[paste0("ref.", anno)]]), annotation_colors[[paste0("ref.", anno)]])
 
     # set annotation colors for all transferred labels
     annotation_colors[[paste0("ref.", anno)]] <- annotation_colors[[paste0("ref.", anno)]][unique(annotation_col[which(colnames(annotation_col) == paste0("ref.", anno))][,1])]
@@ -214,7 +177,7 @@ for (sample in samples) {
     # plot pretty heatmap
     p <- pheatmap::pheatmap(t(combined.results[[paste(sample, anno)]][[paste0(RefAggrStrategy, ".scores")]]),
                   fontsize = 9,
-                  color = colorRampPalette(RColorBrewer::brewer.pal(n = 7, name = "PiYG"))(100),
+                  color = grDevices::colorRampPalette(RColorBrewer::brewer.pal(n = 7, name = "PiYG"))(100),
                   labels_col = paste0(levels(data.list[[sample]]$seurat_clusters), " (n=", table(data.list[[sample]]$seurat_clusters), ")"),
                   annotation_col = annotation_col,
                   annotation_colors = annotation_colors,
