@@ -10,14 +10,15 @@ library(gridExtra)
 work_dir <- "C:/Users/mauri/Desktop/Single Cell RNA Sequencing/Seurat/"
 
 # files and sample names
-rds.files <- c("C:/Users/mauri/Desktop/Single Cell RNA Sequencing/Seurat/results/2022-08-12 13-50-22/BL_N/BL_N.rds",
-               "C:/Users/mauri/Desktop/Single Cell RNA Sequencing/Seurat/results/2022-08-12 14-42-57/BL_C/BL_C.rds")
-sample_name <- "BL_N-BL_C"
-ref_sample <- "BL_C"
+rds.files <- c("C:/Users/mauri/Desktop/Single Cell RNA Sequencing/Seurat/results/2022-08-24 15-12-14/t90/t90.rds",
+               "C:/Users/mauri/Desktop/Single Cell RNA Sequencing/Seurat/results/2022-08-24 15-12-14/t149/t149.rds",
+               "C:/Users/mauri/Desktop/Single Cell RNA Sequencing/Seurat/results/2022-08-24 15-12-14/t275/t275.rds")
+sample_name <- "t90-149-275"
+ref_sample <- "t90"
 
 # set to perform selection after integration and re-run integration
 perform_cell_level_selection <- FALSE
-perform_cluster_level_selection <- TRUE
+perform_cluster_level_selection <- FALSE
 selection_panel <- c("MAP2", "DCX", "NEUROG2") # RBFOX3 <-> DCX
 selection_panel_type <- "neuronal"
 # selection_panel <- c("VIM", "S100B", "SOX9") # SOX9 <-> FABP7
@@ -75,9 +76,12 @@ integration_analysis <- function(integrated, selection_performed = FALSE) {
   integrated <- Seurat::FindClusters(integrated, resolution = 0.5, algorithm = 4, method = "igraph")
   integrated <- Seurat::RunUMAP(integrated, reduction = "pca", dims = 1:choose_N_PCs)
 
+  print(2)
+
   # prepare data (recorrect counts) for SCT assay DEG and visualization
   integrated <- Seurat::PrepSCTFindMarkers(integrated, assay = "SCT")
   SeuratObject::DefaultAssay(integrated) <- "SCT"
+  print(3)
 
   # Visualization
   p1 <- Seurat::DimPlot(integrated, reduction = "umap", group.by = 'orig.ident') +
