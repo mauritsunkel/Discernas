@@ -11,76 +11,8 @@ library(dplyr)
 
 
 
-# TODO commented out FGSEA analysis
-FGSEA_analysis <- function(markers, working_directory, marker_type, cluster) {
-  library(biomaRt)
-  library(fgsea)
-  library(data.table)
-  library(ggplot2)
 
-  dir.create(paste0(work_dir, "../GSE_analysis/", marker_type, "/cluster ", cluster, "/"), recursive = T)
 
-  ## fix infinite values later by applying -log10 function
-  markers$p_val[markers$p_val == 0] <- min(markers$p_val[markers$p_val != 0])
-
-  ## calculate metric by FoldChangeSign and -LogPvalue
-  markers$fcsign <- sign(markers$avg_log2FC)
-  markers$logPval <- -log10(markers$p_val)
-
-  ## create ranked vector
-  fgsea_ranks <- markers$logPval/markers$fcsign
-
-  ## get Entrez IDs by HGNC symbol to match gene names and provide a translation map
-  hsmart <- useMart(dataset = "hsapiens_gene_ensembl", biomart = "ensembl")
-  mapping <- getBM(
-    attributes = c('entrezgene_id', 'hgnc_symbol'),
-    filters = 'hgnc_symbol',
-    values = rownames(markers),
-    mart = hsmart
-  )
-  names(fgsea_ranks) <- match(rownames(markers), mapping$hgnc_symbol)
-
-  ## get Reactome pathways by Entrez IDs
-  pathways <- reactomePathways(names(fgsea_ranks))
-
-  fgsea_results <- fgsea(pathways = pathways,
-                         stats    = fgsea_ranks,
-                         eps      = 0.0,
-                         minSize  = 15,
-                         maxSize  = 500)
-
-  topPathwaysUp <- fgsea_results[ES > 0][head(order(pval), n=10), pathway]
-  topPathwaysDown <- fgsea_results[ES < 0][head(order(pval), n=10), pathway]
-  topPathways <- c(topPathwaysUp, rev(topPathwaysDown))
-
-  png(filename=paste0(working_directory, "../GSE_analysis/", marker_type, "/cluster ", cluster, "/overview_table.png"), width = 1600)
-  plotGseaTable(pathways[topPathways], fgsea_ranks, fgsea_results,
-                     gseaParam=0.5)
-  dev.off()
-
-  ## can try to collapse pathways if there are many seemlingly alike in the plot above
-  collapsedPathways <- collapsePathways(fgsea_results[order(pval)][padj < 0.01],
-                                        pathways, fgsea_ranks)
-  mainPathways <- fgsea_results[pathway %in% collapsedPathways$mainPathways][
-    order(-NES), pathway]
-
-  ## check if mainPathways is empty (likely collapsedPathways is empty too)
-  if (length(mainPathways) > 0) {
-    png(filename=paste0(working_directory, "../GSE_analysis/", marker_type, "/cluster ", cluster, "/collapsed_table.png"), width = 1600)
-    p <- plotGseaTable(pathways[mainPathways], fgsea_ranks, fgsea_results,
-                       gseaParam = 0.5)
-    dev.off()
-  }
-
-  fwrite(fgsea_results, file=paste0(working_directory, "../GSE_analysis/", marker_type, "/cluster ", cluster, "/overview.xls"), sep="\t", sep2=c("", ",", ""))
-
-  for (i in seq_along(topPathways)) {
-    # png(filename=paste0(working_directory, "GSEA/cluster_", cluster, "/enriched_", i, ".png"), width = 1600)
-    p <- plotEnrichment(pathways[[topPathways[i]]],
-                        fgsea_ranks) + labs(title=topPathways[[i]])
-    ggsave(file = paste0(working_directory, "../GSE_analysis/", marker_type, "/cluster ", cluster, "/enriched_", i, ".png"), width = 30, height = 20, units = "cm")
-  }
-}
 
 
 
@@ -354,6 +286,8 @@ assignInNamespace("FindMarkers.default", FindMarkers.default.adjusted, ns = "Seu
 
 
 ### USER PARAMETERS
+run_FGSEA_analysis <- FALSE # DEVNOTE: in development!
+
 # set sample and set and get data
 sample_name <- "BL_A + BL_C"
 rds.file <- "C:/Users/mauri/Desktop/Single Cell RNA Sequencing/Seurat/results/Pipe_SCTv2_corrected_13-06/integrated - old selection/BL_A + BL_C/after_selection/BL_A + BL_C.rds"
@@ -376,6 +310,77 @@ if (length(table(integrated$orig.ident)) != 1) {
 message(start_time)
 ### END USER PARAMETERS
 
+if(run_FGSEA_analysis) {
+  FGSEA_analysis <- function(markers, working_directory, marker_type, cluster) {
+    library(biomaRt)
+    library(fgsea)
+    library(data.table)
+    library(ggplot2)
+
+    dir.create(paste0(work_dir, "../GSE_analysis/", marker_type, "/cluster ", cluster, "/"), recursive = T)
+
+    ## fix infinite values later by applying -log10 function
+    markers$p_val[markers$p_val == 0] <- min(markers$p_val[markers$p_val != 0])
+
+    ## calculate metric by FoldChangeSign and -LogPvalue
+    markers$fcsign <- sign(markers$avg_log2FC)
+    markers$logPval <- -log10(markers$p_val)
+
+    ## create ranked vector
+    fgsea_ranks <- markers$logPval/markers$fcsign
+
+    ## get Entrez IDs by HGNC symbol to match gene names and provide a translation map
+    hsmart <- useMart(dataset = "hsapiens_gene_ensembl", biomart = "ensembl")
+    mapping <- getBM(
+      attributes = c('entrezgene_id', 'hgnc_symbol'),
+      filters = 'hgnc_symbol',
+      values = rownames(markers),
+      mart = hsmart
+    )
+    names(fgsea_ranks) <- match(rownames(markers), mapping$hgnc_symbol)
+
+    ## get Reactome pathways by Entrez IDs
+    pathways <- reactomePathways(names(fgsea_ranks))
+
+    fgsea_results <- fgsea(pathways = pathways,
+                           stats    = fgsea_ranks,
+                           eps      = 0.0,
+                           minSize  = 15,
+                           maxSize  = 500)
+
+    topPathwaysUp <- fgsea_results[ES > 0][head(order(pval), n=10), pathway]
+    topPathwaysDown <- fgsea_results[ES < 0][head(order(pval), n=10), pathway]
+    topPathways <- c(topPathwaysUp, rev(topPathwaysDown))
+
+    png(filename=paste0(working_directory, "../GSE_analysis/", marker_type, "/cluster ", cluster, "/overview_table.png"), width = 1600)
+    plotGseaTable(pathways[topPathways], fgsea_ranks, fgsea_results,
+                  gseaParam=0.5)
+    dev.off()
+
+    ## can try to collapse pathways if there are many seemlingly alike in the plot above
+    collapsedPathways <- collapsePathways(fgsea_results[order(pval)][padj < 0.01],
+                                          pathways, fgsea_ranks)
+    mainPathways <- fgsea_results[pathway %in% collapsedPathways$mainPathways][
+      order(-NES), pathway]
+
+    ## check if mainPathways is empty (likely collapsedPathways is empty too)
+    if (length(mainPathways) > 0) {
+      png(filename=paste0(working_directory, "../GSE_analysis/", marker_type, "/cluster ", cluster, "/collapsed_table.png"), width = 1600)
+      p <- plotGseaTable(pathways[mainPathways], fgsea_ranks, fgsea_results,
+                         gseaParam = 0.5)
+      dev.off()
+    }
+
+    fwrite(fgsea_results, file=paste0(working_directory, "../GSE_analysis/", marker_type, "/cluster ", cluster, "/overview.xls"), sep="\t", sep2=c("", ",", ""))
+
+    for (i in seq_along(topPathways)) {
+      # png(filename=paste0(working_directory, "GSEA/cluster_", cluster, "/enriched_", i, ".png"), width = 1600)
+      p <- plotEnrichment(pathways[[topPathways[i]]],
+                          fgsea_ranks) + labs(title=topPathways[[i]])
+      ggsave(file = paste0(working_directory, "../GSE_analysis/", marker_type, "/cluster ", cluster, "/enriched_", i, ".png"), width = 30, height = 20, units = "cm")
+    }
+  }
+}
 
 
 ## perform sample level comparison for integration
@@ -410,7 +415,9 @@ if (!any(table(integrated$orig.ident) < 3)) {
 
     write.csv2(sample_markers_pval_adj, file = paste0("sample_markers/pct1=", names(table(integrated$orig.ident))[1], "-pct2=", names(table(integrated$orig.ident))[2], " - (nz-)p-val st 0.05.csv"), row.names = TRUE)
 
-    # FGSEA_analysis(markers = sample_markers, working_directory = work_dir, marker_type = 'sample_markers', cluster = pct)
+    if(run_FGSEA_analysis) {
+      FGSEA_analysis(markers = sample_markers, working_directory = work_dir, marker_type = 'sample_markers', cluster = pct)
+    }
 
     # add sample markers and n cells count as miscellaneous data to Seurat object
     SeuratObject::Misc(object = integrated, slot = paste0("DEG.sample_markers")) <- sample_markers
@@ -462,7 +469,9 @@ for (i in cluster_ids) {
 
     write.csv2(markers, file = paste0("markers/all_cluster", i, "_m.csv"))
 
-    # FGSEA_analysis(markers = markers, working_directory = work_dir, marker_type = 'markers', cluster = i)
+    if(run_FGSEA_analysis) {
+      FGSEA_analysis(markers = markers, working_directory = work_dir, marker_type = 'markers', cluster = i)
+    }
 
     # add as miscellaneous data to Seurat object
     SeuratObject::Misc(object = integrated, slot = paste0("DEG.markers")) <- markers
@@ -497,7 +506,9 @@ for (i in cluster_ids) {
 
       write.csv2(conserved_markers, file = paste0("conserved_markers/all_cluster", i, "_cm.csv"))
 
-      # FGSEA_analysis(markers = conserved_markers, working_directory = work_dir, marker_type = 'conserved_markers', cluster = i)
+      if(run_FGSEA_analysis) {
+        FGSEA_analysis(markers = conserved_markers, working_directory = work_dir, marker_type = 'conserved_markers', cluster = i)
+      }
 
       # add as miscellaneous data to Seurat object
       SeuratObject::Misc(object = integrated, slot = paste0("DEG.conserved_markers")) <- conserved_markers
@@ -532,7 +543,9 @@ for (i in cluster_ids) {
 
       message('Cluster ID:', i, ' before condition_markers FGSEA call')
 
-      # FGSEA_analysis(markers = condition_markers, working_directory = work_dir, marker_type = 'condition_markers', cluster = i)
+      if(run_FGSEA_analysis) {
+        FGSEA_analysis(markers = condition_markers, working_directory = work_dir, marker_type = 'condition_markers', cluster = i)
+      }
 
       # add as miscellaneous data to Seurat object
       SeuratObject::Misc(object = integrated, slot = paste0("DEG.condition_markers")) <- condition_markers
