@@ -1,119 +1,6 @@
-library(fgsea)
-library(org.Hs.eg.db) # Organism.HomoSapiens.EntrezGene.DataBase
-library(clusterProfiler)
-library(enrichplot)
-library(ggplot2)
-library(DOSE)
-
-
-### USER PARAMETERS
-set.seed(42)
-lfc_threshold <- 1
-### END USER PARAMETERS ###
-
-
-
-
-# load DEA result
-dea_result <- read.csv2("C:/Users/mauri/Desktop/Single Cell RNA Sequencing/Seurat/results/Pipe_SCTv2_23-06 cluster_level_selection/integrated/BL_A + BL_C/after_selection_old/DE_analysis/sample_markers/method=DESeq2-pct1=BL_A-pct2=BL_C - (nz-)p-val st 0.05.csv")
-
-## if .csv was saved in Excel, some gene names e.g. SEP2 become dates
-# get index of these genes
-excel_genes_ind <- grepl(x = dea_result$X, pattern = "^[A-Z][a-z]{2}/[0-9]{2}$")
-# get these genes
-excel_genes <- dea_result$X[excel_genes_ind]
-# convert back to original names from date names
-dea_result$X[excel_genes_ind] <- sapply(X = excel_genes, USE.NAMES = FALSE, FUN = function(X) {
-  ss <- unlist(strsplit(X, split = '/'))
-  paste0(toupper(ss[1]), as.integer(ss[2]))
-})
-
-## DEVNOTE: don't remove '.' and everything after because of matching ENSEMBL IDs with ENSEMBL symbols at origin
-## DEVNOTE: Normally remove for proper Ensembl gene version matching to Entrez
-## dea_result$X <- sub("\\.[^.]*$", "", dea_result$X)
-# load CellRanger features - Ensembl genes and IDs
-ensembl_genes_ids <- read.delim(file = "C:/Users/mauri/Desktop/Single Cell RNA Sequencing/Seurat/data/Ensembl genes.tsv",
-                                col.names = c("ensembl_gene_id", "ensembl_gene_name", "gene_type"))
-dea_result$ensembl_id <- ensembl_genes_ids$ensembl_gene_id[match(dea_result$X, ensembl_genes_ids$ensembl_gene_name)]
-# map ENSEMBL to ENTREZIDs
-entrez_ids <- bitr(geneID = dea_result$ensembl_id, OrgDb = org.Hs.eg.db, fromType = "ENSEMBL", toType = "ENTREZID")
-## DEVNOTE: clusterProfiler::bitr mapped more non-NA than annotationDbi::mapIds
-# entrez_ids <- mapIds(org.Hs.eg.db, keys=dea_result$ensembl_id, keytype="ENSEMBL", column="ENTREZID", multiVals="first")
-# set length 0 values to NA, otherwise lose them while unlisting
-# entrez_ids[lengths(entrez_ids) == 0] <- NA
-
-# get DEG names and lfc
-deg_ids_lfc <- dea_result$avg_log2FC
-names(deg_ids_lfc) <- entrez_ids$ENTREZID
-# remove NA
-deg_ids_lfc <- deg_ids_lfc[!is.na(names(deg_ids_lfc))]
-# sort decreasingly
-deg_ids_lfc <- sort(deg_ids_lfc, decreasing = TRUE)
-
-
-
-
-# TODO check which genes are not mapped?
-## check of those which are in head/tail 100 positions, because they would be very weighty in GSEA
-## and check specifically which ones are in abs(log2fc) > threshold positions
-
-## TODO perform gseXXX functions first
-
-
-
-
-gene_ontology_types <- c("biological_process" = "BP")
-# gene_ontology_types <- c("biological_process" = "BP",
-#                          "molecular_function" = "MF",
-# "cellular_component" = "CC")
-for (ind in 1:length(gene_ontology_types)) {
-  # GOEA: provide a set of genes, compare against predefined gene set
-  ## look for over representtion, but not by rank!
-  gse <- clusterProfiler::gseGO(
-    geneList = deg_ids_lfc,
-    ont = gene_ontology_types[ind],
-    OrgDb = org.Hs.eg.db,
-    keyType = "ENTREZID",
-    minGSSize = 3, # default: 10
-    maxGSSize = 800, # default: 500
-    pvalueCutoff = 1, # default: 0.05
-    eps = 0, # default: 1e-10
-    verbose = TRUE,
-    pAdjustMethod = "none", # TODO try (always used by GuidoHooiberg fromclusterProfiler) the default: "BH" (Benjamini-Hochberg)
-    seed = TRUE,
-    by = "fgsea",
-    scoreType = "pos"
-  )
-
-  enrichplot::dotplot(
-    gse,
-    title=paste0("Gene Ontology: ", names(gene_ontology_types[ind])),
-    # split=".sign", # uncomment to show suppressed GO terms
-    showCategory=50) +
-    # facet_grid(.~.sign) +
-    labs(subtitle = paste0("Log fold-change threshold: >", lfc_threshold))
-
-  # TODO uncomment
-  # ggsave(file = paste0("enrichmentPlot_geneOntology_", names(gene_ontology_types[ind]), ".png"), width = 30, height = 20, units = "cm")
-}
-
-
-
-## TODO then subset with dplyr::filter(abs(log2fc) > threshold)
-# TODO test swapping signs
-# dea_result$avg_log2FC <- dea_result$avg_log2FC * -1
-# filter by log2 fold change threshold
-dea_result <- dea_result[dea_result$avg_log2FC > lfc_threshold,]
-
-## TODO then run enrichXXX functions
-
-
-
-
-
-
-# clusterProfiler vignette: https://yulab-smu.top/biomedical-knowledge-mining-book/useful-utilities.html
+# clusterProfiler vignette: https://yulab-smu.top/biomedical-knowledge-mining-book
 # general intro ORA vs GSEA: https://www.pathwaycommons.org/guide/primers/data_analysis/gsea/
+# use Entrez IDs with clusterProfiler etc to perform GSEA/ORA analyses with FGSEA
 # Over-representation (enrichment) analysis (ORA): check DEG vs known biological relationship (via gene set)
 ## will find genes where the difference is large and will fail where the difference is small, but evidenced in coordinated way in a set of related genes
 ## limitations: 1) arbitrary user-defined inclusion criteria, 2) equal importance to each gene, 3) assume gene independance
@@ -132,131 +19,556 @@ dea_result <- dea_result[dea_result$avg_log2FC > lfc_threshold,]
 ###### https://www.nature.com/articles/nbt1209-1135
 ###### https://jtd.amegroups.com/article/view/13609/11598
 
-## OVER REPRESENTATION ANALYSIS (one-sided version of Fishers exact test, input DEG subsets)
-# enrichGO, enrichKEGG, enrichDO, enrichWP, enrichPathway, and the universal one enrichr
-## GO=Gene ontology, DOSE=Disease Ontology, WP=WikiPathways
-enrichGO()
-enrichKEGG()
-enrichWP()
-enrichPathway() # ReactomePA package
-enrichDO() # Disease Ontology
-enrichDGN() # Disease Gene Network
-enricher() # custom annotation, like MSigDB (https://www.gsea-msigdb.org/gsea/msigdb/human/collection_details.jsp#H)
+# TODO remove these when function incorporated in package
+library(fgsea)
+library(clusterProfiler)
+library(DOSE)
+library(ReactomePA)
+library(org.Hs.eg.db) # Organism.HomoSapiens.EntrezGene.DataBase
+library(enrichplot)
+library(ggplot2)
+library(ggnewscale)
+library(ggupset)
 
-## GENE SET ENRICHMENTS ANALYSIS (full DEG)
-# gseGO, gseKEGG, gseWP, and the universal one GSEA
-gseGO()
-gseKEGG()
-gseWP()
-gsePathway() # ReactomePA package
-gseDO() # Disease Ontology
-gseDGN() # Disease Gene Network
+# TODO remove these when function incorporated in package
+### USER PARAMETERS
+set.seed(seed)
+lfc_threshold <- 1
+# set TRUE if up/down regulated GSEA visualization results need to be swapped
+swap_GSEA_groups <- TRUE
+
+use_internal_universe <- TRUE
+p_adjust_method = "BH"
+pval_cutoff <- 1 # default: 0.05
+qval_cutoff <- 1 # default: 0.2
+# Gene Set Size (GSS) is the number of genes match a term and are present in the gene universe (background)
+min_gene_set_size_gsea <- 10 # default: 10
+max_gene_set_size_gsea <- 500 # default: 500
+min_gene_set_size_ora <- 3 # default: 10
+max_gene_set_size_ora <- NA # default: 500
+plot_n_category <- 30
+### END USER PARAMETERS ###
+
+
+
+
+# TODO test function call
+# TODO optimize GSEA/ORA parameters
+run_fgsea(
+  output_dir = ...,
+  dea_result_file = "C:/Users/mauri/Desktop/Single Cell RNA Sequencing/Seurat/results/Pipe_SCTv2_23-06 cluster_level_selection/integrated/BL_A + BL_C/after_selection_old/DE_analysis/sample_markers/method=DESeq2-pct1=BL_A-pct2=BL_C - (nz-)p-val st 0.05.csv",
+  cellRanger_ensembl_features = "C:/Users/mauri/Desktop/Single Cell RNA Sequencing/Seurat/data/Ensembl genes.tsv",
+  )
+
+
+
+
+
+
+
+#' Run GSEA and ORA.
+#'
+#' Run gene set enrichment and over representation analyses with clusterProfiler using fgsea.
+#'
+#' @param output_dir output directory for plots, string
+#' @param dea_result_file Seurat differential expression analysis result object in .csv
+#' @param cellRanger_ensembl_features CellRanger .csv file with mapping of Ensembl IDs to Ensembl gene symbols
+#' @param lfc_threshold ORA differentially expressed genes log fold-change threshold, default: 1
+#' @param seed set pseudorandomness, default: 42
+#' @param swap_GSEA_groups invert log fold changes to visually swap upregulation/overrepresentation and downregulation/underrepresentation, default: FALSE
+#' @param use_internal_universe TRUE: use DEA measured genes, FALSE: use clusterProfiler::ORA_db() specific genes, default: TRUE
+#' @param p_adjust_method p-value multiple testing correction method, default: "BH" (Benjamini-Hochberg)
+#' @param pval_cutoff GSEA/ORA term taken into account by p-val statistic
+#' @param qval_cutoffGSEA/ORA term taken into account by q-val statistic
+#' @param min_gene_set_size_gsea minimum gene set size for GSEA, default: 10
+#' @param max_gene_set_size_gsea maximum gene set size for GSEA, default: 500
+#' @param min_gene_set_size_ora minimum gene set size for ORA, default: 3
+#' @param max_gene_set_size_ora maximum gene set size for ORA, default: NA
+#' @param plot_n_category plot top n most significant terms, default: 30
+#'
+#' @return Nothing
+#'
+#' @import fgsea
+#' @import clusterProfiler
+#' @import DOSE
+#' @import ReactomePA
+#' @import org.Hs.eg.db
+#' @import enrichplot
+#' @import ggplot2
+#' @import ggnewscale
+#' @import ggupset
+#'
+#' @export
+run_fgsea <- function(
+    output_dir, dea_result_file, cellRanger_ensembl_features,
+    lfc_threshold = 1, seed = 42,
+    swap_GSEA_groups = FALSE, use_internal_universe = TRUE,
+    p_adjust_method = "BH", pval_cutoff = 1, qval_cutoff = 1,
+    min_gene_set_size_gsea = 10, max_gene_set_size_gsea = 500,
+    min_gene_set_size_ora = 3, max_gene_set_size_ora = NA,
+    plot_n_category = 30) {
+
+  ## set and create output directories
+  output_dir <- paste0(output_dir, '/fgsea/')
+  dir.create(output_dir)
+  setwd(output_dir)
+
+  fgsea_dbs <- c(
+    "gene_ontology", "disease_ontology", "disease_gene_network",
+    "wiki_pathways", "reactome_pathways")
+  for (db in fgsea_dbs) {
+    dir.create(paste0("gene_set_enrichment_analysis/", db))
+    dir.create(paste0("over_representation_analysis/", db))
+  }
+
+  ## prep GSEA/ORA input
+  # load DEA result
+  dea_result <- read.csv2(dea_result_file)
+  # DEVNOTE: non-unique/duplicate, as reconverting dates have multiple gene name options (e.g. MAR2/MARC2/MARCH2 --> 02/03/year)
+  dea_result$X <- date2gene(gene_names = dea_result$X)
+
+  ## DEVNOTE: don't remove '.' and everything after because of matching ENSEMBL IDs with ENSEMBL symbols at origin
+  ## DEVNOTE: Normally remove for proper Ensembl gene version matching to Entrez
+  ## dea_result$X <- sub("\\.[^.]*$", "", dea_result$X)
+  # load CellRanger features - Ensembl genes and IDs
+  ensembl_genes_ids <- read.delim(file = cellRanger_ensembl_features,
+                                  col.names = c("ensembl_gene_id", "ensembl_gene_name", "gene_type"))
+  # map enseml gene names to ensembl gene IDs from DEA result gene names
+  dea_result$ensembl_id <- plyr::mapvalues(
+    x = dea_result$X,
+    from = ensembl_genes_ids$ensembl_gene_name,
+    to = ensembl_genes_ids$ensembl_gene_id,
+    warn_missing = FALSE)
+  # map ENSEMBL IDs to ENTREZ IDs
+  entrez_ids <- bitr(geneID = dea_result$ensembl_id, OrgDb = org.Hs.eg.db, fromType = "ENSEMBL", toType = "ENTREZID")
+
+  fgsea_examine_unmapped_genes(
+    gene_names = dea_result$X,
+    dea_ensembl_ids = dea_result$ensembl_id,
+    bitr_ensembl_ids = entrez_ids$ENSEMBL)
+
+  ## prep GSEA input
+  # get log fold-change (lfc)
+  dea_ids_lfc <- dea_result$avg_log2FC
+  # get Entrez names by matching Ensembl IDs
+  names(dea_ids_lfc) <- plyr::mapvalues(x = dea_result$ensembl_id, from = entrez_ids$ENSEMBL, to = entrez_ids$ENTREZID)
+  # remove NA
+  dea_ids_lfc <- dea_ids_lfc[!is.na(names(dea_ids_lfc))]
+  # swap signs to swap up/down regulation for GSEA visualization
+  if (swap_GSEA_groups) {
+    dea_ids_lfc <- dea_ids_lfc * -1
+  }
+  # sort decreasingly
+  dea_ids_lfc <- sort(dea_ids_lfc, decreasing = TRUE)
+
+  ## prep ORA input
+  # subset DEA result to DEG result based on log fold-change threshold
+  deg_names <- names(dea_ids_lfc[dea_ids_lfc > lfc_threshold | dea_ids_lfc < -lfc_threshold])
+  # define background gene universe, either internal (all measured/measurable genes) or external (package function built-in)
+  if (use_internal_universe) {
+    universe <- names(dea_ids_lfc)
+  } else {
+    universe <- NULL
+  }
+
+
+  ## GENE SET ENRICHMENT ANALYSES (full DEA list)
+  gsea_results <- run_fgsea_gsea(
+    dea_ids_lfc, min_gene_set_size_gsea, max_gene_set_size_gsea,
+    pval_cutoff, p_adjust_method)
+
+  ## OVER REPRESENTATION ANALYSES (subset DEG list)
+  ora_results <- run_fgsea_ora(
+    deg_names, min_gene_set_size_ora, max_gene_set_size_ora,
+    pval_cutoff, p_adjust_method, qval_cutoff, universe
+  )
+
+  ## plot results
+  for (res in c(gsea_results, ora_results)) {
+    plot_fgsea_result(res, res_name, plot_n_category, dea_ids_lfc)
+  }
+}
+
+fgsea_examine_unmapped_genes <- function(gene_names, dea_ensembl_ids, bitr_ensembl_ids) {
+  d <- dea_ensembl_ids
+  b <- bitr_ensembl_ids
+
+  ratio_mapped <- round(length(b)/(length(d)-sum(is.na(d)))*100, digits = 2)
+
+  genes_not_mapped <- gene_names[d %in% d[!d %in% b]]
+  write.csv2(x = genes_not_mapped, file = "bitr_genes_not_mapped.csv")
+
+  rank_genes_not_mapped <- which(d %in% d[!d %in% b])
+  png("distribution_rank_genes_not_mapped.png")
+  hist(rank_genes_not_mapped, breaks = 200, main = paste0("bitr rank unmapped genes - %mapped: ", ratio_mapped))
+  dev.off()
+}
+
+run_fgsea_gsea <- function(
+    dea_ids_lfc, min_gene_set_size_gsea, max_gene_set_size_gsea,
+    pval_cutoff, p_adjust_method) {
+
+  # initialize results
+  gsea_results <- c()
+
+  gene_ontology_types <- c("GO-BP" = "BP",
+                           "GO-MF" = "MF",
+                           "GO-CC" = "CC")
+  for (i in 1:length(gene_ontology_types)) {
+    res_gse_go <- clusterProfiler::gseGO(
+      geneList = dea_ids_lfc,
+      ont = gene_ontology_types[i],
+      OrgDb = org.Hs.eg.db,
+      keyType = "ENTREZID",
+      exponent = 1, # default: 1
+      minGSSize = min_gene_set_size_gsea, # default: 10
+      maxGSSize = max_gene_set_size_gsea, # default: 500
+      pvalueCutoff = pval_cutoff, # default: 0.05
+      eps = 0, # default: 1e-10
+      verbose = TRUE,
+      pAdjustMethod = p_adjust_method, # default: "BH" (Benjamini-Hochberg)
+      seed = TRUE,
+      by = "fgsea"
+    )
+    gsea_results[paste0("GSEA-", names(gene_ontology_types)[i])] = res_gse_go
+  }
+
+  ## BUGFIX 1
+  # library(R.utils)
+  # R.utils::setOption("clusterProfiler.download.method","auto")
+  ## BUGFIX 2: update R --> update Bioconductor --> update clusterProfiler
+  ## BUGFIX 3: restart R (lol)
+  # res_gsekegg <- clusterProfiler::gseKEGG(
+  #   geneList = dea_ids_lfc,
+  #   organism = "hsa",
+  #   keyType = "kegg", # "kegg", 'ncbi-geneid', 'ncib-proteinid' and 'uniprot'
+  #   exponent = 1, # default: 1
+  #   minGSSize = min_gene_set_size_gsea, # default: 10
+  #   maxGSSize = max_gene_set_size_gsea, # default: 500
+  #   pvalueCutoff = pval_cutoff, # default: 0.05
+  #   pAdjustMethod = p_adjust_method,
+  #   eps = 0, # default: 1e-10
+  #   verbose = TRUE,
+  #   use_internal_data = FALSE, # default: FALSE
+  #   seed = TRUE,
+  #   by = "fgsea"
+  # )
+  # TODO check clusterProfiler::download_KEGG("hsa") # to skip gse part and just try download hsa pathways from KEGG
+  # TODO check if bitr_kegg() needed for keyType
+  ## TODO process error messages
+  # Reading KEGG annotation online:
+  #
+  #   fail to download KEGG data...
+  # Error in download.KEGG.Path(species) :
+  #   'species' should be one of organisms listed in 'http://www.genome.jp/kegg/catalog/org_list.html'...
+  # In addition: Warning message:
+  #   In utils::download.file(url, quiet = quiet, method = "libcurl",  :
+  #                             URL 'https://rest.kegg.jp/link/hsa/pathway': status was 'Failure when receiving data from the peer'
+
+  # WikiPathways
+  res_gse_wp <- clusterProfiler::gseWP(
+    geneList = dea_ids_lfc,
+    organism = "Homo sapiens",
+    pvalueCutoff = pval_cutoff,
+    pAdjustMethod = p_adjust_method,
+    minGSSize = min_gene_set_size_gsea,
+    maxGSSize = max_gene_set_size_gsea
+  )
+  gsea_results["GSEA-WP"] = res_gse_wp
+
+  # Reactome Pathway Analysis
+  res_gse_rp <- ReactomePA::gsePathway(
+    geneList = dea_ids_lfc,
+    organism = "human",
+    exponent = 1, # default: 1
+    minGSSize = min_gene_set_size_gsea, # default: 10
+    maxGSSize = max_gene_set_size_gsea, # default: 500
+    pvalueCutoff = pval_cutoff, # default: 0.05
+    eps = 0, # default: 1e-10
+    verbose = TRUE,
+    pAdjustMethod = p_adjust_method, # default: "BH" (Benjamini-Hochberg)
+    seed = TRUE,
+    by = "fgsea"
+  )
+  gsea_results["GSEA-RP"] = res_gse_rp
+
+  # DiseaseOntology (DO)
+  res_gse_do <- gseDO(
+    geneList = dea_ids_lfc,
+    exponent = 1, # default: 1
+    minGSSize = min_gene_set_size_gsea, # default: 10
+    maxGSSize = max_gene_set_size_gsea, # default: 500
+    pvalueCutoff = pval_cutoff, # default: 0.05
+    verbose = TRUE,
+    pAdjustMethod = p_adjust_method, # default: "BH" (Benjamini-Hochberg)
+    seed = TRUE,
+    by = "fgsea"
+  )
+  gsea_results["GSEA-DO"] = res_gse_do
+
+  # Disease Gene Network (DGN)
+  res_gse_dgn <- gseDGN(
+    geneList = dea_ids_lfc,
+    exponent = 1, # default: 1
+    minGSSize = min_gene_set_size_gsea, # default: 10
+    maxGSSize = max_gene_set_size_gsea, # default: 500
+    pvalueCutoff = pval_cutoff, # default: 0.05
+    verbose = TRUE,
+    pAdjustMethod = p_adjust_method, # default: "BH" (Benjamini-Hochberg)
+    seed = TRUE,
+    by = "fgsea"
+  )
+  gsea_results["GSEA-DGN"] = res_gse_dgn
+
+  return(gsea_results)
+}
+
+run_fgsea_ora <- function(
+    deg_names, min_gene_set_size_ora, max_gene_set_size_ora,
+    pval_cutoff, p_adjust_method, qval_cutoff, universe) {
+
+  # initialize results
+  ora_results <- c()
+
+  # DEPRECATED: define GO specific gene universe
+  # go_gene_list = unique(sort(as.data.frame(org.Hs.egGO)$gene_id))
+  gene_ontology_types <- c("GO-BP" = "BP",
+                           "GO-MF" = "MF",
+                           "GO-CC" = "CC")
+  for (i in 1:length(gene_ontology_types)) {
+    res_enrich_go <- clusterProfiler::enrichGO(
+      gene = deg_names,
+      OrgDb = org.Hs.eg.db,
+      keyType = "ENTREZID",
+      ont = gene_ontology_types[i],
+      pvalueCutoff = pval_cutoff,
+      pAdjustMethod = p_adjust_method, # default: "BH" (Benjamini-Hochberg)
+      universe = universe,
+      qvalueCutoff = qval_cutoff,
+      minGSSize = min_gene_set_size_ora, # default: 10
+      maxGSSize = max_gene_set_size_ora, # default: 500
+      readable = FALSE, # default: FALSE
+      pool = FALSE # default: FALSE
+    )
+    ora_results[paste0("ORA-", names(gene_ontology_types)[i])] = res_enrich_go
+  }
+
+  ## Kyto Encyclopedia of Genes and Genomes
+  # res_enrich_kegg <- enrichKEGG(
+  #   gene = deg_names,
+  #   organism = "hsa",
+  #   pvalueCutoff = pval_cutoff,
+  #   pAdjustMethod = p_adjust_method,
+  #   universe = universe,
+  #   minGSSize = min_gene_set_size_ora, # default: 10
+  #   maxGSSize = max_gene_set_size_ora, # default: 500
+  #   qvalueCutoff = qval_cutoff, # default: 0.2
+  #   use_internal_data = FALSE
+  # )
+  # TODO try KEGG.REST (as above)/Pathway Commons/reactome.db/fixing error messages
+  # Reading KEGG annotation online:
+  #
+  #   fail to download KEGG data...
+  # Error in download.KEGG.Path(species) :
+  #   'species' should be one of organisms listed in 'http://www.genome.jp/kegg/catalog/org_list.html'...
+  # In addition: Warning message:
+  #   In utils::download.file(url, quiet = quiet, method = "libcurl",  :
+  #                             URL 'https://rest.kegg.jp/link/hsa/pathway': status was 'Failure when receiving data from the peer'
+
+  # WikiPathways
+  res_enrich_wp <- enrichWP(
+    gene = deg_names,
+    organism = "Homo sapiens",
+    universe = universe,
+    pvalueCutoff = pval_cutoff,
+    pAdjustMethod = p_adjust_method,
+    minGSSize = min_gene_set_size_ora,
+    maxGSSize = max_gene_set_size_ora,
+    qvalueCutoff = qval_cutoff)
+  ora_results["ORA-WP"] = res_enrich_wp
+
+  # Reactome Pathway
+  res_enrich_rp <- enrichPathway(
+    gene = deg_names,
+    organism = "human",
+    universe = universe,
+    pvalueCutoff = pval_cutoff,
+    pAdjustMethod = p_adjust_method,
+    minGSSize = min_gene_set_size_ora,
+    maxGSSize = max_gene_set_size_ora,
+    qvalueCutoff = qval_cutoff)
+  ora_results["ORA-RP"] = res_enrich_rp
+
+  # Disease Ontology
+  res_enrich_do <- enrichDO(
+    gene = deg_names,
+    universe = universe,
+    ont = "DO",
+    pvalueCutoff = pval_cutoff,
+    pAdjustMethod = p_adjust_method,
+    minGSSize = min_gene_set_size_ora,
+    maxGSSize = max_gene_set_size_ora,
+    qvalueCutoff = qval_cutoff,
+    readable = FALSE)
+  ora_results["ORA-DO"] = res_enrich_do
+
+  # Disease Gene Network
+  res_enrich_dgn <- enrichDGN(
+    gene = deg_names,
+    universe = universe,
+    pvalueCutoff = pval_cutoff,
+    pAdjustMethod = p_adjust_method,
+    minGSSize = min_gene_set_size_ora,
+    maxGSSize = max_gene_set_size_ora,
+    qvalueCutoff = qval_cutoff,
+    readable = FALSE)
+  ora_results["ORA-DGN"] = res_enrich_dgn
+
+  return(ora_results)
+}
+
+plot_fgsea_result <- function(res, res_name, plot_n_category, dea_ids_lfc) {
+  ## prep results
+  res_r <- setReadable(res, 'org.Hs.eg.db', 'ENTREZID')
+  res_r_pt <- pairwise_termsim(res_r)
+  res_df <- as.data.frame(res)
+
+  # TODO check GSEA or ORA
+  # set plot folder name accordingly
+  # set subplot folder name accordingly
+  # make and save according plots
+
+
+
+
+  ## plots for GSEA and ORA results
+  # term vs gene ratio & p-adjust & gene count
+  png()
+  dotplot(res, showCategory = show_n_category)
+  dev.off()
+  # check network of terms with associated genes and amount of genes
+  cnetplot(res_r, showCategory = show_n_category)
+  dev.off()
+  # check heatmap of terms with associated genes and associated log fold change
+  heatplot(res, foldChange = dea_ids_lfc, showCategory = show_n_category)
+  dev.off()
+  # check relations between amount of genes on terms and term association
+  upsetplot(res)
+  dev.off()
+  # check network of associated terms with gene amounts but not gene associations
+  emapplot(res_r)
+  dev.off()
+
+  # GOplot specifically for Gene Ontology GSEA and ORA
+  if (grepl("^GO:", as.data.frame(res)$ID[1])) {
+    goplot(res)
+    dev.off()
+  }
+
+
+
+  # TODO plot if class(res) = "GSEA"
+  # TODO if class(res) == "ORA"
+  if (class(res) == "gseaResult") {
+    ridgeplot(res)
+    dev.off()
+
+    gsea_shown <- 0
+    while(gsea_shown < show_n_category) {
+      gseaplot2(res, geneSetID = res_df$ID[gsea_shown+1:gsea_shown+10], pvalue_table = TRUE)
+      dev.off()
+      gsea_shown <- gsea_shown + 10
+    }
+
+
+
+  }
+  if (class(res) == "enrichResult") {
+
+  }
+
+
+}
+
+### TODO SET FUNCTIONS TO UTILS ###
+#' gene_names: get gene names in character vector
+#' return: gene names in character vector
+date2gene <- function(gene_names) {
+  ## if .csv was saved in Excel, some gene names e.g. SEP2 become dates
+  # get index of these genes
+  excel_genes_ind <- grepl(x = gene_names, pattern = "^[A-Z][a-z]{2}/[0-9]{2}$")
+  # get these genes
+  excel_genes <- gene_names[excel_genes_ind]
+  # convert back to original names from date names
+  gene_names[excel_genes_ind] <- sapply(X = excel_genes, USE.NAMES = FALSE, FUN = function(X) {
+    ss <- unlist(strsplit(X, split = '/'))
+    paste0(toupper(ss[1]), as.integer(ss[2]))
+  })
+  return(gene_names)
+}
+### END SET FUNCTIONS TO UTILS
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# TODO upgrade R version and then BioCOnductor version then packages to test this function
+enrichplot::treeplot(res_enrich_do_r2)
+
+
+
+# TODO check how to get genes associated with a certain term from results object
+
+
+
+# TODO try msigdb with custom GSEA/ORA?
+enricher() # custom annotation, like MSigDB (https://www.gsea-msigdb.org/gsea/msigdb/human/collection_details.jsp#H)
 GSEA() # custom annotation, like MSigDB (https://www.gsea-msigdb.org/gsea/msigdb/human/collection_details.jsp#H)
 
-
-## LEADING EDGE ANALYSIS
-# https://guangchuangyu.github.io/2016/07/leading-edge-analysis/
-
-
-
-## GENERAL
-goplot(gse)
-setReadable() # get symbols with IDs
-bitr() # convert gene IDs
-compareCluster() # try when have multiple gene lists from different experiments/conditions
-
-## VISUALIZATION
-enrichplot() # https://yulab-smu.top/biomedical-knowledge-mining-book/enrichplot.html#enrichplot
-browseKEGG()
-pathview()
-viewPathway() # reactome pathway analysis
-
-
-
-
-
-
-
-# use Entrez IDs with ClusterProfiler etc to perform GSEA/GOEA/pathway analyses with FGSEA
-
-
-
-
-
-## internal function used by clusterProfiler to select data from gse object
-# df <- fortify(gse, showCategory = 10, split=".sign")
-# df <- fortify(gse, showCategory = 10, split=NULL)
-# df
-# gse <- df[df$.sign == "activated"]
-
-
-
-# FGSEA_analysis <- function(markers, working_directory, marker_type, cluster) {
-#   library(biomaRt)
-#   library(fgsea)
-#   library(data.table)
-#   library(ggplot2)
-#
-#   dir.create(paste0(work_dir, "../GSE_analysis/", marker_type, "/cluster ", cluster, "/"), recursive = T)
-#
-#   ## fix infinite values later by applying -log10 function
-#   markers$p_val[markers$p_val == 0] <- min(markers$p_val[markers$p_val != 0])
-#
-#   ## calculate metric by FoldChangeSign and -LogPvalue
-#   markers$fcsign <- sign(markers$avg_log2FC)
-#   markers$logPval <- -log10(markers$p_val)
-#
-#   ## create ranked vector
-#   fgsea_ranks <- markers$logPval/markers$fcsign
-#
-#   ## get Entrez IDs by HGNC symbol to match gene names and provide a translation map
-#   hsmart <- useMart(dataset = "hsapiens_gene_ensembl", biomart = "ensembl")
-#   mapping <- getBM(
-#     attributes = c('entrezgene_id', 'hgnc_symbol'),
-#     filters = 'hgnc_symbol',
-#     values = rownames(markers),
-#     mart = hsmart
-#   )
-#   names(fgsea_ranks) <- match(rownames(markers), mapping$hgnc_symbol)
-#
-#   ## get Reactome pathways by Entrez IDs
-#   pathways <- reactomePathways(names(fgsea_ranks))
-#
-#   fgsea_results <- fgsea(pathways = pathways,
-#                          stats    = fgsea_ranks,
-#                          eps      = 0.0,
-#                          minSize  = 15,
-#                          maxSize  = 500)
-#
-#   topPathwaysUp <- fgsea_results[ES > 0][head(order(pval), n=10), pathway]
-#   topPathwaysDown <- fgsea_results[ES < 0][head(order(pval), n=10), pathway]
-#   topPathways <- c(topPathwaysUp, rev(topPathwaysDown))
-#
-#   png(filename=paste0(working_directory, "../GSE_analysis/", marker_type, "/cluster ", cluster, "/overview_table.png"), width = 1600)
-#   plotGseaTable(pathways[topPathways], fgsea_ranks, fgsea_results,
-#                 gseaParam=0.5)
-#   dev.off()
-#
-#   ## can try to collapse pathways if there are many seemlingly alike in the plot above
-#   collapsedPathways <- collapsePathways(fgsea_results[order(pval)][padj < 0.01],
-#                                         pathways, fgsea_ranks)
-#   mainPathways <- fgsea_results[pathway %in% collapsedPathways$mainPathways][
-#     order(-NES), pathway]
-#
-#   ## check if mainPathways is empty (likely collapsedPathways is empty too)
-#   if (length(mainPathways) > 0) {
-#     png(filename=paste0(working_directory, "../GSE_analysis/", marker_type, "/cluster ", cluster, "/collapsed_table.png"), width = 1600)
-#     p <- plotGseaTable(pathways[mainPathways], fgsea_ranks, fgsea_results,
-#                        gseaParam = 0.5)
-#     dev.off()
-#   }
-#
-#   fwrite(fgsea_results, file=paste0(working_directory, "../GSE_analysis/", marker_type, "/cluster ", cluster, "/overview.xls"), sep="\t", sep2=c("", ",", ""))
-#
-#   for (i in seq_along(topPathways)) {
-#     # png(filename=paste0(working_directory, "GSEA/cluster_", cluster, "/enriched_", i, ".png"), width = 1600)
-#     p <- plotEnrichment(pathways[[topPathways[i]]],
-#                         fgsea_ranks) + labs(title=topPathways[[i]])
-#     ggsave(file = paste0(working_directory, "../GSE_analysis/", marker_type, "/cluster ", cluster, "/enriched_", i, ".png"), width = 30, height = 20, units = "cm")
-#   }
-# }
+## user input: visualize specific pathways
+# browseKEGG() # KEGG pathways
+# pathview::pathview() # general
+# viewPathway() # reactome pathway analysis
