@@ -35,7 +35,7 @@ library(ggupset)
 set.seed(42)
 lfc_threshold <- 1
 # set TRUE if up/down regulated GSEA visualization results need to be swapped
-swap_GSEA_groups <- TRUE
+swap_GSEA_groups <- FALSE
 
 use_internal_universe <- TRUE
 p_adjust_method = "BH"
@@ -114,7 +114,7 @@ run_fgsea <- function(
 
   fgsea_dbs <- c(
     "gene_ontology", "disease_ontology", "disease_gene_network",
-    "wiki_pathways", "reactome_pathways", "KEGG")
+    "wiki_pathways", "reactome_pathways", "KEGG", "molecular_signatures")
   for (db in fgsea_dbs) {
     dir.create(paste(gsea_plot_folder, db, sep = "/"), recursive = TRUE)
     dir.create(paste(ora_plot_folder, "upregulated", db, sep = "/"), recursive = TRUE)
@@ -190,11 +190,14 @@ run_fgsea <- function(
   # define background gene universe, either internal (all measured/measurable genes) or external (package function built-in)
   if (use_internal_universe) {
     universe <- names(dea_ids_lfc)
+
+    # TODO comment out or make a combination by overlap as universe?
     go_universe = unique(sort(as.data.frame(org.Hs.egGO)$gene_id))
 
     fgsea_compare_DEG_GO_universe(
       deg_universe = universe,
-      go_universe = go_universe)
+      go_universe = go_universe,
+      ensembl_genes_ids = ensembl_genes_ids)
   } else {
     universe <- NULL
   }
@@ -205,6 +208,7 @@ run_fgsea <- function(
   # TODO build in msigdb
   # msigdb.hs.h <- get_msigdb_term2gene(collection = 'h')
   # msigdb.hs.c2.cp <- get_msigdb_term2gene(collection = 'c2', subcollection = 'CP')
+
 
 
 
@@ -226,7 +230,6 @@ run_fgsea <- function(
     min_gene_set_size_ora, max_gene_set_size_ora,
     pval_cutoff, p_adjust_method, qval_cutoff, universe
   )
-
   # plot results
   all_results <- c(gsea_results, ora_results_positive, ora_results_negative)
   for (res_name in names(all_results)) {
@@ -243,10 +246,9 @@ run_fgsea <- function(
 
 # TODO optimize GSEA/ORA parameters
 run_fgsea(
-  output_dir = "C:/Users/mauri/Desktop/Single Cell RNA Sequencing/Seurat/results/fgsea_GOuniverse_treeplot_KEGG_pvalCutoff=1/",
+  output_dir = "C:/Users/mauri/Desktop/Single Cell RNA Sequencing/Seurat/results/fgsea_GOuniverse_treeplot_KEGG_MSigDB/",
   dea_result_file = "C:/Users/mauri/Desktop/Single Cell RNA Sequencing/Seurat/results/2022-11-01 14-02-50/integrated/BL_A + BL_C/DE_analysis/sample_markers/method=DESeq2-pct1=BL_C-pct2=BL_A - (nz-)p-val st 0.05.csv",
-  cellRanger_ensembl_features = "C:/Users/mauri/Desktop/Single Cell RNA Sequencing/Seurat/data/Ensembl genes.tsv",
-  pval_cutoff = 1
+  cellRanger_ensembl_features = "C:/Users/mauri/Desktop/Single Cell RNA Sequencing/Seurat/data/Ensembl genes.tsv"
 )
 
 ### TODO SET FUNCTIONS TO UTILS ###
@@ -284,7 +286,7 @@ fgsea_examine_unmapped_genes <- function(gene_names, dea_ensembl_ids, bitr_ensem
   dev.off()
 }
 
-fgsea_compare_DEG_GO_universe <- function(deg_universe, go_universe) {
+fgsea_compare_DEG_GO_universe <- function(deg_universe, go_universe, ensembl_genes_ids) {
   overlapping_gene_ids <- go_universe[go_universe %in% deg_universe]
   gene_ids_not_in_go <- go_universe[!go_universe %in% deg_universe]
 
@@ -407,6 +409,38 @@ run_fgsea_gsea <- function(
   )
   gsea_results[["GSEA-DGN"]] <- res_gse_dgn
 
+  # Molecular Signatures Database - hallmarks (MSigDB hallmark gene sets)
+  msigdb.hs.h <- get_msigdb_term2gene(collection = 'h')
+  res_gse_msdb_h <- clusterProfiler::GSEA(
+    geneList = dea_ids_lfc,
+    TERM2GENE = msigdb.hs.h,
+    exponent = 1,
+    minGSSize = min_gene_set_size_gsea, # default: 10
+    maxGSSize = max_gene_set_size_gsea, # default: 500
+    pvalueCutoff = pval_cutoff, # default: 0.05
+    verbose = TRUE,
+    pAdjustMethod = p_adjust_method, # default: "BH" (Benjamini-Hochberg)
+    seed = TRUE,
+    by = "fgsea"
+  )
+  gsea_results[["GSEA-MSDB-H"]] <- res_gse_msdb_h
+
+  # Molecular Signatures Database - C2 Canonical Pathways (MSigDB C2:CP)
+  msigdb.hs.c2.cp <- get_msigdb_term2gene(collection = 'c2', subcollection = 'CP')
+  res_gse_msdb_c2cp <- clusterProfiler::GSEA(
+    geneList = dea_ids_lfc,
+    TERM2GENE = msigdb.hs.c2.cp,
+    exponent = 1,
+    minGSSize = min_gene_set_size_gsea, # default: 10
+    maxGSSize = max_gene_set_size_gsea, # default: 500
+    pvalueCutoff = pval_cutoff, # default: 0.05
+    verbose = TRUE,
+    pAdjustMethod = p_adjust_method, # default: "BH" (Benjamini-Hochberg)
+    seed = TRUE,
+    by = "fgsea"
+  )
+  gsea_results[["GSEA-MSDB-C2CP"]] <- res_gse_msdb_c2cp
+
   return(gsea_results)
 }
 
@@ -520,6 +554,34 @@ run_fgsea_ora <- function(
     readable = FALSE)
   ora_results[[paste0("ORA-DGN-", posneg)]] = res_enrich_dgn
 
+  # Molecular Signatures Database - hallmarks (MSigDB hallmark gene sets)
+  msigdb.hs.h <- get_msigdb_term2gene(collection = 'h')
+  res_enrich_msdb_h <- clusterProfiler::enricher(
+    gene = deg_names,
+    TERM2GENE = msigdb.hs.h,
+    universe = universe,
+    minGSSize = min_gene_set_size_ora, # default: 10
+    maxGSSize = max_gene_set_size_ora, # default: 500
+    qvalueCutoff = qval_cutoff,
+    pvalueCutoff = pval_cutoff, # default: 0.05
+    pAdjustMethod = p_adjust_method # default: "BH" (Benjamini-Hochberg)
+  )
+  ora_results[[paste0("ORA-MSDB-H-", posneg)]] = res_enrich_msdb_h
+
+  # Molecular Signatures Database - C2 Canonical Pathways (MSigDB C2:CP)
+  msigdb.hs.c2.cp <- get_msigdb_term2gene(collection = 'c2', subcollection = 'CP')
+  res_enrich_msdb_c2cp <- clusterProfiler::enricher(
+    gene = deg_names,
+    TERM2GENE = msigdb.hs.c2.cp,
+    universe = universe,
+    minGSSize = min_gene_set_size_ora, # default: 10
+    maxGSSize = max_gene_set_size_ora, # default: 500
+    qvalueCutoff = qval_cutoff,
+    pvalueCutoff = pval_cutoff, # default: 0.05
+    pAdjustMethod = p_adjust_method # default: "BH" (Benjamini-Hochberg)
+  )
+  ora_results[[paste0("ORA-MSDB-C2CP-", posneg)]] = res_enrich_msdb_c2cp
+
   return(ora_results)
 }
 
@@ -534,7 +596,8 @@ plot_fgsea_result <- function(
     "disease_gene_network" = "DGN",
     "wiki_pathways" = "WP",
     "reactome_pathways" = "RP",
-    "KEGG" = "KEGG")
+    "KEGG" = "KEGG",
+    "molecular_signatures" = "MSDB")
   db_name <- strsplit(res_name, "-")[[1]][2]
   db_folder <- names(fgsea_dbs)[which(fgsea_dbs %in% db_name)]
 
@@ -556,6 +619,9 @@ plot_fgsea_result <- function(
         plot_folder <- paste(plot_folder, "DEGuniverse", sep = "/")
       }
     }
+    if (grepl("-MSDB-", res_name)) {
+      plot_folder <- paste(plot_folder, strsplit(res_name, "-")[[1]][3], sep = "/")
+    }
     dir.create(plot_folder, recursive = TRUE)
 
     # check heatmap of terms with associated genes and associated log fold change
@@ -575,6 +641,9 @@ plot_fgsea_result <- function(
     plot_folder <- paste(gsea_plot_folder, db_folder, sep = "/")
     if (grepl("^GO:", as.data.frame(res)$ID[1])) {
       plot_folder <- paste(plot_folder, res@setType, sep = "/")
+    }
+    if (grepl("-MSDB-", res_name)) {
+      plot_folder <- paste(plot_folder, strsplit(res_name, "-")[[1]][3], sep = "/")
     }
     dir.create(plot_folder, recursive = TRUE)
 
