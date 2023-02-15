@@ -39,20 +39,32 @@ data$delabel[data$diffexpressed != "NO" & data$p_val_adj != 0] <- data$X[data$di
 data$delabel[data$p_val_adj == 0 & data$avg_log2FC >= up]  <- data$X[data$p_val_adj == 0 & data$avg_log2FC >= up]
 data$delabel[data$p_val_adj == 0 & data$avg_log2FC <= down]  <- data$X[data$p_val_adj == 0 & data$avg_log2FC <= down]
 
-# plot data
-ggplot(data=data, aes(x=-avg_log2FC, y=-log10(p_val_adj), col = diffexpressed, label = delabel)) +
-  geom_point() +
-  theme_classic() +
-  geom_text_repel(
-    box.padding = .25,
-    max.overlaps = 15,
-    label.size = .5
-  ) +
-  scale_color_manual(values = diffcolors) +
-  geom_vline(xintercept=c(-log2FC.threshold, log2FC.threshold), col="red") +
-  geom_hline(yintercept=-log10(0.01), col="red") +
-  xlab("Average log2 Fold Change") +
-  ylab("-log10 P-val (Bonferroni adjusted)")
 
-# save plot
-ggplot2::ggsave(file=paste0("A+C DEG volcano plot v2.png"), width = 20, height = 20, units = "cm")
+x = data$X[data$p_val_adj == 0 & data$avg_log2FC >= log2FC.threshold]
+y = data$X[data$p_val_adj == 0 & data$avg_log2FC <= -log2FC.threshold]
+x_log = data$avg_log2FC[data$p_val_adj == 0 & data$avg_log2FC >= log2FC.threshold]
+y_log = data$avg_log2FC[data$p_val_adj == 0 & data$avg_log2FC <= -log2FC.threshold]
+
+dfup <- data.frame(
+  gene = c(x),
+  value = c(x_log),
+  var = c(rep("up", length(x)))
+)
+dfup$gene <- reorder(dfup$gene, -dfup$value)
+ggplot(dfup, aes(x = var, y = gene)) +
+  geom_tile(aes(fill = -value), colour = "white", na.rm = T) +
+  theme_classic() +
+  scale_fill_gradient2(low = "blue", high = "red") +
+  geom_text(aes(label = round(value, digits = 2)))
+
+dfdown <- data.frame(
+  gene = c(y),
+  value = c(y_log),
+  var = c(rep("down", length(y)))
+)
+dfdown$gene <- reorder(dfdown$gene, -dfdown$value)
+ggplot(dfdown, aes(x = var, y = gene)) +
+  geom_tile(aes(fill = -value), colour = "white", na.rm = T) +
+  theme_classic() +
+  scale_fill_gradient2(low = "blue", high = "red") +
+  geom_text(aes(label = round(value, digits = 2)))

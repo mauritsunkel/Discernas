@@ -1,66 +1,17 @@
-# clusterProfiler vignette: https://yulab-smu.top/biomedical-knowledge-mining-book
-# general intro ORA vs GSEA: https://www.pathwaycommons.org/guide/primers/data_analysis/gsea/
-# use Entrez IDs with clusterProfiler etc to perform GSEA/ORA analyses with FGSEA
-# Over-representation (enrichment) analysis (ORA): check DEG vs known biological relationship (via gene set)
-## will find genes where the difference is large and will fail where the difference is small, but evidenced in coordinated way in a set of related genes
-## limitations: 1) arbitrary user-defined inclusion criteria, 2) equal importance to each gene, 3) assume gene independance
-# Gene set enrichment analysis (GSEA): unordered collection of related genes (sets)
-## Pathway: type of gene set if functional relations are ignored
-## gene set enrichment analysis (GSEA): aggregates the per gene statistics across genes within a gene set
-### overcoming ORA limitation, by detecting situations where all genes in a predefined set change in a small but coordinated way
-## steps
-### local gene-level statistic: adj-p-val / log fold change
-### global gene-set statistics: weighted running sum by ranked-list gene prevalence, Enrichment Score (ES) = max score
-#### Normalized ES (NES): accounting for gene set size
-### significance testing & multiple testing correction
-#### Type 1 error: family of hypotheses, chance of false positive (significant p-val)
-##### False Discovery Rate (FDR): fraction of rejected null hypothesis (Type 1 error) that are true (false negatives)
-###### https://www.pathwaycommons.org/guide/primers/statistics/multiple_testing/
-###### https://www.nature.com/articles/nbt1209-1135
-###### https://jtd.amegroups.com/article/view/13609/11598
+#' import org.Hs.eg.db org.Hs.eg.db
+NULL
 
-# TODO remove these when function incorporated in package
-library(fgsea)
-library(clusterProfiler)
-library(DOSE)
-library(ReactomePA)
-library(org.Hs.eg.db) # Organism.HomoSapiens.EntrezGene.DataBase
-library(enrichplot)
-library(ggplot2)
-library(ggnewscale)
-library(ggupset)
+# TODO remove these when function incorporated
+# library(org.Hs.eg.db) # Organism.HomoSapiens.EntrezGene.DataBase
 
-# TODO remove these when function incorporated in package
-### USER PARAMETERS
-set.seed(42)
-lfc_threshold <- 1
-# set TRUE if up/down regulated GSEA visualization results need to be swapped
-swap_GSEA_groups <- FALSE
-
-use_internal_universe <- TRUE
-p_adjust_method = "BH"
-pval_cutoff <- 1 # default: 0.05
-qval_cutoff <- 1 # default: 0.2
-# Gene Set Size (GSS) is the number of genes match a term and are present in the gene universe (background)
-min_gene_set_size_gsea <- 10 # default: 10
-max_gene_set_size_gsea <- 500 # default: 500
-min_gene_set_size_ora <- 3 # default: 10
-max_gene_set_size_ora <- NA # default: 500
-plot_n_category <- 30
-gsea_plot_folder = "gene_set_enrichment_analysis"
-ora_plot_folder = "over_representation_analysis"
-### END USER PARAMETERS ###
-
-
-
-# TODO testing inputs
-## "C:/Users/mauri/Desktop/Single Cell RNA Sequencing/Seurat/results/Pipe_SCTv2_23-06 cluster_level_selection/integrated/BL_A + BL_C/after_selection_old/DE_analysis/sample_markers/method=DESeq2-pct1=BL_A-pct2=BL_C - (nz-)p-val st 0.05.csv"
-## "C:/Users/mauri/Desktop/Single Cell RNA Sequencing/Seurat/results/2022-11-01 14-02-50/integrated/BL_A + BL_C/DE_analysis/sample_markers/method=DESeq2-pct1=BL_C-pct2=BL_A - (nz-)p-val st 0.05.csv
-
-
-
-
-
+# library(fgsea)
+# library(clusterProfiler)
+# library(DOSE)
+# library(ReactomePA)
+# library(enrichplot)
+# library(ggplot2)
+# library(ggnewscale)
+# library(ggupset)
 
 
 
@@ -84,17 +35,40 @@ ora_plot_folder = "over_representation_analysis"
 #' @param max_gene_set_size_ora maximum gene set size for ORA, default: NA
 #' @param plot_n_category plot top n most significant terms, default: 30
 #'
-#' @return Nothing
+#' @example
+#' run_fgsea(
+#'   output_dir = "results/fgsea_GOuniverse_treeplot_KEGG_MSigDB_neurons_TPlabels/",
+#'   dea_result_file = astrocyte_deg.csv,
+#'   cellRanger_ensembl_features = "Ensembl genes.tsv",
+#' )
 #'
-#' @import fgsea
-#' @import clusterProfiler
-#' @import DOSE
-#' @import ReactomePA
-#' @import org.Hs.eg.db
-#' @import enrichplot
-#' @import ggplot2
-#' @import ggnewscale
-#' @import ggupset
+#' @description Setting a seed can be useful as FGSEA functions have stochasticity.
+#'
+#' @import org.Hs.eg.db org.Hs.eg.db
+#'
+#' @note
+#' Notes during development
+#'
+#' # clusterProfiler vignette: https://yulab-smu.top/biomedical-knowledge-mining-book
+#' # general intro ORA vs GSEA: https://www.pathwaycommons.org/guide/primers/data_analysis/gsea/
+#' # use Entrez IDs with clusterProfiler etc to perform GSEA/ORA analyses with FGSEA
+#' # Over-representation (enrichment) analysis (ORA): check DEG vs known biological relationship (via gene set)
+#' ## will find genes where the difference is large and will fail where the difference is small, but evidenced in coordinated way in a set of related genes
+#' ## limitations: 1) arbitrary user-defined inclusion criteria, 2) equal importance to each gene, 3) assume gene independance
+#' # Gene set enrichment analysis (GSEA): unordered collection of related genes (sets)
+#' ## Pathway: type of gene set if functional relations are ignored
+#' ## gene set enrichment analysis (GSEA): aggregates the per gene statistics across genes within a gene set
+#' ### overcoming ORA limitation, by detecting situations where all genes in a predefined set change in a small but coordinated way
+#' ## steps
+#' ### local gene-level statistic: adj-p-val / log fold change
+#' ### global gene-set statistics: weighted running sum by ranked-list gene prevalence, Enrichment Score (ES) = max score
+#' #### Normalized ES (NES): accounting for gene set size
+#' ### significance testing & multiple testing correction
+#' #### Type 1 error: family of hypotheses, chance of false positive (significant p-val)
+#' ##### False Discovery Rate (FDR): fraction of rejected null hypothesis (Type 1 error) that are true (false negatives)
+#' ###### https://www.pathwaycommons.org/guide/primers/statistics/multiple_testing/
+#' ###### https://www.nature.com/articles/nbt1209-1135
+#' ###### https://jtd.amegroups.com/article/view/13609/11598
 #'
 #' @export
 run_fgsea <- function(
@@ -104,7 +78,7 @@ run_fgsea <- function(
     p_adjust_method = "BH", pval_cutoff = 1, qval_cutoff = 1,
     min_gene_set_size_gsea = 10, max_gene_set_size_gsea = 500,
     min_gene_set_size_ora = 3, max_gene_set_size_ora = NA,
-    plot_n_category = 30,
+    plot_n_category = 30, run_msigdb = FALSE,
     gsea_plot_folder = "gene_set_enrichment_analysis",
     ora_plot_folder = "over_representation_analysis") {
 
@@ -125,6 +99,10 @@ run_fgsea <- function(
   # load DEA result
   dea_result <- read.csv2(dea_result_file)
 
+  # TODO remove, this is a subset for quick testing
+  dea_result <- dea_result[1:1000,]
+
+
   # DEVNOTE: non-unique/duplicate, as reconverting dates have multiple gene name options (e.g. MAR2/MARC2/MARCH2 --> 02/03/year)
   dea_result$X <- date2gene(gene_names = dea_result$X)
 
@@ -141,7 +119,7 @@ run_fgsea <- function(
     to = ensembl_genes_ids$ensembl_gene_id,
     warn_missing = FALSE)
   # map ENSEMBL IDs to ENTREZ IDs
-  entrez_ids <- bitr(geneID = dea_result$ensembl_id, OrgDb = org.Hs.eg.db, fromType = "ENSEMBL", toType = "ENTREZID")
+  entrez_ids <- clusterProfiler::bitr(geneID = dea_result$ensembl_id, OrgDb = org.Hs.eg.db, fromType = "ENSEMBL", toType = "ENTREZID")
 
   fgsea_examine_unmapped_genes(
     gene_names = dea_result$X,
@@ -162,10 +140,9 @@ run_fgsea <- function(
   # sort decreasingly
   dea_ids_lfc <- sort(dea_ids_lfc, decreasing = TRUE)
 
-
-  # TODO put this in a function
   ## prep ORA input
   # subset DEA result to DEG result based on log fold-change threshold
+  deg_ids <- dea_ids_lfc[dea_ids_lfc >= 1 | dea_ids_lfc <= -1]
   deg_ids_positive <- names(dea_ids_lfc[dea_ids_lfc >= lfc_threshold])
   deg_ids_negative <- names(dea_ids_lfc[dea_ids_lfc <= -lfc_threshold])
   # save ORA deg subset names
@@ -190,8 +167,6 @@ run_fgsea <- function(
   # define background gene universe, either internal (all measured/measurable genes) or external (package function built-in)
   if (use_internal_universe) {
     universe <- names(dea_ids_lfc)
-
-    # TODO comment out or make a combination by overlap as universe?
     go_universe = unique(sort(as.data.frame(org.Hs.egGO)$gene_id))
 
     fgsea_compare_DEG_GO_universe(
@@ -202,33 +177,34 @@ run_fgsea <- function(
     universe <- NULL
   }
 
+  # get molecular signatures databases
+  if (run_msigdb) {
+    msigdb.hs.h <- get_msigdb_term2gene(collection = 'h')
+    msigdb.hs.c2.cp <- get_msigdb_term2gene(collection = 'c2', subcollection = 'CP')
 
-
-
-  # TODO build in msigdb
-  # msigdb.hs.h <- get_msigdb_term2gene(collection = 'h')
-  # msigdb.hs.c2.cp <- get_msigdb_term2gene(collection = 'c2', subcollection = 'CP')
-
-
-
-
-
+  } else {
+    msigdb.hs.h <- NULL
+    msigdb.hs.c2.cp <- NULL
+  }
 
   # Gene Set Enrichment Analyses (GSEA. full DEA list)
   gsea_results <- run_fgsea_gsea(
     dea_ids_lfc, min_gene_set_size_gsea, max_gene_set_size_gsea,
-    pval_cutoff, p_adjust_method
+    pval_cutoff, p_adjust_method,
+    msigdb.hs.h, msigdb.hs.c2.cp
   )
   # Over Representation Analyses (ORA, subset DEG list)
   ora_results_positive <- run_fgsea_ora(
     deg_ids_positive, posneg = "upregulated",
     min_gene_set_size_ora, max_gene_set_size_ora,
-    pval_cutoff, p_adjust_method, qval_cutoff, universe
+    pval_cutoff, p_adjust_method, qval_cutoff, universe,
+    msigdb.hs.h, msigdb.hs.c2.cp
   )
   ora_results_negative <- run_fgsea_ora(
     deg_ids_negative, posneg = "downregulated",
     min_gene_set_size_ora, max_gene_set_size_ora,
-    pval_cutoff, p_adjust_method, qval_cutoff, universe
+    pval_cutoff, p_adjust_method, qval_cutoff, universe,
+    msigdb.hs.h, msigdb.hs.c2.cp
   )
   # plot results
   all_results <- c(gsea_results, ora_results_positive, ora_results_negative)
@@ -244,16 +220,13 @@ run_fgsea <- function(
   }
 }
 
-# TODO optimize GSEA/ORA parameters
-run_fgsea(
-  output_dir = "C:/Users/mauri/Desktop/Single Cell RNA Sequencing/Seurat/results/fgsea_GOuniverse_treeplot_KEGG_MSigDB/",
-  dea_result_file = "C:/Users/mauri/Desktop/Single Cell RNA Sequencing/Seurat/results/2022-11-01 14-02-50/integrated/BL_A + BL_C/DE_analysis/sample_markers/method=DESeq2-pct1=BL_C-pct2=BL_A - (nz-)p-val st 0.05.csv",
-  cellRanger_ensembl_features = "C:/Users/mauri/Desktop/Single Cell RNA Sequencing/Seurat/data/Ensembl genes.tsv"
-)
 
-### TODO SET FUNCTIONS TO UTILS ###
-#' gene_names: get gene names in character vector
-#' return: gene names in character vector
+
+#' Fix Excel formatting genes to dates back to gene names.
+#'
+#' @param gene_names gene names (where some are dates) in character vector
+#'
+#' @return gene names in character vector
 date2gene <- function(gene_names) {
   ## if .csv was saved in Excel, some gene names e.g. SEP2 become dates
   # get index of these genes
@@ -267,9 +240,18 @@ date2gene <- function(gene_names) {
   })
   return(unlist(gene_names))
 }
-### END SET FUNCTIONS TO UTILS
 
 
+
+#' Examine which and how many genes remain unmapped
+#'
+#' What using bitr package for mapping genes from e.g. Ensembl to ENTREZ ids
+#' not all genes might be mapped. This function calculates the percentage of
+#' unmapped genes and plots and saves a distribution of them.
+#'
+#' @param gene_names character vector with gene names
+#' @param dea_ensembl_ids character vector with gene names from the DEA
+#' @param bitr_ensembl_ids character vector with gene names from bitr
 fgsea_examine_unmapped_genes <- function(gene_names, dea_ensembl_ids, bitr_ensembl_ids) {
   dir.create("gene_mapping_bitr")
   d <- dea_ensembl_ids
@@ -286,6 +268,18 @@ fgsea_examine_unmapped_genes <- function(gene_names, dea_ensembl_ids, bitr_ensem
   dev.off()
 }
 
+
+
+#' Compare all genes from the DEG analysis against the Gene Ontology database
+#'
+#' For GSEA and ORA a 'universe' of genes is used. This universe can be all
+#' genes measured during your experiment or specifically all genes that are in
+#' a specific database, here GO.
+#' The overlapping and non overlapping genes are saved as .csv
+#'
+#' @param deg_universe character vector of all DEG genes
+#' @param go_universe character vector of all GO genes
+#' @param ensembl_genes_ids translation table with ensembl IDs and gene names
 fgsea_compare_DEG_GO_universe <- function(deg_universe, go_universe, ensembl_genes_ids) {
   overlapping_gene_ids <- go_universe[go_universe %in% deg_universe]
   gene_ids_not_in_go <- go_universe[!go_universe %in% deg_universe]
@@ -307,9 +301,25 @@ fgsea_compare_DEG_GO_universe <- function(deg_universe, go_universe, ensembl_gen
   write.csv2(gene_names_not_in_go, file = "DEG_GO_universe_nonOverlapping_genes.csv")
 }
 
+
+#' Run GSEA
+#'
+#' Run GSEA for different databases: GO, KEGG, WP, Reactome Pathways,
+#' DO, DGN & MsigDB.
+#'
+#' @param dea_ids_lfc named character vector with DEA ids and logfoldchanges
+#' @param min_gene_set_size_gsea minimum geneSetSize
+#' @param max_gene_set_size_gsea maximum geneSetSize
+#' @param pval_cutoff p-value threshold
+#' @param p_adjust_method p-value adjustment method: BH, ...
+#' @param msigdb.hs.h dataframe with MsigDB Hallmarks Human gene sets
+#' @param msigdb.hs.c2.cp dataframe with MsigDB C2 Curated Pathways gene sets
+#'
+#' @return list with all results
 run_fgsea_gsea <- function(
     dea_ids_lfc, min_gene_set_size_gsea, max_gene_set_size_gsea,
-    pval_cutoff, p_adjust_method) {
+    pval_cutoff, p_adjust_method,
+    msigdb.hs.h, msigdb.hs.c2.cp) {
 
   # initialize results
   gsea_results <- list()
@@ -410,43 +420,64 @@ run_fgsea_gsea <- function(
   gsea_results[["GSEA-DGN"]] <- res_gse_dgn
 
   # Molecular Signatures Database - hallmarks (MSigDB hallmark gene sets)
-  msigdb.hs.h <- get_msigdb_term2gene(collection = 'h')
-  res_gse_msdb_h <- clusterProfiler::GSEA(
-    geneList = dea_ids_lfc,
-    TERM2GENE = msigdb.hs.h,
-    exponent = 1,
-    minGSSize = min_gene_set_size_gsea, # default: 10
-    maxGSSize = max_gene_set_size_gsea, # default: 500
-    pvalueCutoff = pval_cutoff, # default: 0.05
-    verbose = TRUE,
-    pAdjustMethod = p_adjust_method, # default: "BH" (Benjamini-Hochberg)
-    seed = TRUE,
-    by = "fgsea"
-  )
-  gsea_results[["GSEA-MSDB-H"]] <- res_gse_msdb_h
+  if (!is.null(msigdb.hs.h)) {
+    res_gse_msdb_h <- clusterProfiler::GSEA(
+      geneList = dea_ids_lfc,
+      TERM2GENE = msigdb.hs.h,
+      exponent = 1,
+      minGSSize = min_gene_set_size_gsea, # default: 10
+      maxGSSize = max_gene_set_size_gsea, # default: 500
+      pvalueCutoff = pval_cutoff, # default: 0.05
+      verbose = TRUE,
+      pAdjustMethod = p_adjust_method, # default: "BH" (Benjamini-Hochberg)
+      seed = TRUE,
+      by = "fgsea"
+    )
+    gsea_results[["GSEA-MSDB-H"]] <- res_gse_msdb_h
+  }
+
 
   # Molecular Signatures Database - C2 Canonical Pathways (MSigDB C2:CP)
-  msigdb.hs.c2.cp <- get_msigdb_term2gene(collection = 'c2', subcollection = 'CP')
-  res_gse_msdb_c2cp <- clusterProfiler::GSEA(
-    geneList = dea_ids_lfc,
-    TERM2GENE = msigdb.hs.c2.cp,
-    exponent = 1,
-    minGSSize = min_gene_set_size_gsea, # default: 10
-    maxGSSize = max_gene_set_size_gsea, # default: 500
-    pvalueCutoff = pval_cutoff, # default: 0.05
-    verbose = TRUE,
-    pAdjustMethod = p_adjust_method, # default: "BH" (Benjamini-Hochberg)
-    seed = TRUE,
-    by = "fgsea"
-  )
-  gsea_results[["GSEA-MSDB-C2CP"]] <- res_gse_msdb_c2cp
+  if (!is.null(msigdb.hs.c2.cp)) {
+    res_gse_msdb_c2cp <- clusterProfiler::GSEA(
+      geneList = dea_ids_lfc,
+      TERM2GENE = msigdb.hs.c2.cp,
+      exponent = 1,
+      minGSSize = min_gene_set_size_gsea, # default: 10
+      maxGSSize = max_gene_set_size_gsea, # default: 500
+      pvalueCutoff = pval_cutoff, # default: 0.05
+      verbose = TRUE,
+      pAdjustMethod = p_adjust_method, # default: "BH" (Benjamini-Hochberg)
+      seed = TRUE,
+      by = "fgsea"
+    )
+    gsea_results[["GSEA-MSDB-C2CP"]] <- res_gse_msdb_c2cp
+  }
 
   return(gsea_results)
 }
 
+
+#' Run ORA
+#'
+#' Run ORA for different databases: GO, KEGG, WP, Reactome Pathways,
+#' DO, DGN & MsigDB.
+#'
+#' @param deg_names character vector with deg names
+#' @param min_gene_set_size_ora minimum geneSetSize
+#' @param max_gene_set_size_ora maximum geneSetSize
+#' @param pval_cutoff p-value threshold
+#' @param p_adjust_method p-value adjustment method: BH, ...
+#' @param qval_cutoff
+#' @param universe DEG/GO gene universe character vector
+#' @param msigdb.hs.h dataframe with MsigDB Hallmarks Human gene sets
+#' @param msigdb.hs.c2.cp dataframe with MsigDB C2 Curated Pathways gene sets
+#'
+#' @return ora_results list with all results
 run_fgsea_ora <- function(
     deg_names, posneg, min_gene_set_size_ora, max_gene_set_size_ora,
-    pval_cutoff, p_adjust_method, qval_cutoff, universe) {
+    pval_cutoff, p_adjust_method, qval_cutoff, universe,
+    msigdb.hs.h, msigdb.hs.c2.cp) {
 
   # initialize results
   ora_results <- list()
@@ -555,36 +586,50 @@ run_fgsea_ora <- function(
   ora_results[[paste0("ORA-DGN-", posneg)]] = res_enrich_dgn
 
   # Molecular Signatures Database - hallmarks (MSigDB hallmark gene sets)
-  msigdb.hs.h <- get_msigdb_term2gene(collection = 'h')
-  res_enrich_msdb_h <- clusterProfiler::enricher(
-    gene = deg_names,
-    TERM2GENE = msigdb.hs.h,
-    universe = universe,
-    minGSSize = min_gene_set_size_ora, # default: 10
-    maxGSSize = max_gene_set_size_ora, # default: 500
-    qvalueCutoff = qval_cutoff,
-    pvalueCutoff = pval_cutoff, # default: 0.05
-    pAdjustMethod = p_adjust_method # default: "BH" (Benjamini-Hochberg)
-  )
-  ora_results[[paste0("ORA-MSDB-H-", posneg)]] = res_enrich_msdb_h
+  if (!is.null(msigdb.hs.h)) {
+    res_enrich_msdb_h <- clusterProfiler::enricher(
+      gene = deg_names,
+      TERM2GENE = msigdb.hs.h,
+      universe = universe,
+      minGSSize = min_gene_set_size_ora, # default: 10
+      maxGSSize = max_gene_set_size_ora, # default: 500
+      qvalueCutoff = qval_cutoff,
+      pvalueCutoff = pval_cutoff, # default: 0.05
+      pAdjustMethod = p_adjust_method # default: "BH" (Benjamini-Hochberg)
+    )
+    ora_results[[paste0("ORA-MSDB-H-", posneg)]] = res_enrich_msdb_h
+  }
 
   # Molecular Signatures Database - C2 Canonical Pathways (MSigDB C2:CP)
-  msigdb.hs.c2.cp <- get_msigdb_term2gene(collection = 'c2', subcollection = 'CP')
-  res_enrich_msdb_c2cp <- clusterProfiler::enricher(
-    gene = deg_names,
-    TERM2GENE = msigdb.hs.c2.cp,
-    universe = universe,
-    minGSSize = min_gene_set_size_ora, # default: 10
-    maxGSSize = max_gene_set_size_ora, # default: 500
-    qvalueCutoff = qval_cutoff,
-    pvalueCutoff = pval_cutoff, # default: 0.05
-    pAdjustMethod = p_adjust_method # default: "BH" (Benjamini-Hochberg)
-  )
-  ora_results[[paste0("ORA-MSDB-C2CP-", posneg)]] = res_enrich_msdb_c2cp
+  if (!is.null(msigdb.hs.c2.cp)) {
+    res_enrich_msdb_c2cp <- clusterProfiler::enricher(
+      gene = deg_names,
+      TERM2GENE = msigdb.hs.c2.cp,
+      universe = universe,
+      minGSSize = min_gene_set_size_ora, # default: 10
+      maxGSSize = max_gene_set_size_ora, # default: 500
+      qvalueCutoff = qval_cutoff,
+      pvalueCutoff = pval_cutoff, # default: 0.05
+      pAdjustMethod = p_adjust_method # default: "BH" (Benjamini-Hochberg)
+    )
+    ora_results[[paste0("ORA-MSDB-C2CP-", posneg)]] = res_enrich_msdb_c2cp
+  }
 
   return(ora_results)
 }
 
+
+#' Plot GSEA and ORA results
+#'
+#' Create and save all different plot for FGSEA results. Heatplot, goplot,
+#' ridgeplot, gseaplot, dotplot, cnetplot, upsetplot, emapplot and treeplot.
+#'
+#' @param res GSEA or ORA result
+#' @param res_name name given to GSEA or ORA result
+#' @param plot_n_category how many categories to plot
+#' @param dea_ids_lfc named character vector with DEA IDs and logfoldchanges
+#' @param gsea_plot_folder output folder basename for GSEA results
+#' @param ora_plot_folderoutput folder basename for ORA results
 plot_fgsea_result <- function(
     res, res_name, plot_n_category, dea_ids_lfc,
     gsea_plot_folder, ora_plot_folder) {
@@ -683,9 +728,14 @@ plot_fgsea_result <- function(
   enrichplot::emapplot(res_r_pt) + ggplot2::theme_bw()
   ggplot2::ggsave(paste(plot_folder, "emapplot_terms+ngenes.png", sep = "/"), width = 30, height = 20, units = "cm")
   # terms grouped and semantically summarized
-  enrichplot::treeplot(res_r_pt, showCategory = plot_n_category)
+  enrichplot::treeplot(
+    res_r_pt,
+    showCategory = plot_n_category,
+    label_format = 14)
   ggplot2::ggsave(paste(plot_folder, "treeplot.png", sep = "/"), width = 30, height = 20, units = "cm")
 }
+
+
 
 #' Get TERM2GENE dataframe for custom MSigDB collection/subcollection terms.
 #'
@@ -703,9 +753,7 @@ plot_fgsea_result <- function(
 #'
 #' @return Dataframe with 'term' and 'gene' columns.
 #'
-#' @import msigdb
-#'
-#' @export
+#' @importFrom msigdb getMsigdbVersions getMsigdb subsetCollection
 get_msigdb_term2gene <- function(
     organism = 'hs',
     collection = 'h',
@@ -732,3 +780,136 @@ get_msigdb_term2gene <- function(
 
   return(term2gene)
 }
+
+
+
+#' Overwrite namespace for enrichplot::group_tree function
+#'
+#' Added custom functionality to enrichplot::group_tree, I know playing with
+#' namespace is not proper, however please fill me in on how to do this
+#' without changing namespace!
+#'
+#' @description see enrichplot::group_tree for documentation
+group_tree.adjusted <- function(hc, clus, d, offset_tiplab, nWords,
+                                label_format_cladelab, label_format_tiplab,
+                                offset, fontsize, group_color,
+                                extend, hilight, cex_category,
+                                ID_Cluster_mat = NULL, geneClusterPanel = NULL,
+                                align, add_tippoint = TRUE, align_tiplab = TRUE, color = 'p.adjust') {
+  message("running adjusted enrichplot:::group_tree()...")
+  showCategory = length(d$count)
+
+  group <- count <- NULL
+  # cluster data
+  dat <- data.frame(name = names(clus), cls=paste0("cluster_", as.numeric(clus)))
+  grp <- apply(table(dat), 2, function(x) names(x[x == 1]))
+  p <- ggtree(hc, hang=-1, branch.length = "none", show.legend=FALSE)
+  # extract the most recent common ancestor
+  noids <- lapply(grp, function(x) unlist(lapply(x, function(i) ggtree::nodeid(p, i))))
+  roots <- unlist(lapply(noids, function(x) ggtree::MRCA(p, x)))
+  # cluster data
+  p <- ggtree::groupOTU(p, grp, "group") + aes_(color =~ group)
+  rangeX <- max(p$data$x, na.rm=TRUE) - min(p$data$x, na.rm=TRUE)
+  if (inherits(offset_tiplab, "rel")) {
+    offset_tiplab <- unclass(offset_tiplab)
+    if (geneClusterPanel == "pie" || is.null(geneClusterPanel)) {
+      ## 1.5 * max(radius_of_pie)
+      offset_tiplab <- offset_tiplab * 1.5 * max(sqrt(d$count / sum(d$count) * cex_category))
+    }  else if (geneClusterPanel == "heatMap") {
+      ## Close to the width of the tree
+      offset_tiplab <- offset_tiplab * 0.16 * ncol(ID_Cluster_mat) * rangeX
+    } else if (geneClusterPanel == "dotplot") {
+      ## Close to the width of the tree
+      offset_tiplab <- offset_tiplab * 0.09 * ncol(ID_Cluster_mat) * rangeX
+    }
+  }
+
+  if (inherits(offset, "rel")) {
+    offset <- unclass(offset)
+    offset <- offset * rangeX * 1.2 + offset_tiplab
+  }
+  # max_nchar <- max(nchar(p$data$label), na.rm = TRUE)
+
+  pdata <- data.frame(name = p$data$label, color2 = p$data$group)
+  pdata <- pdata[!is.na(pdata$name), ]
+  cluster_color <- unique(pdata$color2)
+  n_color <- length(levels(cluster_color)) - length(cluster_color)
+  if (!is.null(group_color)) {
+    color2 <- c(rep("black", n_color), group_color)
+    p <- p + scale_color_manual(values = color2, guide = 'none')
+  }
+  p <- p %<+% d
+
+
+  if (!is.null(label_format_tiplab)) {
+    label_func_tiplab <- default_labeller(label_format_tiplab)
+    if (is.function(label_format_tiplab)) {
+      label_func_tiplab <- label_format_tiplab
+    }
+    isTip <- p$data$isTip
+    p$data$label[isTip] <-  label_func_tiplab(p$data$label[isTip])
+  }
+
+  p <- add_cladelab(p = p, nWords = nWords,
+                    label_format_cladelab = label_format_cladelab,
+                    offset = offset, roots = roots, fontsize = fontsize,
+                    group_color = group_color, cluster_color = cluster_color,
+                    pdata = pdata, extend = extend, hilight = hilight, align = align)
+
+
+
+  # DEVNOTE: to add new labels: add a column to p$data where the first 30 (showCategory) rows need labels and the others NA
+  # print(p$data)
+  # print(p$data$count)
+
+
+
+  # this is where p.adjust colored circles are added!
+  if (add_tippoint) {
+    p <- p + ggnewscale::new_scale_colour() +
+      geom_tippoint(aes(color = color, size = count )) +
+      scale_colour_continuous(low="red", high="blue", name = color,
+                              guide = guide_colorbar(reverse = TRUE))
+
+
+    ## DEVNOTES
+    # check https://guangchuangyu.github.io/ggtree-book/chapter-ggtree.html ?
+
+    # Convert GO ids to/from terms, then calculate up/down ratio based on geneRatio as 100%
+    ## calculate for each GO:term, how to add to object and then get into this function?
+
+    ## get data in this function by modifying the other function as well
+    # add geneRatio for size and %up/downregulated for color (scaled from 0-100)
+    # p <- p + ggnewscale::new_scale_colour() +
+    #   # uncomment this for a next column of dots
+    #   geom_point(aes(x+1, color = color, size = count)) +
+    #   geom_text(aes(x+1, y, label = count), inherit.aes = T) +
+    #   scale_color_gradientn(colours = c('green', 'white', 'purple'), name = color,
+    #                           guide = guide_colorbar(reverse = TRUE))
+  }
+  ## add tiplab
+  p <- p + geom_tiplab(offset = offset_tiplab + 1, hjust = 0,
+                       show.legend = FALSE, align = align_tiplab, linesize = 0)
+  return(p)
+}
+# changing namespace and environment of adjusted functions for overwriting originals
+environment(group_tree.adjusted) <- asNamespace("enrichplot")
+assignInNamespace("group_tree", group_tree.adjusted, ns = "enrichplot")
+
+
+
+
+
+
+
+
+
+
+
+astrocyte_deg <-  "C:/Users/mauri/Desktop/Single Cell RNA Sequencing/Seurat/results/2022-11-01 14-02-50/integrated/BL_A + BL_C/DE_analysis/sample_markers/method=DESeq2-pct1=BL_C-pct2=BL_A - (nz-)p-val st 0.05.csv"
+# neuronal_deg <- "C:/Users/mauri/Desktop/Single Cell RNA Sequencing/Seurat/results/Pipe_SCTv2_23-06 cluster_level_selection/integrated/BL_N + BL_C/after_selection_old/DE_analysis/sample_markers/method=DESeq2-pct1=BL_C-pct2=BL_N - (nz-)p-val st 0.05.csv"
+run_fgsea(
+  output_dir = "C:/Users/mauri/Desktop/Single Cell RNA Sequencing/Seurat/results/fgsea_GOuniverse_treeplot_KEGG_MSigDB_neurons_TPlabels/",
+  dea_result_file = astrocyte_deg,
+  cellRanger_ensembl_features = "C:/Users/mauri/Desktop/Single Cell RNA Sequencing/Seurat/data/Ensembl genes.tsv"
+)

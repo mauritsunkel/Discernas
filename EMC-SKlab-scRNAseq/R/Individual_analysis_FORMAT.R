@@ -1,36 +1,11 @@
-library(dplyr)
-library(Seurat)
-library(ggplot2)
-library(stringr)
-
-
-
-### INITIALIZATION
-## USER PARAMETERS
-sample_names <- c('t90', 't149', 't275')
-samples_dir <- "C:/Users/mauri/Desktop/Single Cell RNA Sequencing/Seurat/data/samples/mark organoids/"
-
-# set to run cell cycle regression (based on: https://satijalab.org/seurat/articles/cell_cycle_vignette.html)
-run_cell_cycle_regression <- FALSE
-## END USER PARAMETERS
-
-# create output directories based on start time and sample name and set working directory
-start_time <- format(Sys.time(), "%F %H-%M-%S")
-home_dir <- paste0("C:/Users/mauri/Desktop/Single Cell RNA Sequencing/Seurat/results/", start_time, "/")
-### END INITIALIZATION
-
-
-
-
-
-
-
-
 #' Analyse individual samples
 #'
 #' Performs Seurat SCTv2 analysis workflow on individual samples.
 #'
-#' @param x Numeric vector.
+#' @param samples_dir Root directory of samples.
+#' @param sample_name Current sample name, used to match in samples_dir.
+#' @param output_dir Package home directory, used to create output directory for results.
+#' @param run_cell_cycle_regression True/False to regress out genes to do with cell cycle, based on Tirosh et al, 2015.
 #'
 #' @return Nothing
 #'
@@ -38,32 +13,35 @@ home_dir <- paste0("C:/Users/mauri/Desktop/Single Cell RNA Sequencing/Seurat/res
 #' @import dplyr
 #' @import ggplot2
 #' @import stringr
+#' @importFrom dplyr .data
 #'
 #' @export
-individual_analysis <- function(samples_dir, sample_name, home_dir) {
-  dir.create(paste0(home_dir, sample_name, "/"), recursive = T)
-  setwd(paste0(home_dir, sample_name, "/"))
-  dir.create('Quality_Control/')
-  dir.create('Principal_Component_Analysis/')
-  dir.create('DE_analysis/')
+individual_analysis <- function(samples_dir, sample_name, output_dir, run_cell_cycle_regression) {
+  sample_path <- file.path(output_dir, sample_name)
+  dir.create(sample_path, recursive = T)
+  setwd(sample_path)
+  dir.create('Quality_Control')
+  dir.create('Principal_Component_Analysis')
+  dir.create('DE_analysis')
 
   # read 10X data (preprocessed by 10X Cellranger pipeline) and convert to Seurat object
-  data.data <- Seurat::Read10X(data.dir = paste0(samples_dir, sample_name, "/filtered_feature_bc_matrix"), strip.suffix = TRUE)
+  data.data <- Seurat::Read10X(data.dir = file.path(samples_dir, sample_name, "filtered_feature_bc_matrix"), strip.suffix = TRUE)
   data <- Seurat::CreateSeuratObject(counts = data.data, project = sample_name, min.cells = 3, min.features = 700)
 
   ## QUALITY CONTROL
   # calculate percentage of all counts belonging to mitochondrial (^MT-) DNA, for filtering
   data <- Seurat::PercentageFeatureSet(data, pattern = "^MT-", col.name = "percent.mt")
   # Visualize quality control metrics
-  png(paste0("Quality_Control/QC_nFeat_nCount_percent.mt_", sample_name, ".png"))
+  grDevices::png(file.path("Quality_Control", paste0("QC_nFeat_nCount_percent.mt_", sample_name, ".png")))
   plot(Seurat::VlnPlot(data, features = c("nFeature_RNA", "nCount_RNA", "percent.mt"), ncol = 3, cols = c("#85d0f5", "#2b2f70")))
-  dev.off()
+  grDevices::dev.off()
   plot1 <- Seurat::FeatureScatter(data, feature1 = "percent.mt", feature2 = "nCount_RNA", cols = c("#85d0f5", "#2b2f70"))
   plot2 <- Seurat::FeatureScatter(data, feature1 = "nFeature_RNA", feature2 = "nCount_RNA", cols = c("#85d0f5", "#2b2f70"))
-  png(paste0("Quality_Control/QC_feature-scatter_", sample_name, ".png"))
+  grDevices::png(file.path("Quality_Control", paste0("QC_feature-scatter_", sample_name, ".png")))
   plot(plot1 + plot2)
-  dev.off()
+  grDevices::dev.off()
   # subset cells with less than 200 unique genes (NFeature_RNA)
+  nFeature_RNA <- NULL # pass R CMB Check note
   data <- subset(data, subset = nFeature_RNA > 200)
 
   ## SCTransform-v2 replaces NormalizeData + FindVariableFeatures + ScaleData & sets default assay to "SCT"
@@ -82,12 +60,12 @@ individual_analysis <- function(samples_dir, sample_name, home_dir) {
   # plot variable features, label top 10
   plot1 <- Seurat::VariableFeaturePlot(data, cols = c("#85d0f5", "#2b2f70"), selection.method = 'SCT')
   print(2)
-  plot2 <- Seurat::LabelPoints(plot = plot1, points = head(SeuratObject::VariableFeatures(data), 10), repel = TRUE)
+  plot2 <- Seurat::LabelPoints(plot = plot1, points = utils::head(SeuratObject::VariableFeatures(data), 10), repel = TRUE)
   print(3)
-  png(paste0("Quality_Control/Feature-selection_variable-genes_", sample_name, ".png"))
+  grDevices::png(file.path("Quality_Control", paste0("Feature-selection_variable-genes_", sample_name, ".png")))
   print(4)
   plot(plot2)
-  dev.off()
+  grDevices::dev.off()
   print(5)
 
   if (run_cell_cycle_regression) {
@@ -95,50 +73,50 @@ individual_analysis <- function(samples_dir, sample_name, home_dir) {
 
     # A list of cell cycle markers, from Tirosh et al, 2015, is loaded with Seurat.
     # We can segregate this list into markers of G2/M phase and markers of S phase.
-    s.genes <- cc.genes$s.genes
-    g2m.genes <- cc.genes$g2m.genes
+    s.genes <- Seurat::cc.genes$s.genes
+    g2m.genes <- Seurat::cc.genes$g2m.genes
     # First, we assign each cell a score, based on its expression of G2/M and S phase markers.
     # These marker sets should be anticorrelated in their expression levels,
     # cells expressing neither are likely not cycling and in G1 phase.
     data <- Seurat::CellCycleScoring(data, s.features = s.genes, g2m.features = g2m.genes, set.ident = TRUE)
     # Visualize the distribution of cell cycle markers across
-    png(paste0("Cell_Cycle/Cell_cycle_markers_ridgeplot_", sample_name, ".png"))
+    grDevices::png(file.path("Cell_Cycle", paste0("Cell_cycle_markers_ridgeplot_", sample_name, ".png")))
     plot(Seurat::RidgePlot(data, features = c("PCNA", "TOP2A", "MCM6", "MKI67"), ncol = 2))
-    dev.off()
+    grDevices::dev.off()
     data <- Seurat::RunPCA(data, features = SeuratObject::VariableFeatures(object = data), npcs = 20, verbose = FALSE)
-    png(paste0("Cell_Cycle/Cell_cycle_PCA_dimplot-all-features_", sample_name, ".png"))
+    grDevices::png(file.path("Cell_Cycle", paste0("Cell_cycle_PCA_dimplot-all-features_", sample_name, ".png")))
     plot(DimPlot(data, reduction = "pca", label = TRUE))
-    dev.off()
+    grDevices::dev.off()
     # Running a PCA on cell cycle genes reveals, unsurprisingly, that cells separate entirely by phase
     data <- Seurat::RunPCA(data, features = c(s.genes, g2m.genes), npcs = 20, verbose = FALSE)
-    png(paste0("Cell_Cycle/Cell_cycle_PCA_dimplot-s-and-g2m-features_", sample_name, ".png"))
+    grDevices::png(file.path("Cell_Cycle", paste0("Cell_cycle_PCA_dimplot-s-and-g2m-features_", sample_name, ".png")))
     plot(Seurat::DimPlot(data, reduction = "pca", label = TRUE))
-    dev.off()
+    grDevices::dev.off()
     # When running a PCA on only cell cycle genes after regression, cells no longer separate by cell-cycle phase
     data <- Seurat::ScaleData(data, vars.to.regress = c("S.Score", "G2M.Score"), features = rownames(data))
     data <- Seurat::RunPCA(data, features = c(s.genes, g2m.genes), npcs = 20, verbose = FALSE)
-    png(paste0("Cell_Cycle/Cell_cycle_PCA_dimplot_after-regression-s-and-g2m-features_", sample_name, ".png"))
+    grDevices::png(file.path("Cell_Cycle", paste0("Cell_cycle_PCA_dimplot_after-regression-s-and-g2m-features_", sample_name, ".png")))
     plot(Seurat::DimPlot(data, reduction = "pca", label = TRUE))
-    dev.off()
+    grDevices::dev.off()
     data <- Seurat::RunPCA(data, features = SeuratObject::VariableFeatures(data), npcs = 20, nfeatures.print = 10, verbose = FALSE)
-    png(paste0("Cell_Cycle/Cell_cycle_PCA_dimplot_after-regression-variable-features_", sample_name, ".png"))
+    grDevices::png(file.path("Cell_Cycle", paste0("Cell_cycle_PCA_dimplot_after-regression-variable-features_", sample_name, ".png")))
     plot(Seurat::DimPlot(data, reduction = "pca", label = TRUE))
-    dev.off()
+    grDevices::dev.off()
     # set sample identity to data, instead of cell cycle identity
     data@active.ident <- data@meta.data$old.ident
   }
 
   # run Principal Component Analysis as linear dimension reduction
   data <- Seurat::RunPCA(data, features = SeuratObject::VariableFeatures(object = data), npcs = 50, verbose = FALSE)
-  png(paste0("Principal_Component_Analysis/PCA-scores_", sample_name, ".png"))
+  grDevices::png(file.path("Principal_Component_Analysis", paste0("PCA-scores_", sample_name, ".png")))
   plot(Seurat::DimPlot(data, reduction = "pca", label = TRUE))
-  dev.off()
-  png(paste0("Principal_Component_Analysis/PCA-loadings_", sample_name, ".png"))
+  grDevices::dev.off()
+  grDevices::png(file.path("Principal_Component_Analysis", paste0("PCA-loadings_", sample_name, ".png")))
   plot(Seurat::VizDimLoadings(data, dims = 1:2, reduction = "pca"))
-  dev.off()
-  png(paste0("Principal_Component_Analysis/PCA-genes-heatmap_", sample_name, ".png"))
+  grDevices::dev.off()
+  grDevices::png(file.path("Principal_Component_Analysis", paste0("PCA-genes-heatmap_", sample_name, ".png")))
   plot(Seurat::DimHeatmap(data, dims = 1:2, cells = 2000, balanced = TRUE, fast = FALSE))
-  dev.off()
+  grDevices::dev.off()
   # custom Elbow (or Scree) plot -> Variance explained
   varExplained <- (data[["pca"]]@stdev)^2 / data[["pca"]]@misc$total.variance # Eigenvalues (current subset) / total_variance (Whole dataset)
   plotdf <- data.frame('Cumulative' = round(cumsum(varExplained / sum(varExplained)), 3),
@@ -149,8 +127,8 @@ individual_analysis <- function(samples_dir, sample_name, home_dir) {
   plotdf <- plotdf[, c(2, 1)]
   colnames(plotdf) <- c('Cumulative', 'Individual')
   longdf <- reshape2::melt(plotdf)
-  png(paste0("Principal_Component_Analysis/PCA-variance_", sample_name, ".png"))
-  p <- ggplot2::ggplot(data = longdf, ggplot2::aes(x=rep(1:length(varExplained), times=2), y = value*100, fill = variable, color = variable)) +
+  grDevices::png(file.path("Principal_Component_Analysis", paste0("PCA-variance_", sample_name, ".png")))
+  p <- ggplot2::ggplot(data = longdf, ggplot2::aes(x=rep(1:length(varExplained), times=2), y = .data$value*100, fill = .data$variable, color = .data$variable)) +
     ggplot2::geom_bar(stat="identity", width = .7) +
     # ggplot2::geom_point(stat="identity") +
     ggplot2::theme(axis.text.x = ggplot2::element_text(angle = 90, vjust = 0.5, hjust=1)) +
@@ -160,10 +138,10 @@ individual_analysis <- function(samples_dir, sample_name, home_dir) {
     ggplot2::scale_fill_manual(values = c('darkgreen', 'darkred')) +
     ggplot2::scale_color_manual(values = c('darkgreen', 'darkred'))
   plot(p)
-  dev.off()
-  png(paste0("Principal_Component_Analysis/PCA_elbow-plot_", sample_name, ".png"))
+  grDevices::dev.off()
+  grDevices::png(file.path("Principal_Component_Analysis", paste0("PCA_elbow-plot_", sample_name, ".png")))
   plot(Seurat::ElbowPlot(data))
-  dev.off()
+  grDevices::dev.off()
 
   # cell clustering: Levine2015 - Xu & Su2015
   choose_N_PCs <- 20 # default: 20 (out of default 50 generated with Seurat::RunPCA)
@@ -174,9 +152,9 @@ individual_analysis <- function(samples_dir, sample_name, home_dir) {
   data <- Seurat::FindClusters(data, resolution = 0.5, algorithm = 4)
   # visualize clustering with Uniform Manifold Projection Approximation (UMAP) as non-linear dimension reduction
   data <- Seurat::RunUMAP(data, reduction = "pca", dims = 1:choose_N_PCs)
-  png(paste0("UMAP_unsupervised_", sample_name, ".png"))
+  grDevices::png(paste0("UMAP_unsupervised_", sample_name, ".png"))
   plot(Seurat::DimPlot(data, reduction = "umap", label = TRUE))
-  dev.off()
+  grDevices::dev.off()
 
 
 
@@ -188,14 +166,14 @@ individual_analysis <- function(samples_dir, sample_name, home_dir) {
   ## finds markers for every cluster compared to all remaining cells
   ### report only up-regulated genes as down-regulated genes represent all other cells/clusters here
   data.markers <- Seurat::FindAllMarkers(data, assay = "SCT", only.pos = TRUE, min.pct = 0.1)
-  utils::write.csv2(data.markers, file = paste0("DE_analysis/marker-list_", sample_name, ".csv"))
+  utils::write.csv2(data.markers, file = file.path("DE_analysis", paste0("marker-list_", sample_name, ".csv")))
 
   # select top gene per cluster for exploration
   topn <- data.markers %>%
-    dplyr::group_by(cluster) %>%
-    dplyr::top_n(n = 1, wt = avg_log2FC) %>%
+    dplyr::group_by(.data$cluster) %>%
+    dplyr::top_n(n = 1, wt = .data$avg_log2FC) %>%
     dplyr::ungroup() %>%
-    dplyr::pull(gene)
+    dplyr::pull(.data$gene)
   # marker panels of interest
   astrocyte_interest <- c("GFAP", "VIM", "S100B", "SOX9", "CD44", "AQP4", "ALDH1L1",
                           "HIST1H4C", "FABP7", "SLC1A2", "SLC1A3", "GJA1", "APOE")
@@ -209,16 +187,17 @@ individual_analysis <- function(samples_dir, sample_name, home_dir) {
   sloan_2017_interest <- c("AQP4", "ALDH1L1", "RANBP3L", "IGFBP7", "TOP2A", "TMSB15A", "NNAT", "HIST1H3B",
                            "STMN2", "SYT1", "SNAP25", "SOX9", "CLU", "SLC1A3", "UBE2C", "NUSAP1", "PTPRZ1",
                            "HOPX", "FAM107A", "AGT")
+  interneuron_interest <- c("SST", "PVALB", "GAD1")
 
   plot_DEG <- function(data, features, name) {
-    dir.create(paste0("DE_analysis/", name, "/"))
-    dir.create(paste0("DE_analysis/", name, "/Feature/"))
+    dir.create(file.path("DE_analysis", name))
+    dir.create(file.path("DE_analysis", name, "Feature"))
 
     # plot feature expression, if available in Seurat
     for (i in seq_along(features)) {
       tryCatch({
         p <- Seurat::FeaturePlot(data, features = features[i])
-        ggplot2::ggsave(file=paste0("DE_analysis/", name ,"/Feature/", features[i], ".png"), width = 30, height = 20, units = "cm")
+        ggplot2::ggsave(file=file.path("DE_analysis", name ,"Feature", paste0(features[i], ".png")), width = 30, height = 20, units = "cm")
       },
       error=function(e) {
         message(features[i], ' plot is skipped, as gene was not found with FetchData')
@@ -227,19 +206,19 @@ individual_analysis <- function(samples_dir, sample_name, home_dir) {
 
     # expression plots
     p <- Seurat::FeaturePlot(data, features = features)
-    ggplot2::ggsave(file=paste0("DE_analysis/", name, "/feature-plot_", name, "_", sample_name, ".png"), width = 30, height = 20, units = "cm")
+    ggplot2::ggsave(file=file.path("DE_analysis", name, paste0("feature-plot_", name, "_", sample_name, ".png")), width = 30, height = 20, units = "cm")
     p <- Seurat::VlnPlot(data, features = features)
-    ggplot2::ggsave(file = paste0("DE_analysis/", name, "/violin-plot_ ", name, "_", sample_name, ".png"), width = 30, height = 20, units = "cm")
+    ggplot2::ggsave(file = file.path("DE_analysis", name, paste0("violin-plot_ ", name, "_", sample_name, ".png")), width = 30, height = 20, units = "cm")
     p <- Seurat::DoHeatmap(data, features = features) + NoLegend()
-    ggplot2::ggsave(file = paste0("DE_analysis/", name, "/heatmap_", name, "_", sample_name, ".png"), width = 30, height = 20, units = "cm")
+    ggplot2::ggsave(file = file.path("DE_analysis", name, paste0("heatmap_", name, "_", sample_name, ".png")), width = 30, height = 20, units = "cm")
     p <- Seurat::RidgePlot(data, features = features, ncol = 3)
-    ggplot2::ggsave(file = paste0("DE_analysis/", name, "/ridge-plot_", name, "_", sample_name, ".png"), width = 30, height = 20, units = "cm")
+    ggplot2::ggsave(file = file.path("DE_analysis", name, paste0("ridge-plot_", name, "_", sample_name, ".png")), width = 30, height = 20, units = "cm")
     # dotplot with custom labels
     cell.num <- table(SeuratObject::Idents(data))
     cluster.labels = paste(names(cell.num), paste0("(", round(cell.num/sum(cell.num), 2)*100, "%, n = ", cell.num, ")"))
     levels(SeuratObject::Idents(data)) <- cluster.labels
     p <- Seurat::DotPlot(data, features = features) + Seurat::RotatedAxis() + Seurat::WhiteBackground()
-    ggplot2::ggsave(file = paste0("DE_analysis/", name, "/dot-plot_", name, "_", sample_name, ".png"), width = 30, height = 20, units = "cm")
+    ggplot2::ggsave(file = file.path("DE_analysis", name, paste0("dot-plot_", name, "_", sample_name, ".png")), width = 30, height = 20, units = "cm")
     levels(SeuratObject::Idents(data)) <- sapply(stringr::str_split(levels(SeuratObject::Idents(data)), " "), "[[", 1)
   }
   plot_DEG(data = data, features = unique(topn), name = "topn-features")
@@ -249,20 +228,17 @@ individual_analysis <- function(samples_dir, sample_name, home_dir) {
   plot_DEG(data = data, features = neuron_maturity, name = "neuron_maturity")
   plot_DEG(data = data, features = schema_psych_interest, name = "SCHEMA")
   plot_DEG(data = data, features = sloan_2017_interest, name = "Sloan2017")
+  plot_DEG(data = data, features = interneuron_interest, name = "interneuron")
 
   # plot heatmap for topn genes per cluster
   heatmap_features <- data.markers %>%
-    dplyr::group_by(cluster) %>%
-    dplyr::top_n(n = 8, wt = avg_log2FC) %>%
+    dplyr::group_by(.data$cluster) %>%
+    dplyr::top_n(n = 8, wt = .data$avg_log2FC) %>%
     dplyr::ungroup() %>%
-    dplyr::pull(gene)
+    dplyr::pull(.data$gene)
   p <- Seurat::DoHeatmap(data, features = heatmap_features) + Seurat::NoLegend()
   ggplot2::ggsave(file = paste0("DEG-analysis_big-heatmap_", sample_name, ".png"), width = 30, height = 20, units = "cm")
 
   # save data
   saveRDS(data, file = paste0(sample_name, ".rds"))
-}
-
-for (sample_name in sample_names) {
-  individual_analysis(samples_dir, sample_name, home_dir)
 }

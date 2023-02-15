@@ -11,6 +11,8 @@ library(MAST)
 DE_method = 'DESeq2'
 
 sample_name <- "BL_A + BL_C"
+ref_sample_name <- "BL_C" # this sample will be pct.1
+not_ref_sample_name <- "BL_A" # TODO remove hard coded, could try: names(table(integrated$orig.ident))[names(table(integrated$orig.ident)) != ref_sample_name]
 rds.file <- "C:/Users/mauri/Desktop/Single Cell RNA Sequencing/Seurat/results/Pipe_SCTv2_23-06 cluster_level_selection/integrated/BL_A + BL_C/after_selection_old/BL_A + BL_C.rds"
 integrated <- readRDS(rds.file)
 
@@ -31,9 +33,9 @@ message(start_time)
 
 
 
-
-
-
+if (length( names(table(integrated$orig.ident))) > 2) {
+  stop("Compare 2 groups per run")
+}
 
 ## perform sample level comparison for integration
 # check if multiple samples AND all samples for comparison have more then 3 cells
@@ -41,7 +43,6 @@ if (length(table(integrated$orig.ident)) != 1 && !any(table(integrated$orig.iden
   # set idents to compare cells at sample level instead of cluster level
   Idents(integrated) <- integrated$orig.ident
 
-  # TODO if 2+ samples then this hard code will error
   # create sample marker dataframes to count n cells used in comparisons
   sample_markers_columns <- c(paste0("n_cells_", names(table(integrated$orig.ident))[1]),
                               paste0("n_cells_", names(table(integrated$orig.ident))[2]))
@@ -53,17 +54,23 @@ if (length(table(integrated$orig.ident)) != 1 && !any(table(integrated$orig.iden
   # write n cells for comparison to CSV files
   write.csv2(sample_markers_df, file = "sample_markers/n_cells_for_comparison_m.csv", row.names = FALSE)
 
-  # TODO need a user put name instead of: names(table(integrated$orig.ident))[1]
   # get sample markers (note: p_val_adj based on Bonferroni correction using ALL genes)
-  sample_markers <- FindMarkers(integrated, assay = "SCT", ident.1 = names(table(integrated$orig.ident))[1], only.pos = FALSE, verbose = T,
+  sample_markers <- FindMarkers(integrated, assay = "SCT", ident.1 = ref_sample_name, only.pos = FALSE, verbose = T,
                                 logfc.threshold = 0, min.pct = 0, test.use = DE_method)
 
-  # TODO check if filter on feature not in dataframe filters all rows
-  # # filters rows (genes) if they are >0.05 for both p_val and non-zero p_val with Bonferroni correction
-  # sample_markers <- sample_markers[!(sample_markers$p_val_adj > 0.05 & sample_markers$nz_p_val_adj > 0.05),]
+  # calculate meanExperssion for sample markers - Seurat method
+  mean.fxn <- function(x) {return(log(x = rowMeans(x = x) + 1, base = 2))}
+  features <- rownames(integrated)
+  cells.1 <- colnames(integrated)[integrated$orig.ident == ref_sample_name]
+  cells.2 <- colnames(integrated)[integrated$orig.ident == not_ref_sample_name]
+  data.1 <- mean.fxn(integrated[features, cells.1])
+  data.2 <- mean.fxn(integrated[features, cells.2])
+  sample_markers$meanExpr.astrocytes.coculture <- data.1
+  sample_markers$meanExpr.astrocytes.monoculture <- data.2
 
   # order by avg_log2FC
-  sample_markers_pval_adj <- sample_markers %>% arrange(desc(avg_log2FC)) # DEPRECATED: filter(pct > 0.1)
+  sample_markers <- sample_markers %>% arrange(desc(avg_log2FC))
 
-  write.csv2(sample_markers_pval_adj, file = paste0("sample_markers/method=", DE_method, "-pct1=", names(table(integrated$orig.ident))[1], "-pct2=", names(table(integrated$orig.ident))[2], " - (nz-)p-val st 0.05.csv"), row.names = TRUE)
+  # TODO check if "!= ref_sample_name" works
+  write.csv2(sample_markers, file = paste0("sample_markers/method=", DE_method, "-pct1=", ref_sample_name, "-pct2=", not_ref_sample_name, " - (nz-)p-val st 0.05.csv"), row.names = TRUE)
 }

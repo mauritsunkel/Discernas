@@ -3,7 +3,7 @@ library(ggplot2)
 library(SingleR)
 library(gridExtra)
 
-
+# TODO test this script, then set to pipeline w/ checking all TODOs
 
 ### INITIALIZATION
 ## USER PARAMETERS
@@ -13,10 +13,12 @@ work_dir <- "C:/Users/mauri/Desktop/Single Cell RNA Sequencing/Seurat/"
 rds.files <- c("C:/Users/mauri/Desktop/Single Cell RNA Sequencing/Seurat/results/2022-08-24 15-12-14/t90/t90.rds",
                "C:/Users/mauri/Desktop/Single Cell RNA Sequencing/Seurat/results/2022-08-24 15-12-14/t149/t149.rds",
                "C:/Users/mauri/Desktop/Single Cell RNA Sequencing/Seurat/results/2022-08-24 15-12-14/t275/t275.rds")
-sample_name <- "t90-149-275"
-ref_sample <- "t90"
+sample_names <- c("t90", "t149", "t275") # TODO default take from general user parameter @pipe start
+ref_sample <- NULL # TODO set as user parameter, NULL = default, given sample can also be ref validate ref_sample in sample_names
+
 
 # set to perform selection after integration and re-run integration
+# TODO cleanup in pipeline function, selection_panels etc will become pipe parameters + defaults & documentation
 perform_cell_level_selection <- FALSE
 perform_cluster_level_selection <- FALSE
 selection_panel <- c("MAP2", "DCX", "NEUROG2") # RBFOX3 <-> DCX
@@ -26,6 +28,18 @@ selection_panel_type <- "neuronal"
 # define minimal expression percentage in each cluster for each feature from selection_panel
 selection_percent_expressed <- 20
 ## END USER PARAMETERS
+
+# read/load all sample data
+data.list <- lapply(X = rds.files, FUN = function(x) {
+  readRDS(file = x)
+})
+
+# set sample name for integration
+sample_name <- paste(sample_names, collapse = "-")
+# set reference sample for integration
+ref_sample <- if (is.null(ref_sample)) stringr::str_split(sample_name, "-")[[1]][1] else ref_sample
+# set ref sample index
+for (i in seq_along(1:length(data.list))) if (levels(data.list[[i]]$orig.ident) == ref_sample) ind <- i
 
 # initialize start time and directories
 start_time <- format(Sys.time(), "%F %H-%M-%S")
@@ -42,17 +56,12 @@ dir.create("GSEA_analysis/")
 
 
 
-# read/load all sample data
-data.list <- lapply(X = rds.files, FUN = function(x) {
-  readRDS(file = x)
-})
+
 
 # select repeatedly variable features across data sets
 features <- Seurat::SelectIntegrationFeatures(object.list = data.list, nfeatures = 3000)
 data.list <- Seurat::PrepSCTIntegration(object.list = data.list, anchor.features = features)
 
-# set ref sample index
-for (i in seq_along(1:length(data.list))) if (levels(data.list[[i]]$orig.ident) == ref_sample) ind <- i
 
 # run Canonical Correlation Analysis (CCA) to find 'anchors' between data sets
 anchors <- Seurat::FindIntegrationAnchors(object.list = data.list, normalization.method = "SCT", anchor.features = features, reference = c(ind))
@@ -73,17 +82,20 @@ integration_analysis <- function(integrated, selection_performed = FALSE) {
   integrated <- Seurat::RunPCA(integrated, features = SeuratObject::VariableFeatures(object = integrated), npcs = 50, verbose = FALSE)
   choose_N_PCs <- 20
   integrated <- Seurat::FindNeighbors(integrated, dims = 1:choose_N_PCs)
+  # could give warning: "NAs introduced by coercion" as '.' in data will be coerced to NA
   integrated <- Seurat::FindClusters(integrated, resolution = 0.5, algorithm = 4, method = "igraph")
   integrated <- Seurat::RunUMAP(integrated, reduction = "pca", dims = 1:choose_N_PCs)
-
-  print(2)
 
   # prepare data (recorrect counts) for SCT assay DEG and visualization
   integrated <- Seurat::PrepSCTFindMarkers(integrated, assay = "SCT")
   SeuratObject::DefaultAssay(integrated) <- "SCT"
-  print(3)
 
-  # Visualization
+  # save Seurat object in .RDS data file
+  saveRDS(integrated, file = paste0(sample_name, ".rds"))
+
+
+
+  ### VISUALIZATION
   p1 <- Seurat::DimPlot(integrated, reduction = "umap", group.by = 'orig.ident') +
     ggplot2::labs(title = "Original sample identity") +
     ggplot2::theme(plot.title = ggplot2::element_text(hjust = 0.5))
@@ -92,7 +104,7 @@ integration_analysis <- function(integrated, selection_performed = FALSE) {
     ggplot2::theme(plot.title = ggplot2::element_text(hjust = 0.5))
   # initiate plot_list for arranging ggplot objects in final visualization
   plot_list <- list(p1, p2)
-  for (sample in stringr::str_split(sample_name, " \\+ ")[[1]]) {
+  for (sample in sample_names) {
     p <- Seurat::DimPlot(integrated, reduction = "umap", label = TRUE, repel = TRUE, cells = names(integrated$orig.ident[integrated$orig.ident == sample])) +
       ggplot2::labs(title = sample) +
       ggplot2::theme(plot.title = ggplot2::element_text(hjust = 0.5))
@@ -116,12 +128,18 @@ integration_analysis <- function(integrated, selection_performed = FALSE) {
   sloan_2017_interest <- c("AQP4", "ALDH1L1", "RANBP3L", "IGFBP7", "TOP2A", "TMSB15A", "NNAT", "HIST1H3B",
                            "STMN2", "SYT1", "SNAP25", "SOX9", "CLU", "SLC1A3", "UBE2C", "NUSAP1", "PTPRZ1",
                            "HOPX", "FAM107A", "AGT")
+  interneuron_interest <- c("SST", "PVALB", "GAD1")
 
   # define expression visualization function
-  plot_DEG <- function(data, features, name) {
+  plot_DEG <- function(data, features, name, sample_order = NULL) {
     dir.create(paste0("Plots/", name, "/"))
     dir.create(paste0("Plots/", name, "/Feature/"))
     dir.create(paste0("Plots/", name, "/Feature_split/"))
+
+    # set plot sample order
+    if(!is.null(sample_order)) {
+      data$orig.ident <- factor(data$orig.ident, levels = sample_order)
+    }
 
     # plot feature expression, if available in Seurat
     for (i in seq_along(features)) {
@@ -129,7 +147,7 @@ integration_analysis <- function(integrated, selection_performed = FALSE) {
         p <- Seurat::FeaturePlot(data, features = features[i])
         ggplot2::ggsave(file=paste0("Plots/", name ,"/Feature/", features[i], ".png"), width = 30, height = 20, units = "cm")
 
-        p <- Seurat::FeaturePlot(data, features = features[i], split.by = "orig.ident", cols = c("grey", "red"))
+        p <- Seurat::FeaturePlot(data, features = features[i], split.by = "orig.ident", by.col = FALSE, order = TRUE, cols = c("grey", "red"))
         ggplot2::ggsave(file=paste0("Plots/", name ,"/Feature_split/", features[i], ".png"), width = 30, height = 20, units = "cm")
       },
       error=function(e) {
@@ -138,33 +156,38 @@ integration_analysis <- function(integrated, selection_performed = FALSE) {
     }
 
     # expression plots
-    p <- Seurat::VlnPlot(data, features = features, split.by = "orig.ident")
+    p <- Seurat::VlnPlot(data, features = features, split.by = "orig.ident") + Seurat::RestoreLegend()
     ggplot2::ggsave(file = paste0("Plots/", name, "/violin-split.png"), width = 30, height = 20, units = "cm")
-    p <- Seurat::FeaturePlot(data, features = features)
+    p <- Seurat::FeaturePlot(data, features = features, order = TRUE)
     ggplot2::ggsave(file=paste0("Plots/", name, "/features.png"), width = 30, height = 20, units = "cm")
     p <- Seurat::VlnPlot(data, features = features)
     ggplot2::ggsave(file = paste0("Plots/", name, "/violins.png"), width = 30, height = 20, units = "cm")
     p <- Seurat::RidgePlot(data, features = features, ncol = 3)
     ggplot2::ggsave(file = paste0("Plots/", name, "/ridges.png"), width = 30, height = 20, units = "cm")
+
     # dotplot with custom labels
     cell.num <- table(data$seurat_clusters)
     cluster.labels = paste("Cluster", names(cell.num), paste0("(", round(cell.num/sum(cell.num), 2)*100, "%, n = ", cell.num, ")"))
     levels(SeuratObject::Idents(data)) <- cluster.labels
     p <- Seurat::DotPlot(data, features = features) + Seurat::RotatedAxis() + Seurat::WhiteBackground()
     ggplot2::ggsave(file = paste0("Plots/", name, "/dots.png"), width = 30, height = 20, units = "cm")
-    p <- Seurat::DotPlot(data, features = features, split.by = "orig.ident") + Seurat::RotatedAxis() + Seurat::WhiteBackground()
+
+    p <- Seurat::DotPlot(data, features = features, split.by = "orig.ident", cols="RdYlGn") + Seurat::RotatedAxis() + Seurat::WhiteBackground()
     ggplot2::ggsave(file = paste0("Plots/", name, "/dots-split.png"), width = 30, height = 20, units = "cm")
+
     levels(SeuratObject::Idents(data)) <- c(0:(length(levels(SeuratObject::Idents(data)))-1))
     Seurat::DefaultAssay(data) <- "SCT"
+
     p <- Seurat::DoHeatmap(data, features = features) + Seurat::NoLegend()
     ggplot2::ggsave(file = paste0("Plots/", name, "/heatmap.png"), width = 30, height = 20, units = "cm")
   }
-  plot_DEG(data = integrated, features = astrocyte_interest, name = "astrocyte")
-  plot_DEG(data = integrated, features = astrocyte_maturity, name = "astrocyte_maturity")
-  plot_DEG(data = integrated, features = neuron_interest, name = "neuron")
-  plot_DEG(data = integrated, features = neuron_maturity, name = "neuron_maturity")
-  plot_DEG(data = integrated, features = schema_psych_interest, name = "SCHEMA")
-  plot_DEG(data = integrated, features = sloan_2017_interest, name = "Sloan2017")
+  plot_DEG(data = integrated, features = astrocyte_interest, name = "astrocyte", sample_order = sample_names)
+  plot_DEG(data = integrated, features = astrocyte_maturity, name = "astrocyte_maturity", sample_order = sample_names)
+  plot_DEG(data = integrated, features = neuron_interest, name = "neuron", sample_order = sample_names)
+  plot_DEG(data = integrated, features = neuron_maturity, name = "neuron_maturity", sample_order = sample_names)
+  plot_DEG(data = integrated, features = schema_psych_interest, name = "SCHEMA", sample_order = sample_names)
+  plot_DEG(data = integrated, features = sloan_2017_interest, name = "Sloan2017", sample_order = sample_names)
+  plot_DEG(data = integrated, features = interneuron_interest, name = "interneuron", sample_order = sample_names)
 
   saveRDS(integrated, file = paste0(sample_name, ".rds"))
 

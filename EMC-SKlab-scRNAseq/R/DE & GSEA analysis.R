@@ -22,7 +22,7 @@ library(dplyr)
 ### DE INITIALIZATION ###
 ## Overwriting Seurat DE functions, only adding functionality ##
 # overwriting Seurat DE functions
-FoldChange.default.adjusted <- function (object, cells.1, cells.2, mean.fxn, fc.name, mean.fxn.adj = mean.fxn.adj, features = NULL, ...)
+FoldChange.default.adjusted <- function(object, cells.1, cells.2, mean.fxn, fc.name, mean.fxn.adj = mean.fxn.adj, features = NULL, ...)
 {
   features <- features %||% rownames(x = object)
   thresh.min <- 0
