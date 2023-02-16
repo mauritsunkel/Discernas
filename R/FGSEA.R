@@ -1,17 +1,5 @@
-#' import org.Hs.eg.db org.Hs.eg.db
+#' import org.Hs.eg.db org.Hs.eg.db # Organism.HomoSapiens.EntrezGene.DataBase
 NULL
-
-# TODO remove these when function incorporated
-# library(org.Hs.eg.db) # Organism.HomoSapiens.EntrezGene.DataBase
-
-# library(fgsea)
-# library(clusterProfiler)
-# library(DOSE)
-# library(ReactomePA)
-# library(enrichplot)
-# library(ggplot2)
-# library(ggnewscale)
-# library(ggupset)
 
 
 
@@ -35,7 +23,7 @@ NULL
 #' @param max_gene_set_size_ora maximum gene set size for ORA, default: NA
 #' @param plot_n_category plot top n most significant terms, default: 30
 #'
-#' @example
+#' @examples
 #' run_fgsea(
 #'   output_dir = "results/fgsea_GOuniverse_treeplot_KEGG_MSigDB_neurons_TPlabels/",
 #'   dea_result_file = astrocyte_deg.csv,
@@ -46,31 +34,34 @@ NULL
 #'
 #' @import org.Hs.eg.db org.Hs.eg.db
 #'
+#' @export
+#'
 #' @note
 #' Notes during development
 #'
-#' # clusterProfiler vignette: https://yulab-smu.top/biomedical-knowledge-mining-book
-#' # general intro ORA vs GSEA: https://www.pathwaycommons.org/guide/primers/data_analysis/gsea/
-#' # use Entrez IDs with clusterProfiler etc to perform GSEA/ORA analyses with FGSEA
-#' # Over-representation (enrichment) analysis (ORA): check DEG vs known biological relationship (via gene set)
-#' ## will find genes where the difference is large and will fail where the difference is small, but evidenced in coordinated way in a set of related genes
-#' ## limitations: 1) arbitrary user-defined inclusion criteria, 2) equal importance to each gene, 3) assume gene independance
-#' # Gene set enrichment analysis (GSEA): unordered collection of related genes (sets)
-#' ## Pathway: type of gene set if functional relations are ignored
-#' ## gene set enrichment analysis (GSEA): aggregates the per gene statistics across genes within a gene set
-#' ### overcoming ORA limitation, by detecting situations where all genes in a predefined set change in a small but coordinated way
-#' ## steps
-#' ### local gene-level statistic: adj-p-val / log fold change
-#' ### global gene-set statistics: weighted running sum by ranked-list gene prevalence, Enrichment Score (ES) = max score
-#' #### Normalized ES (NES): accounting for gene set size
-#' ### significance testing & multiple testing correction
-#' #### Type 1 error: family of hypotheses, chance of false positive (significant p-val)
-#' ##### False Discovery Rate (FDR): fraction of rejected null hypothesis (Type 1 error) that are true (false negatives)
-#' ###### https://www.pathwaycommons.org/guide/primers/statistics/multiple_testing/
-#' ###### https://www.nature.com/articles/nbt1209-1135
-#' ###### https://jtd.amegroups.com/article/view/13609/11598
+#' clusterProfiler vignette: https://yulab-smu.top/biomedical-knowledge-mining-book
 #'
-#' @export
+#' general intro ORA vs GSEA: https://www.pathwaycommons.org/guide/primers/data_analysis/gsea/
+#'
+#' use Entrez IDs with clusterProfiler etc to perform GSEA/ORA analyses with FGSEA
+#'
+#' Over-representation (enrichment) analysis (ORA): check DEG vs known biological relationship (via gene set)
+#' will find genes where the difference is large and will fail where the difference is small, but evidenced in coordinated way in a set of related genes
+#' limitations: 1) arbitrary user-defined inclusion criteria, 2) equal importance to each gene, 3) assume gene independance
+#'
+#' Gene set enrichment analysis (GSEA): unordered collection of related genes (sets)
+#' Pathway: type of gene set if functional relations are ignored
+#' gene set enrichment analysis (GSEA): aggregates the per gene statistics across genes within a gene set
+#' overcoming ORA limitation, by detecting situations where all genes in a predefined set change in a small but coordinated way
+#'
+#' steps: local gene-level statistic: adj-p-val / log fold change,
+#' global gene-set statistics: weighted running sum by ranked-list gene prevalence, Enrichment Score (ES) = max score
+#' , Normalized ES (NES): accounting for gene set size significance testing
+#' & multiple testing correction. Type 1 error: family of hypotheses, chance of false positive (significant p-val),
+#' False Discovery Rate (FDR): fraction of rejected null hypothesis (Type 1 error) that are true (false negatives) -
+#' https://www.pathwaycommons.org/guide/primers/statistics/multiple_testing/ -
+#' https://www.nature.com/articles/nbt1209-1135 -
+#' https://jtd.amegroups.com/article/view/13609/11598
 run_fgsea <- function(
     output_dir, dea_result_file, cellRanger_ensembl_features,
     lfc_threshold = 1, seed = 42,
@@ -90,18 +81,14 @@ run_fgsea <- function(
     "gene_ontology", "disease_ontology", "disease_gene_network",
     "wiki_pathways", "reactome_pathways", "KEGG", "molecular_signatures")
   for (db in fgsea_dbs) {
-    dir.create(paste(gsea_plot_folder, db, sep = "/"), recursive = TRUE)
-    dir.create(paste(ora_plot_folder, "upregulated", db, sep = "/"), recursive = TRUE)
-    dir.create(paste(ora_plot_folder, "downregulated", db, sep = "/"), recursive = TRUE)
+    dir.create(file.path(gsea_plot_folder, db), recursive = TRUE)
+    dir.create(file.path(ora_plot_folder, "upregulated", db), recursive = TRUE)
+    dir.create(file.path(ora_plot_folder, "downregulated", db), recursive = TRUE)
   }
 
   ## prep GSEA/ORA input
   # load DEA result
   dea_result <- read.csv2(dea_result_file)
-
-  # TODO remove, this is a subset for quick testing
-  dea_result <- dea_result[1:1000,]
-
 
   # DEVNOTE: non-unique/duplicate, as reconverting dates have multiple gene name options (e.g. MAR2/MARC2/MARCH2 --> 02/03/year)
   dea_result$X <- date2gene(gene_names = dea_result$X)
@@ -146,8 +133,8 @@ run_fgsea <- function(
   deg_ids_positive <- names(dea_ids_lfc[dea_ids_lfc >= lfc_threshold])
   deg_ids_negative <- names(dea_ids_lfc[dea_ids_lfc <= -lfc_threshold])
   # save ORA deg subset names
-  deg_names_positive <- bitr(geneID = deg_ids_positive, OrgDb = org.Hs.eg.db, fromType = "ENTREZID", toType = "ENSEMBL")
-  deg_names_negative <- bitr(geneID = deg_ids_negative, OrgDb = org.Hs.eg.db, fromType = "ENTREZID", toType = "ENSEMBL")
+  deg_names_positive <- clusterProfiler::bitr(geneID = deg_ids_positive, OrgDb = org.Hs.eg.db, fromType = "ENTREZID", toType = "ENSEMBL")
+  deg_names_negative <- clusterProfiler::bitr(geneID = deg_ids_negative, OrgDb = org.Hs.eg.db, fromType = "ENTREZID", toType = "ENSEMBL")
 
   deg_names_positive <- plyr::mapvalues(
     x = deg_names_positive$ENSEMBL,
@@ -161,8 +148,8 @@ run_fgsea <- function(
     to = ensembl_genes_ids$ensembl_gene_name,
     warn_missing = FALSE)
   deg_names_negative <- deg_names_negative[!grepl("^ENSG", deg_names_negative)]
-  write.csv2(deg_names_positive, file = paste(ora_plot_folder, "upregulated", "deg_subset_pos.csv", sep = "/"))
-  write.csv2(deg_names_negative, file = paste(ora_plot_folder, "downregulated", "deg_subset_neg.csv", sep = "/"))
+  write.csv2(deg_names_positive, file = file.path(ora_plot_folder, "upregulated", "deg_subset_pos.csv"))
+  write.csv2(deg_names_negative, file = file.path(ora_plot_folder, "downregulated", "deg_subset_neg.csv"))
 
   # define background gene universe, either internal (all measured/measurable genes) or external (package function built-in)
   if (use_internal_universe) {
@@ -284,8 +271,8 @@ fgsea_compare_DEG_GO_universe <- function(deg_universe, go_universe, ensembl_gen
   overlapping_gene_ids <- go_universe[go_universe %in% deg_universe]
   gene_ids_not_in_go <- go_universe[!go_universe %in% deg_universe]
 
-  overlapping_gene_ids <- bitr(geneID = overlapping_gene_ids, OrgDb = org.Hs.eg.db, fromType = "ENTREZID", toType = "ENSEMBL")
-  gene_ids_not_in_go <- bitr(geneID = gene_ids_not_in_go, OrgDb = org.Hs.eg.db, fromType = "ENTREZID", toType = "ENSEMBL")
+  overlapping_gene_ids <- clusterProfiler::bitr(geneID = overlapping_gene_ids, OrgDb = org.Hs.eg.db, fromType = "ENTREZID", toType = "ENSEMBL")
+  gene_ids_not_in_go <- clusterProfiler::bitr(geneID = gene_ids_not_in_go, OrgDb = org.Hs.eg.db, fromType = "ENTREZID", toType = "ENSEMBL")
 
   overlapping_gene_names <- plyr::mapvalues(
     x = overlapping_gene_ids$ENSEMBL,
@@ -392,7 +379,7 @@ run_fgsea_gsea <- function(
   gsea_results[["GSEA-RP"]] <- res_gse_rp
 
   # DiseaseOntology (DO)
-  res_gse_do <- gseDO(
+  res_gse_do <- DOSE::gseDO(
     geneList = dea_ids_lfc,
     exponent = 1, # default: 1
     minGSSize = min_gene_set_size_gsea, # default: 10
@@ -406,7 +393,7 @@ run_fgsea_gsea <- function(
   gsea_results[["GSEA-DO"]] <- res_gse_do
 
   # Disease Gene Network (DGN)
-  res_gse_dgn <- gseDGN(
+  res_gse_dgn <- DOSE::gseDGN(
     geneList = dea_ids_lfc,
     exponent = 1, # default: 1
     minGSSize = min_gene_set_size_gsea, # default: 10
@@ -468,7 +455,7 @@ run_fgsea_gsea <- function(
 #' @param max_gene_set_size_ora maximum geneSetSize
 #' @param pval_cutoff p-value threshold
 #' @param p_adjust_method p-value adjustment method: BH, ...
-#' @param qval_cutoff
+#' @param qval_cutoff q-value threshold
 #' @param universe DEG/GO gene universe character vector
 #' @param msigdb.hs.h dataframe with MsigDB Hallmarks Human gene sets
 #' @param msigdb.hs.c2.cp dataframe with MsigDB C2 Curated Pathways gene sets
@@ -523,7 +510,7 @@ run_fgsea_ora <- function(
   }
 
   # Kyoto Encyclopedia of Genes and Genomes (KEGG)
-  res_enrich_kegg <- enrichKEGG(
+  res_enrich_kegg <- clusterProfiler::enrichKEGG(
     gene = deg_names,
     organism = "hsa",
     pvalueCutoff = pval_cutoff,
@@ -537,7 +524,7 @@ run_fgsea_ora <- function(
   ora_results[[paste0("ORA-KEGG-", posneg)]] = res_enrich_kegg
 
   # WikiPathways
-  res_enrich_wp <- enrichWP(
+  res_enrich_wp <- clusterProfiler::enrichWP(
     gene = deg_names,
     organism = "Homo sapiens",
     universe = universe,
@@ -549,7 +536,7 @@ run_fgsea_ora <- function(
   ora_results[[paste0("ORA-WP-", posneg)]] = res_enrich_wp
 
   # Reactome Pathway
-  res_enrich_rp <- enrichPathway(
+  res_enrich_rp <- ReactomePA::enrichPathway(
     gene = deg_names,
     organism = "human",
     universe = universe,
@@ -561,7 +548,7 @@ run_fgsea_ora <- function(
   ora_results[[paste0("ORA-RP-", posneg)]] = res_enrich_rp
 
   # Disease Ontology
-  res_enrich_do <- enrichDO(
+  res_enrich_do <- DOSE::enrichDO(
     gene = deg_names,
     universe = universe,
     ont = "DO",
@@ -574,7 +561,7 @@ run_fgsea_ora <- function(
   ora_results[[paste0("ORA-DO-", posneg)]] = res_enrich_do
 
   # Disease Gene Network
-  res_enrich_dgn <- enrichDGN(
+  res_enrich_dgn <- DOSE::enrichDGN(
     gene = deg_names,
     universe = universe,
     pvalueCutoff = pval_cutoff,
@@ -647,53 +634,53 @@ plot_fgsea_result <- function(
   db_folder <- names(fgsea_dbs)[which(fgsea_dbs %in% db_name)]
 
   # prep results
-  res_r <- setReadable(res, 'org.Hs.eg.db', 'ENTREZID')
-  res_r_pt <- pairwise_termsim(res_r)
+  res_r <- DOSE::setReadable(res, 'org.Hs.eg.db', 'ENTREZID')
+  res_r_pt <- enrichplot::pairwise_termsim(res_r)
   res_df <- as.data.frame(res)
 
   if (class(res) == "enrichResult") {
     # set plot_folder name
     ora_posneg_folder <- tail(strsplit(res_name, "-")[[1]], n = 1)
-    plot_folder <- paste(ora_plot_folder, ora_posneg_folder, db_folder, sep = "/")
+    plot_folder <- file.path(ora_plot_folder, ora_posneg_folder, db_folder)
     if (grepl("^GO:", as.data.frame(res)$ID[1])) {
-      plot_folder <- paste(plot_folder, res@ontology, sep = "/")
+      plot_folder <- file.path(plot_folder, res@ontology)
 
       if (grepl("-GOuniverse-", res_name)) {
-        plot_folder <- paste(plot_folder, "GOuniverse", sep = "/")
+        plot_folder <- file.path(plot_folder, "GOuniverse")
       } else {
-        plot_folder <- paste(plot_folder, "DEGuniverse", sep = "/")
+        plot_folder <- file.path(plot_folder, "DEGuniverse")
       }
     }
     if (grepl("-MSDB-", res_name)) {
-      plot_folder <- paste(plot_folder, strsplit(res_name, "-")[[1]][3], sep = "/")
+      plot_folder <- file.path(plot_folder, strsplit(res_name, "-")[[1]][3])
     }
     dir.create(plot_folder, recursive = TRUE)
 
     # check heatmap of terms with associated genes and associated log fold change
     p <- enrichplot::heatplot(res_r, foldChange = dea_ids_lfc, showCategory = plot_n_category) + ggplot2::theme_bw()
     p + ggplot2::theme(axis.text.x = element_text(angle = 90, hjust = 1))
-    ggplot2::ggsave(paste(plot_folder, "heatmap_genes+lfc.png", sep = "/"), width = 30, height = 20, units = "cm")
+    ggplot2::ggsave(file.path(plot_folder, "heatmap_genes+lfc.png"), width = 30, height = 20, units = "cm")
 
     # GOplot specifically for Gene Ontology ORA
     if (grepl("^GO:", as.data.frame(res)$ID[1])) {
       enrichplot::goplot(res) + ggplot2::theme_bw()
-      ggplot2::ggsave(paste(plot_folder, "goplot.png", sep = "/"), width = 30, height = 20, units = "cm")
+      ggplot2::ggsave(file.path(plot_folder, "goplot.png"), width = 30, height = 20, units = "cm")
     }
   }
 
   if (class(res) == "gseaResult") {
     # set plot_folder name
-    plot_folder <- paste(gsea_plot_folder, db_folder, sep = "/")
+    plot_folder <- file.path(gsea_plot_folder, db_folder)
     if (grepl("^GO:", as.data.frame(res)$ID[1])) {
-      plot_folder <- paste(plot_folder, res@setType, sep = "/")
+      plot_folder <- file.path(plot_folder, res@setType)
     }
     if (grepl("-MSDB-", res_name)) {
-      plot_folder <- paste(plot_folder, strsplit(res_name, "-")[[1]][3], sep = "/")
+      plot_folder <- file.path(plot_folder, strsplit(res_name, "-")[[1]][3])
     }
     dir.create(plot_folder, recursive = TRUE)
 
     enrichplot::ridgeplot(res) + ggplot2::theme_bw()
-    ggplot2::ggsave(paste(plot_folder, "ridgeplot.png", sep = "/"), width = 30, height = 20, units = "cm")
+    ggplot2::ggsave(file.path(plot_folder, "ridgeplot.png"), width = 30, height = 20, units = "cm")
     p <- enrichplot::dotplot(
       res,
       showCategory = plot_n_category/2,
@@ -701,12 +688,12 @@ plot_fgsea_result <- function(
       label_format = Inf)
     p + ggplot2::theme_bw()
     p + facet_grid(.~.sign)
-    ggplot2::ggsave(paste(plot_folder, "dotplot_split.png", sep = "/"), width = 30, height = 20, units = "cm")
+    ggplot2::ggsave(file.path(plot_folder, "dotplot_split.png"), width = 30, height = 20, units = "cm")
 
     gsea_shown <- 0
     while(gsea_shown < plot_n_category) {
       enrichplot::gseaplot2(res, geneSetID = res_df$ID[(gsea_shown+1):(gsea_shown+10)], pvalue_table = TRUE) + ggplot2::theme_bw()
-      ggplot2::ggsave(paste(plot_folder, paste0("gseaplot2_categories_", gsea_shown+1,"-", gsea_shown+10, ".png"), sep = "/"), width = 30, height = 20, units = "cm")
+      ggplot2::ggsave(file.path(plot_folder, paste0("gseaplot2_categories_", gsea_shown+1,"-", gsea_shown+10, ".png")), width = 30, height = 20, units = "cm")
       gsea_shown <- gsea_shown + 10
     }
   }
@@ -717,22 +704,22 @@ plot_fgsea_result <- function(
     res,
     showCategory = plot_n_category,
     label_format = Inf) + ggplot2::theme_bw()
-  ggplot2::ggsave(paste(plot_folder, "dotplot_top.png", sep = "/"), width = 30, height = 20, units = "cm")
+  ggplot2::ggsave(file.path(plot_folder, "dotplot_top.png"), width = 30, height = 20, units = "cm")
   # check network of terms with associated genes and amount of genes
   enrichplot::cnetplot(res_r, showCategory = plot_n_category) + ggplot2::theme_bw()
-  ggplot2::ggsave(paste(plot_folder, "cnetplot_terms+genes.png", sep = "/"), width = 30, height = 20, units = "cm")
+  ggplot2::ggsave(file.path(plot_folder, "cnetplot_terms+genes.png"), width = 30, height = 20, units = "cm")
   # check relations between amount of genes on terms and term association
   enrichplot::upsetplot(res, n = 10)
-  ggplot2::ggsave(paste(plot_folder, "upsetplot_terms+ngenes.png", sep = "/"))
+  ggplot2::ggsave(file.path(plot_folder, "upsetplot_terms+ngenes.png"))
   # check network of associated terms with gene amounts but not gene associations
   enrichplot::emapplot(res_r_pt) + ggplot2::theme_bw()
-  ggplot2::ggsave(paste(plot_folder, "emapplot_terms+ngenes.png", sep = "/"), width = 30, height = 20, units = "cm")
+  ggplot2::ggsave(file.path(plot_folder, "emapplot_terms+ngenes.png"), width = 30, height = 20, units = "cm")
   # terms grouped and semantically summarized
   enrichplot::treeplot(
     res_r_pt,
     showCategory = plot_n_category,
     label_format = 14)
-  ggplot2::ggsave(paste(plot_folder, "treeplot.png", sep = "/"), width = 30, height = 20, units = "cm")
+  ggplot2::ggsave(file.path(plot_folder, "treeplot.png"), width = 30, height = 20, units = "cm")
 }
 
 
@@ -895,21 +882,3 @@ group_tree.adjusted <- function(hc, clus, d, offset_tiplab, nWords,
 # changing namespace and environment of adjusted functions for overwriting originals
 environment(group_tree.adjusted) <- asNamespace("enrichplot")
 assignInNamespace("group_tree", group_tree.adjusted, ns = "enrichplot")
-
-
-
-
-
-
-
-
-
-
-
-astrocyte_deg <-  "C:/Users/mauri/Desktop/Single Cell RNA Sequencing/Seurat/results/2022-11-01 14-02-50/integrated/BL_A + BL_C/DE_analysis/sample_markers/method=DESeq2-pct1=BL_C-pct2=BL_A - (nz-)p-val st 0.05.csv"
-# neuronal_deg <- "C:/Users/mauri/Desktop/Single Cell RNA Sequencing/Seurat/results/Pipe_SCTv2_23-06 cluster_level_selection/integrated/BL_N + BL_C/after_selection_old/DE_analysis/sample_markers/method=DESeq2-pct1=BL_C-pct2=BL_N - (nz-)p-val st 0.05.csv"
-run_fgsea(
-  output_dir = "C:/Users/mauri/Desktop/Single Cell RNA Sequencing/Seurat/results/fgsea_GOuniverse_treeplot_KEGG_MSigDB_neurons_TPlabels/",
-  dea_result_file = astrocyte_deg,
-  cellRanger_ensembl_features = "C:/Users/mauri/Desktop/Single Cell RNA Sequencing/Seurat/data/Ensembl genes.tsv"
-)
