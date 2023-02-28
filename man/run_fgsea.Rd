@@ -54,6 +54,10 @@ run_fgsea(
 
 \item{plot_n_category}{plot top n most significant terms, default: 30}
 
+\item{gsea_plot_folder}{string with output folder for GSEA results}
+
+\item{ora_plot_folder}{string with output folder for ORA results}
+
 \item{qval_cutoffGSEA/ORA}{term taken into account by q-val statistic}
 }
 \description{
@@ -91,9 +95,9 @@ https://jtd.amegroups.com/article/view/13609/11598
 }
 \examples{
 run_fgsea(
-  output_dir = "results/fgsea_GOuniverse_treeplot_KEGG_MSigDB_neurons_TPlabels/",
-  dea_result_file = astrocyte_deg.csv,
-  cellRanger_ensembl_features = "Ensembl genes.tsv",
+  output_dir = file.path("EMC-SKlab-scRNAseq", "results"),
+  dea_result_file = file.path("EMC-SKlab-scRNAseq", "results","deg.csv"),
+  cellRanger_ensembl_features = file.path("EMC-SKlab-scRNAseq", "data", "Ensembl genes.tsv"))
 )
 
 }
