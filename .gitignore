@@ -4,3 +4,4 @@ data/
 .git/
 .Rhistory
 .Rproj.user
+inst/temp/

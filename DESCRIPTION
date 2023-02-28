@@ -1,4 +1,4 @@
-Package: EMC_SKlab_scRNAseq
+Package: EMC.SKlab.scRNAseq
 Type: Package
 Title: Single-cell RNA sequencing package for SKlab
 Version: 0.1.0
@@ -9,8 +9,10 @@ License: GPL (>= 3)
 Encoding: UTF-8
 LazyData: true
 RoxygenNote: 7.2.1
-Imports:
+Depends:
     Seurat,
+	enrichplot
+Imports:
     SeuratObject,
     reshape2,
     dplyr,
@@ -19,7 +21,11 @@ Imports:
     data.table,
     SingleR,
     gridExtra,
-    leiden
+    leiden,
+    patchwork,
+    chron,
+    tidyr,
+    magrittr
 Suggests: 
     testthat (>= 3.0.0)
 Config/testthat/edition: 3
