@@ -5,3 +5,5 @@ data/
 .Rhistory
 .Rproj.user
 inst/temp/
+inst/R_manual/
+inst/temp/
