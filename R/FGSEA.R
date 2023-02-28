@@ -22,12 +22,14 @@ NULL
 #' @param min_gene_set_size_ora minimum gene set size for ORA, default: 3
 #' @param max_gene_set_size_ora maximum gene set size for ORA, default: NA
 #' @param plot_n_category plot top n most significant terms, default: 30
+#' @param gsea_plot_folder string with output folder for GSEA results
+#' @param ora_plot_folder string with output folder for ORA results
 #'
 #' @examples
 #' run_fgsea(
-#'   output_dir = "results/fgsea_GOuniverse_treeplot_KEGG_MSigDB_neurons_TPlabels/",
-#'   dea_result_file = astrocyte_deg.csv,
-#'   cellRanger_ensembl_features = "Ensembl genes.tsv",
+#'   output_dir = file.path("EMC-SKlab-scRNAseq", "results"),
+#'   dea_result_file = file.path("EMC-SKlab-scRNAseq", "results","deg.csv"),
+#'   cellRanger_ensembl_features = file.path("EMC-SKlab-scRNAseq", "data", "Ensembl genes.tsv"))
 #' )
 #'
 #' @description Setting a seed can be useful as FGSEA functions have stochasticity.
@@ -72,6 +74,8 @@ run_fgsea <- function(
     plot_n_category = 30, run_msigdb = FALSE,
     gsea_plot_folder = "gene_set_enrichment_analysis",
     ora_plot_folder = "over_representation_analysis") {
+
+  initialize_FGSEA_group_tree_adjusted()
 
   ## set and create output directories
   dir.create(output_dir, recursive = TRUE)
@@ -770,115 +774,117 @@ get_msigdb_term2gene <- function(
 
 
 
-#' Overwrite namespace for enrichplot::group_tree function
+#' Overwrite namespace for enrichplot:::group_tree
 #'
 #' Added custom functionality to enrichplot::group_tree, I know playing with
 #' namespace is not proper, however please fill me in on how to do this
 #' without changing namespace!
 #'
-#' @description see enrichplot::group_tree for documentation
-group_tree.adjusted <- function(hc, clus, d, offset_tiplab, nWords,
-                                label_format_cladelab, label_format_tiplab,
-                                offset, fontsize, group_color,
-                                extend, hilight, cex_category,
-                                ID_Cluster_mat = NULL, geneClusterPanel = NULL,
-                                align, add_tippoint = TRUE, align_tiplab = TRUE, color = 'p.adjust') {
-  message("running adjusted enrichplot:::group_tree()...")
-  showCategory = length(d$count)
+#' @description see enrichplot:::group_tree for documentation
+initialize_FGSEA_group_tree_adjusted <- function() {
+  group_tree.adjusted <- function(hc, clus, d, offset_tiplab, nWords,
+                                  label_format_cladelab, label_format_tiplab,
+                                  offset, fontsize, group_color,
+                                  extend, hilight, cex_category,
+                                  ID_Cluster_mat = NULL, geneClusterPanel = NULL,
+                                  align, add_tippoint = TRUE, align_tiplab = TRUE, color = 'p.adjust') {
+    message("running adjusted enrichplot:::group_tree()...")
+    showCategory = length(d$count)
 
-  group <- count <- NULL
-  # cluster data
-  dat <- data.frame(name = names(clus), cls=paste0("cluster_", as.numeric(clus)))
-  grp <- apply(table(dat), 2, function(x) names(x[x == 1]))
-  p <- ggtree(hc, hang=-1, branch.length = "none", show.legend=FALSE)
-  # extract the most recent common ancestor
-  noids <- lapply(grp, function(x) unlist(lapply(x, function(i) ggtree::nodeid(p, i))))
-  roots <- unlist(lapply(noids, function(x) ggtree::MRCA(p, x)))
-  # cluster data
-  p <- ggtree::groupOTU(p, grp, "group") + aes_(color =~ group)
-  rangeX <- max(p$data$x, na.rm=TRUE) - min(p$data$x, na.rm=TRUE)
-  if (inherits(offset_tiplab, "rel")) {
-    offset_tiplab <- unclass(offset_tiplab)
-    if (geneClusterPanel == "pie" || is.null(geneClusterPanel)) {
-      ## 1.5 * max(radius_of_pie)
-      offset_tiplab <- offset_tiplab * 1.5 * max(sqrt(d$count / sum(d$count) * cex_category))
-    }  else if (geneClusterPanel == "heatMap") {
-      ## Close to the width of the tree
-      offset_tiplab <- offset_tiplab * 0.16 * ncol(ID_Cluster_mat) * rangeX
-    } else if (geneClusterPanel == "dotplot") {
-      ## Close to the width of the tree
-      offset_tiplab <- offset_tiplab * 0.09 * ncol(ID_Cluster_mat) * rangeX
+    group <- count <- NULL
+    # cluster data
+    dat <- data.frame(name = names(clus), cls=paste0("cluster_", as.numeric(clus)))
+    grp <- apply(table(dat), 2, function(x) names(x[x == 1]))
+    p <- ggtree(hc, hang=-1, branch.length = "none", show.legend=FALSE)
+    # extract the most recent common ancestor
+    noids <- lapply(grp, function(x) unlist(lapply(x, function(i) ggtree::nodeid(p, i))))
+    roots <- unlist(lapply(noids, function(x) ggtree::MRCA(p, x)))
+    # cluster data
+    p <- ggtree::groupOTU(p, grp, "group") + aes_(color =~ group)
+    rangeX <- max(p$data$x, na.rm=TRUE) - min(p$data$x, na.rm=TRUE)
+    if (inherits(offset_tiplab, "rel")) {
+      offset_tiplab <- unclass(offset_tiplab)
+      if (geneClusterPanel == "pie" || is.null(geneClusterPanel)) {
+        ## 1.5 * max(radius_of_pie)
+        offset_tiplab <- offset_tiplab * 1.5 * max(sqrt(d$count / sum(d$count) * cex_category))
+      }  else if (geneClusterPanel == "heatMap") {
+        ## Close to the width of the tree
+        offset_tiplab <- offset_tiplab * 0.16 * ncol(ID_Cluster_mat) * rangeX
+      } else if (geneClusterPanel == "dotplot") {
+        ## Close to the width of the tree
+        offset_tiplab <- offset_tiplab * 0.09 * ncol(ID_Cluster_mat) * rangeX
+      }
     }
-  }
 
-  if (inherits(offset, "rel")) {
-    offset <- unclass(offset)
-    offset <- offset * rangeX * 1.2 + offset_tiplab
-  }
-  # max_nchar <- max(nchar(p$data$label), na.rm = TRUE)
-
-  pdata <- data.frame(name = p$data$label, color2 = p$data$group)
-  pdata <- pdata[!is.na(pdata$name), ]
-  cluster_color <- unique(pdata$color2)
-  n_color <- length(levels(cluster_color)) - length(cluster_color)
-  if (!is.null(group_color)) {
-    color2 <- c(rep("black", n_color), group_color)
-    p <- p + scale_color_manual(values = color2, guide = 'none')
-  }
-  p <- p %<+% d
-
-
-  if (!is.null(label_format_tiplab)) {
-    label_func_tiplab <- default_labeller(label_format_tiplab)
-    if (is.function(label_format_tiplab)) {
-      label_func_tiplab <- label_format_tiplab
+    if (inherits(offset, "rel")) {
+      offset <- unclass(offset)
+      offset <- offset * rangeX * 1.2 + offset_tiplab
     }
-    isTip <- p$data$isTip
-    p$data$label[isTip] <-  label_func_tiplab(p$data$label[isTip])
+    # max_nchar <- max(nchar(p$data$label), na.rm = TRUE)
+
+    pdata <- data.frame(name = p$data$label, color2 = p$data$group)
+    pdata <- pdata[!is.na(pdata$name), ]
+    cluster_color <- unique(pdata$color2)
+    n_color <- length(levels(cluster_color)) - length(cluster_color)
+    if (!is.null(group_color)) {
+      color2 <- c(rep("black", n_color), group_color)
+      p <- p + scale_color_manual(values = color2, guide = 'none')
+    }
+    p <- p %<+% d
+
+
+    if (!is.null(label_format_tiplab)) {
+      label_func_tiplab <- default_labeller(label_format_tiplab)
+      if (is.function(label_format_tiplab)) {
+        label_func_tiplab <- label_format_tiplab
+      }
+      isTip <- p$data$isTip
+      p$data$label[isTip] <-  label_func_tiplab(p$data$label[isTip])
+    }
+
+    p <- add_cladelab(p = p, nWords = nWords,
+                      label_format_cladelab = label_format_cladelab,
+                      offset = offset, roots = roots, fontsize = fontsize,
+                      group_color = group_color, cluster_color = cluster_color,
+                      pdata = pdata, extend = extend, hilight = hilight, align = align)
+
+
+
+    # DEVNOTE: to add new labels: add a column to p$data where the first 30 (showCategory) rows need labels and the others NA
+    # print(p$data)
+    # print(p$data$count)
+
+
+
+    # this is where p.adjust colored circles are added!
+    if (add_tippoint) {
+      p <- p + ggnewscale::new_scale_colour() +
+        geom_tippoint(aes(color = color, size = count )) +
+        scale_colour_continuous(low="red", high="blue", name = color,
+                                guide = guide_colorbar(reverse = TRUE))
+
+
+      ## DEVNOTES
+      # check https://guangchuangyu.github.io/ggtree-book/chapter-ggtree.html ?
+
+      # Convert GO ids to/from terms, then calculate up/down ratio based on geneRatio as 100%
+      ## calculate for each GO:term, how to add to object and then get into this function?
+
+      ## get data in this function by modifying the other function as well
+      # add geneRatio for size and %up/downregulated for color (scaled from 0-100)
+      # p <- p + ggnewscale::new_scale_colour() +
+      #   # uncomment this for a next column of dots
+      #   geom_point(aes(x+1, color = color, size = count)) +
+      #   geom_text(aes(x+1, y, label = count), inherit.aes = T) +
+      #   scale_color_gradientn(colours = c('green', 'white', 'purple'), name = color,
+      #                           guide = guide_colorbar(reverse = TRUE))
+    }
+    ## add tiplab
+    p <- p + geom_tiplab(offset = offset_tiplab + 1, hjust = 0,
+                         show.legend = FALSE, align = align_tiplab, linesize = 0)
+    return(p)
   }
-
-  p <- add_cladelab(p = p, nWords = nWords,
-                    label_format_cladelab = label_format_cladelab,
-                    offset = offset, roots = roots, fontsize = fontsize,
-                    group_color = group_color, cluster_color = cluster_color,
-                    pdata = pdata, extend = extend, hilight = hilight, align = align)
-
-
-
-  # DEVNOTE: to add new labels: add a column to p$data where the first 30 (showCategory) rows need labels and the others NA
-  # print(p$data)
-  # print(p$data$count)
-
-
-
-  # this is where p.adjust colored circles are added!
-  if (add_tippoint) {
-    p <- p + ggnewscale::new_scale_colour() +
-      geom_tippoint(aes(color = color, size = count )) +
-      scale_colour_continuous(low="red", high="blue", name = color,
-                              guide = guide_colorbar(reverse = TRUE))
-
-
-    ## DEVNOTES
-    # check https://guangchuangyu.github.io/ggtree-book/chapter-ggtree.html ?
-
-    # Convert GO ids to/from terms, then calculate up/down ratio based on geneRatio as 100%
-    ## calculate for each GO:term, how to add to object and then get into this function?
-
-    ## get data in this function by modifying the other function as well
-    # add geneRatio for size and %up/downregulated for color (scaled from 0-100)
-    # p <- p + ggnewscale::new_scale_colour() +
-    #   # uncomment this for a next column of dots
-    #   geom_point(aes(x+1, color = color, size = count)) +
-    #   geom_text(aes(x+1, y, label = count), inherit.aes = T) +
-    #   scale_color_gradientn(colours = c('green', 'white', 'purple'), name = color,
-    #                           guide = guide_colorbar(reverse = TRUE))
-  }
-  ## add tiplab
-  p <- p + geom_tiplab(offset = offset_tiplab + 1, hjust = 0,
-                       show.legend = FALSE, align = align_tiplab, linesize = 0)
-  return(p)
+  # changing namespace and environment of adjusted functions for overwriting originals
+  environment(group_tree.adjusted) <- asNamespace("enrichplot")
+  assignInNamespace("group_tree", group_tree.adjusted, ns = "enrichplot")
 }
-# changing namespace and environment of adjusted functions for overwriting originals
-environment(group_tree.adjusted) <- asNamespace("enrichplot")
-assignInNamespace("group_tree", group_tree.adjusted, ns = "enrichplot")
