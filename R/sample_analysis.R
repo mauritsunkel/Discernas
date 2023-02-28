@@ -14,9 +14,9 @@
 #' @examples
 #' # create output directories based on start time and sample name and set working directory
 #' start_time <- format(Sys.time(), "%F %H-%M-%S")
-#' output_dir <- fil.epath("EMC-SKlab-scRNAseq", "results", start_time)
+#' output_dir <- file.path("EMC-SKlab-scRNAseq", "results", start_time)
 #' # directory where samples are located
-#' samples_dir <- "data/samples/project/"
+#' samples_dir <- file.path("EMC-SKlab-scRNAseq", "data", "samples", "project")
 #' # selected sample names from sample dir
 #' sample_names <- c('t1', 't2', 't3')
 #'
