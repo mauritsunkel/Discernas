@@ -14,6 +14,12 @@ differential_expression_analysis(sample_name, rds_file, output_dir)
 \item{output_dir}{output directory for plots, string}
 }
 \description{
+Changed following functions in mauritsunkel/EMC-SKlab-seurat:
+Seurat::FindMarkers.default
+Seurat:::WilcoxDETest
+Seurat::Foldchange.default
+}
+\details{
 Perform differential expression analysis on processed and annotated Seurat object.
 }
 \examples{

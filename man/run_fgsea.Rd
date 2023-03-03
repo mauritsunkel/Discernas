@@ -94,10 +94,13 @@ https://www.nature.com/articles/nbt1209-1135 -
 https://jtd.amegroups.com/article/view/13609/11598
 }
 \examples{
+cellRanger_ensembl_features <- system.file("data", "ensembl_genes.tsv", package = 'EMC.SKlab.scRNAseq')
+# cellRanger_ensembl_features <- system.file("inst", "data", "ensembl_genes.tsv", package = 'EMC.SKlab.scRNAseq')
+
 run_fgsea(
   output_dir = file.path("EMC-SKlab-scRNAseq", "results"),
-  dea_result_file = file.path("EMC-SKlab-scRNAseq", "results","deg.csv"),
-  cellRanger_ensembl_features = file.path("EMC-SKlab-scRNAseq", "data", "Ensembl genes.tsv"))
+  dea_result_file = file.path("EMC-SKlab-scRNAseq", "results", "deg.csv"),
+  cellRanger_ensembl_features = cellRanger_ensembl_features
 )
 
 }
