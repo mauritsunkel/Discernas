@@ -41,7 +41,7 @@ beep <- function(n = 5) {
 #' @references https://i.stack.imgur.com/H8syw.png. test
 #' https://stackoverflow.com/questions/57153428/r-plot-color-combinations-that-are-colorblind-accessible
 #' display.brewer.all(n=50, exact.n=FALSE)
-my.color.palettes <- function(type = 'mixed', n = NULL) {
+generate_color_palette <- function(type = 'mixed', n = NULL) {
 
   if (!type %in% c('mixed', 'colorblind')) {
     stop("'type not accepted, please see documentation'")
