@@ -1,5 +1,3 @@
-
-
 #' Run Monocle3 from Seurat object.
 #'
 #' Run monocle3 from Seurat object, performing its own clustering, partitioning
@@ -87,7 +85,7 @@ pseudotime <- function(input_files, input_names, output_dir, genes_of_interest) 
           n_clusters_monocle <- length(levels(clusters(cds)))
           print(paste0("resolution: ", resolution, " - n_seurat_clusters: ", n_clusters_seurat, " - n_monocle_clusters: ", n_clusters_monocle))
         }
-        colData(cds)$monocle3_clustering_resolution <- resolution
+        SummarizedExperiment::colData(cds)$monocle3_clustering_resolution <- resolution
         return(cds)
       } else {
         return(cds)
@@ -112,8 +110,9 @@ pseudotime <- function(input_files, input_names, output_dir, genes_of_interest) 
     }
 
     # plot Monocle3 partitions
-    p2 <- monocle3::plot_cells(cds,
+    p2 <- plot_cells.adjusted(cds,
                                color_cells_by = "partition",
+                               group_cells_by = "cluster",
                                show_trajectory_graph = FALSE,
                                label_cell_groups = FALSE, # if false, show legend
                                group_label_size = 3,
@@ -143,7 +142,8 @@ pseudotime <- function(input_files, input_names, output_dir, genes_of_interest) 
       # plot once
       if (partition == "1") {
         # plot Monocle3 clusters and trajectory
-        p3 <- monocle3::plot_cells(cds,
+        p3 <- plot_cells.adjusted(cds,
+                                   group_cells_by = "cluster",
                                    label_cell_groups = FALSE, # if false, show legend
                                    label_groups_by_cluster = TRUE,
                                    label_roots = TRUE,
@@ -198,8 +198,9 @@ pseudotime <- function(input_files, input_names, output_dir, genes_of_interest) 
       }
 
       # plot pseudotime and trajectory per Monocle3 partition
-      p6 <- monocle3::plot_cells(cds,
+      p6 <- plot_cells.adjusted(cds,
                                  color_cells_by = "pseudotime",
+                                 group_cells_by = "cluster",
                                  label_cell_groups = TRUE,
                                  label_roots = TRUE,
                                  label_leaves = FALSE,
@@ -248,14 +249,14 @@ plot_cells.adjusted <- function(cds, x = 1, y = 2,
                           msg = paste("No dimensionality reduction for", reduction_method,
                                       "calculated.", "Please run reduce_dimension with",
                                       "reduction_method =", reduction_method, "before attempting to plot."))
-  low_dim_coords <- reducedDims(cds)[[reduction_method]]
+  low_dim_coords <- SingleCellExperiment::reducedDims(cds)[[reduction_method]]
   assertthat::assert_that(ncol(low_dim_coords) >= max(x, y),
                           msg = paste("x and/or y is too large. x and y must",
                                       "be dimensions in reduced dimension", "space."))
   if (!is.null(color_cells_by)) {
     assertthat::assert_that(color_cells_by %in% c("cluster",
                                                   "partition", "pseudotime") | color_cells_by %in%
-                              names(colData(cds)), msg = paste("color_cells_by must one of",
+                              names(SummarizedExperiment::colData(cds)), msg = paste("color_cells_by must one of",
                                                                "'cluster', 'partition', 'pseudotime,", "or a column in the colData table."))
     if (color_cells_by == "pseudotime") {
       tryCatch({
@@ -276,8 +277,8 @@ plot_cells.adjusted <- function(cds, x = 1, y = 2,
   ### MY INJECTED CODE
   if (!is.null(group_cells_by)) {
     assertthat::assert_that(group_cells_by %in% c("cluster", "partition") | group_cells_by %in%
-                              names(colData(cds)), msg = paste("group_cells_by must be one of",
-                                                               "'cluster', 'partition',", "or a column in the colData table."))}
+                              names(SummarizedExperiment::colData(cds)), msg = paste("group_cells_by must be one of",
+                                                               "'cluster', 'partition', or a column in the colData table."))}
 
 
 
@@ -312,7 +313,7 @@ plot_cells.adjusted <- function(cds, x = 1, y = 2,
   data_df <- data.frame(S_matrix[, c(x, y)])
   colnames(data_df) <- c("data_dim_1", "data_dim_2")
   data_df$input_name <- row.names(data_df)
-  data_df <- as.data.frame(cbind(data_df, colData(cds)))
+  data_df <- as.data.frame(cbind(data_df, SummarizedExperiment::colData(cds)))
   if (group_cells_by == "cluster") {
     data_df$cell_group <- tryCatch({
       clusters(cds, reduction_method = reduction_method)[data_df$input_name]
@@ -329,7 +330,7 @@ plot_cells.adjusted <- function(cds, x = 1, y = 2,
   }
   else {
     ### MY INJECTED CODE
-    data_df$cell_group <- colData(cds)[data_df$input_name,
+    data_df$cell_group <- SummarizedExperiment::colData(cds)[data_df$input_name,
                                        group_cells_by]
     ### MONOCLE3 ORIGINAL CODE
     # stop("Error: unrecognized way of grouping cells.")
@@ -356,7 +357,7 @@ plot_cells.adjusted <- function(cds, x = 1, y = 2,
     })
   }
   else {
-    data_df$cell_color <- colData(cds)[data_df$input_name,
+    data_df$cell_color <- SummarizedExperiment::colData(cds)[data_df$input_name,
                                        color_cells_by]
   }
   if (show_trajectory_graph) {
