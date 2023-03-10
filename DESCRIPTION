@@ -11,25 +11,29 @@ LazyData: true
 RoxygenNote: 7.2.1
 Imports:
     Seurat,
-	enrichplot,
     SeuratObject,
 	SeuratData,
 	SeuratWrappers,
 	SingleCellExperiment,
+	SingleR,
+	scuttle,
+	stringr,
     reshape2,
-    dplyr,
     ggplot2,
 	ggrepel,
-    stringr,
+	gridExtra,
+	grDevices,
+	chron,
     data.table,
-    SingleR,
-    gridExtra,
+    dplyr,
+	enrichplot,
     leiden,
-    patchwork,
-    chron,
-    tidyr,
     magrittr,
-	monocle3
+	monocle3,
+	patchwork,
+	pheatmap,
+	RColorBrewer,
+    tidyr
 Remotes:
     mauritsunkel/EMC-SKlab-seurat (Seurat)
 Suggests: 
