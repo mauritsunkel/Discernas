@@ -10,7 +10,7 @@ Encoding: UTF-8
 LazyData: true
 RoxygenNote: 7.2.1
 Imports:
-    Seurat,
+    mauritsunkel/EMC-SKlab-seurat
     SeuratObject,
 	SeuratData,
 	SeuratWrappers,
@@ -35,7 +35,7 @@ Imports:
 	RColorBrewer,
     tidyr
 Remotes:
-    mauritsunkel/EMC-SKlab-seurat (Seurat)
+    mauritsunkel/EMC-SKlab-seurat
 Suggests: 
     testthat (>= 3.0.0)
 Config/testthat/edition: 3
