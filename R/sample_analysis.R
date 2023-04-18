@@ -66,9 +66,6 @@ individual_analysis <- function(samples_dir, sample_name, output_dir, run_cell_c
   png(file.path("Quality_Control", paste0("QC_feature-scatter_", sample_name, ".png")))
   plot(plot1 + plot2)
   dev.off()
-  # subset cells with less than 200 unique genes (NFeature_RNA)
-  nFeature_RNA <- NULL # pass R CMB Check note
-  data <- subset(data, subset = nFeature_RNA > 200)
 
   # SCTransform-v2 replaces NormalizeData + FindVariableFeatures + ScaleData & sets default assay to "SCT"
   data <- Seurat::SCTransform(data, vst.flavor = "v2", vars.to.regress = "percent.mt", return.only.var.genes = TRUE)
