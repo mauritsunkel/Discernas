@@ -10,10 +10,12 @@
 #' @export
 #'
 #' @examples
+#' kriegstein_custom_annotation <- system.file("extdata", "kriegstein_custom_annotation.txt", package = 'EMC.SKlab.scRNAseq')
 #' chunk_kriegstein_data(
 #'   n_chunks = 25,
 #'   kriegstein_data_dir = "path/to/Kriegstein_data/",
-#'   kriegstein_chunks_output_dir = paste0(kriegstein_data_dir, "RData/chunks/")
+#'   kriegstein_chunks_output_dir = paste0(kriegstein_data_dir, "RData/chunks/"),
+#'   kriegstein_custom_annotation = kriegstein_custom_annotation
 #' )
 #'
 #' @note
@@ -24,7 +26,7 @@
 #'
 #' Run EMC.SKlab.scRNAseq::chunk_kriegstein_data() to have chunked reference data before annotating!
 #' No need to run if chunked data already exists!
-chunk_kriegstein_data <- function(n_chunks, kriegstein_data_dir, kriegstein_chunks_output_dir) {
+chunk_kriegstein_data <- function(n_chunks, kriegstein_data_dir, kriegstein_chunks_output_dir, kriegstein_custom_annotation) {
   # get start time to measure run time
   start_run_time <- Sys.time()
 
@@ -41,7 +43,7 @@ chunk_kriegstein_data <- function(n_chunks, kriegstein_data_dir, kriegstein_chun
   } else {
     meta <- utils::read.table("meta.tsv", header=T, sep="\t", as.is=T, row.names=1)
     # create custom merged cluster annotations for clusterv2 from reference data
-    anno_df <- read.csv2("custom_annotation.txt")
+    anno_df <- read.csv2(kriegstein_custom_annotation)
     meta$custom.clusterv2 <- plyr::mapvalues(meta$clusterv2, anno_df$from, anno_df$to)
 
     # save custom annotation for use in processing and visualization
