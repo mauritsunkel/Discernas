@@ -7,7 +7,8 @@
 chunk_kriegstein_data(
   n_chunks,
   kriegstein_data_dir,
-  kriegstein_chunks_output_dir
+  kriegstein_chunks_output_dir,
+  kriegstein_custom_annotation
 )
 }
 \arguments{
@@ -31,10 +32,13 @@ Run EMC.SKlab.scRNAseq::chunk_kriegstein_data() to have chunked reference data b
 No need to run if chunked data already exists!
 }
 \examples{
+\dontshow{if (FALSE) (if (getRversion() >= "3.4") withAutoprint else force)(\{ # examplesIf}
+kriegstein_custom_annotation <- system.file("extdata", "kriegstein_custom_annotation.txt", package = 'EMC.SKlab.scRNAseq')
 chunk_kriegstein_data(
   n_chunks = 25,
   kriegstein_data_dir = "path/to/Kriegstein_data/",
-  kriegstein_chunks_output_dir = paste0(kriegstein_data_dir, "RData/chunks/")
+  kriegstein_chunks_output_dir = paste0(kriegstein_data_dir, "RData/chunks/"),
+  kriegstein_custom_annotation = kriegstein_custom_annotation
 )
-
+\dontshow{\}) # examplesIf}
 }

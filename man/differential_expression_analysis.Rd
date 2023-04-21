@@ -23,9 +23,11 @@ Seurat::Foldchange.default
 Perform differential expression analysis on processed and annotated Seurat object.
 }
 \examples{
+\dontshow{if (FALSE) (if (getRversion() >= "3.4") withAutoprint else force)(\{ # examplesIf}
 differential_expression_analysis(
   sample_name = "T1",
   rds_file = file.path("EMC-SKlab-scRNAseq", "results", "T1.rds"),
   file.path("EMC-SKlab-scRNAseq", "results")
 )
+\dontshow{\}) # examplesIf}
 }

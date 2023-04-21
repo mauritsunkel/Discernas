@@ -37,7 +37,7 @@
 #' multiply sum by total cell pairs, normalize by total weight of cell interactions and static gene expression for each cell
 #' 0 = no change over trajectory, higher = relatively more change over trajectory
 #'
-#' @examples
+#' @examplesIf FALSE
 #' EMC.SKlab.scRNAseq::pseudotime(
 #'   input_files = c(file.path("path", "to", "seurat.rds")),
 #'   input_names = c('sample_name'),
@@ -45,9 +45,8 @@
 #'   genes_of_interest = c("GENES", "OF", "INTEREST")
 #' )
 pseudotime <- function(input_files, input_names, output_dir, genes_of_interest) {
-  start_time <- format(Sys.time(), "%F %H-%M-%S")
-  message(paste0(output_dir, 'results/', start_time, '/monocle-pseudotime/'), recursive = TRUE)
-  dir.create(paste0(output_dir, 'results/', start_time, '/monocle-pseudotime/'), recursive = TRUE)
+  message(paste0(output_dir, 'results/monocle-pseudotime/'), recursive = TRUE)
+  dir.create(paste0(output_dir, 'results/monocle-pseudotime/'), recursive = TRUE)
 
   # set input names on files
   names(input_files) <- input_names
@@ -57,8 +56,8 @@ pseudotime <- function(input_files, input_names, output_dir, genes_of_interest) 
   for (input_name in input_names) {
     message(input_name)
     # set and create sample specific directory
-    dir.create(paste0(output_dir, 'results/', start_time, '/monocle-pseudotime/', input_name, "/pseudotime/"), recursive = TRUE)
-    setwd(paste0(output_dir, 'results/', start_time, '/monocle-pseudotime/', input_name, "/"))
+    dir.create(paste0(output_dir, 'results/monocle-pseudotime/', input_name, "/pseudotime/"), recursive = TRUE)
+    setwd(paste0(output_dir, 'results/monocle-pseudotime/', input_name, "/"))
 
     # get data
     integrated <- readRDS(input_files[[input_name]])

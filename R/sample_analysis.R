@@ -11,7 +11,7 @@
 #'
 #' @export
 #'
-#' @examples
+#' @examplesIf FALSE
 #' # create output directories based on start time and sample name and set working directory
 #' start_time <- format(Sys.time(), "%F %H-%M-%S")
 #' output_dir <- file.path("EMC-SKlab-scRNAseq", "results", start_time)
@@ -28,8 +28,8 @@
 #'
 #' Cell cycle regression based on: https://satijalab.org/seurat/articles/cell_cycle_vignette.html
 #'
-#' SCTransform-v2 replaces NormalizeData + FindVariableFeatures + ScaleData & sets default assay to "SCT" -
-#' https://satijalab.org/seurat/articles/sctransform_vignette.html & https://satijalab.org/seurat/articles/sctransform_v2_vignette.html -
+#' SCTransform-v2 replaces NormalizeData + FindVariableFeatures + ScaleData & sets default assay to SCT
+#' https://satijalab.org/seurat/articles/sctransform_vignette.html & https://satijalab.org/seurat/articles/sctransform_v2_vignette.html
 #' normalize gene expression counts per cell by the total expression and applying a
 #' scaling factor (default: 10.000) and adding a pseudocount before log-transforming the result
 #' this global linear scaling on the data sets mean expression across cells is 0 and variance across cells is 1 as to
@@ -39,7 +39,7 @@
 #' vars.to.regress = regress out variability originating from reads mapped to mitochondrial DNA
 #' return.only.var.genes = TRUE, as non-sparse matrix is returned and used in PCA
 #' set transformed data as default data assay for downstream processing
-individual_analysis <- function(samples_dir, sample_name, output_dir, run_cell_cycle_regression = F) {
+sample_analysis <- function(samples_dir, sample_name, output_dir, run_cell_cycle_regression = F) {
   sample_path <- file.path(output_dir, sample_name)
   if (dir.exists(sample_path)) {
     stop("Output directory already exists, please choose a non-existing directory...")

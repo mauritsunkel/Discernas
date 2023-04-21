@@ -16,17 +16,18 @@ NULL
 #' @param use_internal_universe TRUE: use DEA measured genes, FALSE: use clusterProfiler::ORA_db() specific genes, default: TRUE
 #' @param p_adjust_method p-value multiple testing correction method, default: "BH" (Benjamini-Hochberg)
 #' @param pval_cutoff GSEA/ORA term taken into account by p-val statistic
-#' @param qval_cutoffGSEA/ORA term taken into account by q-val statistic
+#' @param qval_cutoff GSEA/ORA term taken into account by q-val statistic
 #' @param min_gene_set_size_gsea minimum gene set size for GSEA, default: 10
 #' @param max_gene_set_size_gsea maximum gene set size for GSEA, default: 500
 #' @param min_gene_set_size_ora minimum gene set size for ORA, default: 3
 #' @param max_gene_set_size_ora maximum gene set size for ORA, default: NA
 #' @param plot_n_category plot top n most significant terms, default: 30
+#' @param run_msigdb To compare against Molecular Signatures Database genesets or not, default: FALSE
 #' @param gsea_plot_folder string with output folder for GSEA results
 #' @param ora_plot_folder string with output folder for ORA results
 #'
-#' @examples
-#' cellRanger_ensembl_features <- system.file("data", "ensembl_genes.tsv", package = 'EMC.SKlab.scRNAseq')
+#' @examplesIf FALSE
+#' cellRanger_ensembl_features <- system.file("extdata", "ensembl_genes.tsv", package = 'EMC.SKlab.scRNAseq')
 #' # cellRanger_ensembl_features <- system.file("inst", "data", "ensembl_genes.tsv", package = 'EMC.SKlab.scRNAseq')
 #'
 #' run_fgsea(
@@ -456,6 +457,7 @@ run_fgsea_gsea <- function(
 #' DO, DGN & MsigDB.
 #'
 #' @param deg_names character vector with deg names
+#' @param posneg up- or down regulated genes
 #' @param min_gene_set_size_ora minimum geneSetSize
 #' @param max_gene_set_size_ora maximum geneSetSize
 #' @param pval_cutoff p-value threshold
@@ -621,7 +623,7 @@ run_fgsea_ora <- function(
 #' @param plot_n_category how many categories to plot
 #' @param dea_ids_lfc named character vector with DEA IDs and logfoldchanges
 #' @param gsea_plot_folder output folder basename for GSEA results
-#' @param ora_plot_folderoutput folder basename for ORA results
+#' @param ora_plot_folder output folder basename for ORA results
 plot_fgsea_result <- function(
     res, res_name, plot_n_category, dea_ids_lfc,
     gsea_plot_folder, ora_plot_folder) {

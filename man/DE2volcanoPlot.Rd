@@ -19,9 +19,11 @@ DE2volcanoPlot(DE_csv, output_filename, log2FC_threshold, top_n = 5)
 Visualize DEG in Volcano plot.
 }
 \examples{
+\dontshow{if (FALSE) (if (getRversion() >= "3.4") withAutoprint else force)(\{ # examplesIf}
 DE_csv <- file.path("DEA_results", "DEG.csv")
 output_filename <- "A+C_DEG_volcano-plot_log2FC-threshold=1.png"
 log2FC_threshold <- 1
 top_n <- 5
 DE2volcanoPlot(DE_csv, output_filename, log2FC_threshold, top_n = top_n)
+\dontshow{\}) # examplesIf}
 }

@@ -34,6 +34,7 @@ Run EMC.SKlab.scRNAseq::chunk_kriegstein_data() to have chunked reference data b
 No need to run if chunked data already exists!
 }
 \examples{
+\dontshow{if (FALSE) (if (getRversion() >= "3.4") withAutoprint else force)(\{ # examplesIf}
 kriegstein_data_dir <-  "path/to/Kriegstein_data/"
 
 annotate_with_kriegstein_data(
@@ -44,5 +45,5 @@ annotate_with_kriegstein_data(
   kriegstein_annotated_output_dir = paste0(kriegstein_data_dir, "Kriegstein_annotated_RData/"),
   annotations = c("age", "structure", "custom.clusterv2")
 )
-
+\dontshow{\}) # examplesIf}
 }

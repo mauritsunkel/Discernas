@@ -46,6 +46,7 @@ algorithm with Seurat::FindClusters() used to work, now it has stopped
 working. Still trying to find the cause of this, issued on their Github.
 }
 \examples{
+\dontshow{if (FALSE) (if (getRversion() >= "3.4") withAutoprint else force)(\{ # examplesIf}
 output_dir <- file.path("EMC-SKlab-scRNAseq", "results")
 
 # files and sample names
@@ -56,5 +57,5 @@ sample_names <- c("t1", "t2", "t3")
 selection_panel <- c("GENES", "OF", "INTEREST")
 samples_integration(sample_files, sample_names, output_dir,
                     selection_panel = selection_panel)
-
+\dontshow{\}) # examplesIf}
 }

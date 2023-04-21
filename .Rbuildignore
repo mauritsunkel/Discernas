@@ -1,7 +1,10 @@
 ^.*\.Rproj$
 ^\.Rproj\.user$
-^notes/
+^.git/
 ^LICENSE\.md$
+^README\.Rmd$
+^notes/
 ^data/
 ^results/
-^README\.Rmd$
+^inst/temp/
+^inst/R_manual/

@@ -13,7 +13,7 @@
 #' Seurat:::WilcoxDETest
 #' Seurat::Foldchange.default
 #'
-#' @examples
+#' @examplesIf FALSE
 #' differential_expression_analysis(
 #'   sample_name = "T1",
 #'   rds_file = file.path("EMC-SKlab-scRNAseq", "results", "T1.rds"),
@@ -21,10 +21,8 @@
 #' )
 differential_expression_analysis <- function(sample_name, rds_file, output_dir) {
   # set working directory and create output directories
-  start_time <- format(Sys.time(), "%F %H-%M-%S")
-  message(start_time)
-  dir.create(paste0(output_dir, 'results/', start_time, '/integrated/', sample_name, "/DE_analysis/"), recursive = T)
-  output_dir <- paste0(output_dir, 'results/', start_time, '/integrated/', sample_name, "/DE_analysis/")
+  dir.create(paste0(output_dir, 'results/integrated/', sample_name, "/DE_analysis/"), recursive = T)
+  output_dir <- paste0(output_dir, 'results/integrated/', sample_name, "/DE_analysis/")
   setwd(output_dir)
   dir.create(paste0(output_dir, "../GSE_analysis/"))
   dir.create(paste0(output_dir, "markers/"))

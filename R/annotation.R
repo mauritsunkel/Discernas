@@ -9,7 +9,7 @@
 #'
 #' @export
 #'
-#' @examples
+#' @examplesIf FALSE
 #' kriegstein_custom_annotation <- system.file("extdata", "kriegstein_custom_annotation.txt", package = 'EMC.SKlab.scRNAseq')
 #' chunk_kriegstein_data(
 #'   n_chunks = 25,
@@ -130,7 +130,7 @@ chunk_kriegstein_data <- function(n_chunks, kriegstein_data_dir, kriegstein_chun
 #'
 #' @export
 #'
-#' @examples
+#' @examplesIf FALSE
 #' kriegstein_data_dir <-  "path/to/Kriegstein_data/"
 #'
 #' annotate_with_kriegstein_data(
@@ -227,7 +227,7 @@ annotate_with_kriegstein_data <- function(
 #'
 #' @export
 #'
-#' @examples
+#' @examplesIf FALSE
 #' visualize_kriegstein_annotated_data(
 #'   sample_names = c("A", "B"),
 #'   sample_files = c(file.path("path", "to", "sampleA.rds"), file.path("path", "to", "sampleB.rds")),

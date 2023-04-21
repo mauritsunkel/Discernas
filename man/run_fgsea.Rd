@@ -44,6 +44,8 @@ run_fgsea(
 
 \item{pval_cutoff}{GSEA/ORA term taken into account by p-val statistic}
 
+\item{qval_cutoff}{GSEA/ORA term taken into account by q-val statistic}
+
 \item{min_gene_set_size_gsea}{minimum gene set size for GSEA, default: 10}
 
 \item{max_gene_set_size_gsea}{maximum gene set size for GSEA, default: 500}
@@ -54,11 +56,11 @@ run_fgsea(
 
 \item{plot_n_category}{plot top n most significant terms, default: 30}
 
+\item{run_msigdb}{To compare against Molecular Signatures Database genesets or not, default: FALSE}
+
 \item{gsea_plot_folder}{string with output folder for GSEA results}
 
 \item{ora_plot_folder}{string with output folder for ORA results}
-
-\item{qval_cutoffGSEA/ORA}{term taken into account by q-val statistic}
 }
 \description{
 Setting a seed can be useful as FGSEA functions have stochasticity.
@@ -94,7 +96,8 @@ https://www.nature.com/articles/nbt1209-1135 -
 https://jtd.amegroups.com/article/view/13609/11598
 }
 \examples{
-cellRanger_ensembl_features <- system.file("data", "ensembl_genes.tsv", package = 'EMC.SKlab.scRNAseq')
+\dontshow{if (FALSE) (if (getRversion() >= "3.4") withAutoprint else force)(\{ # examplesIf}
+cellRanger_ensembl_features <- system.file("extdata", "ensembl_genes.tsv", package = 'EMC.SKlab.scRNAseq')
 # cellRanger_ensembl_features <- system.file("inst", "data", "ensembl_genes.tsv", package = 'EMC.SKlab.scRNAseq')
 
 run_fgsea(
@@ -102,5 +105,5 @@ run_fgsea(
   dea_result_file = file.path("EMC-SKlab-scRNAseq", "results", "deg.csv"),
   cellRanger_ensembl_features = cellRanger_ensembl_features
 )
-
+\dontshow{\}) # examplesIf}
 }

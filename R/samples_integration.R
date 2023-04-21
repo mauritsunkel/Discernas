@@ -15,7 +15,7 @@
 #'
 #' @importFrom gridExtra grid.arrange arrangeGrob
 #'
-#' @examples
+#' @examplesIf FALSE
 #' output_dir <- file.path("EMC-SKlab-scRNAseq", "results")
 #'
 #' # files and sample names
@@ -54,9 +54,8 @@ samples_integration <- function(sample_files, sample_names, output_dir,
   for (i in seq_along(1:length(data.list))) if (levels(data.list[[i]]$orig.ident) == ref_sample) ind <- i
 
   # initialize start time and directories
-  start_time <- format(Sys.time(), "%F %H-%M-%S")
-  dir.create(paste0(output_dir, 'results/', start_time, '/integrated/', sample_name, "/"), recursive = T)
-  setwd(paste0(output_dir, 'results/', start_time, '/integrated/', sample_name, "/"))
+  dir.create(paste0(output_dir, 'results/integrated/', sample_name, "/"), recursive = T)
+  setwd(paste0(output_dir, 'results/integrated/', sample_name, "/"))
   dir.create("DE_analysis/")
   dir.create("DE_analysis/markers/")
   dir.create("DE_analysis/sample_markers/")

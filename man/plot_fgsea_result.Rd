@@ -24,7 +24,7 @@ plot_fgsea_result(
 
 \item{gsea_plot_folder}{output folder basename for GSEA results}
 
-\item{ora_plot_folderoutput}{folder basename for ORA results}
+\item{ora_plot_folder}{output folder basename for ORA results}
 }
 \description{
 Create and save all different plot for FGSEA results. Heatplot, goplot,

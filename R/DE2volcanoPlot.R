@@ -7,7 +7,7 @@
 #'
 #' @export
 #'
-#' @examples
+#' @examplesIf FALSE
 #' DE_csv <- file.path("DEA_results", "DEG.csv")
 #' output_filename <- "A+C_DEG_volcano-plot_log2FC-threshold=1.png"
 #' log2FC_threshold <- 1

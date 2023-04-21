@@ -20,6 +20,8 @@ run_fgsea_ora(
 \arguments{
 \item{deg_names}{character vector with deg names}
 
+\item{posneg}{up- or down regulated genes}
+
 \item{min_gene_set_size_ora}{minimum geneSetSize}
 
 \item{max_gene_set_size_ora}{maximum geneSetSize}
