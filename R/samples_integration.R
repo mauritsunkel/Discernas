@@ -54,18 +54,9 @@ samples_integration <- function(sample_files, sample_names, output_dir,
   for (i in seq_along(1:length(data.list))) if (levels(data.list[[i]]$orig.ident) == ref_sample) ind <- i
 
   # initialize start time and directories
-  dir.create(paste0(output_dir, 'results/integrated/', sample_name, "/"), recursive = T)
-  setwd(paste0(output_dir, 'results/integrated/', sample_name, "/"))
-  dir.create("DE_analysis/")
-  dir.create("DE_analysis/markers/")
-  dir.create("DE_analysis/sample_markers/")
-  dir.create("DE_analysis/condition_markers/")
-  dir.create("DE_analysis/conserved_markers/")
-  dir.create("Plots/")
-  dir.create("GSEA_analysis/")
+  output_dir <- file.path(output_dir, 'integrated', sample_name)
+  dir.create(file.path(output_dir, 'plots'), recursive = T)
   ### END INITIALIZATION
-
-
 
 
 
@@ -84,8 +75,8 @@ samples_integration <- function(sample_files, sample_names, output_dir,
 
   integration_analysis <- function(integrated, selection_performed = FALSE) {
     if (selection_performed) {
-      dir.create(paste0(getwd(), '/postSelect/Plots/'), recursive = TRUE)
-      setwd(paste0(getwd(), '/postSelect/'))
+      output_dir <- file.path(output_dir, 'postSelect')
+      dir.create(file.path(output_dir, 'plots'), recursive = T)
     }
 
     # run the workflow for visualization and clustering on integrated assay
@@ -103,7 +94,7 @@ samples_integration <- function(sample_files, sample_names, output_dir,
     SeuratObject::DefaultAssay(integrated) <- "SCT"
 
     # save Seurat object in .RDS data file
-    saveRDS(integrated, file = paste0(sample_name, ".rds"))
+    saveRDS(integrated, file = file.path(output_dir, paste0(sample_name, ".rds")))
 
 
 
@@ -124,7 +115,7 @@ samples_integration <- function(sample_files, sample_names, output_dir,
     }
     # create arranged visualization
     p <- do.call("grid.arrange", c(plot_list, ncol=2))
-    ggplot2::ggsave(paste0("UMAPs_", sample_name, ".png"), plot = p, width = c(12,12), height = c(12,12))
+    ggplot2::ggsave(file.path(output_dir, paste0("UMAPs_", sample_name, ".png")), plot = p, width = c(12,12), height = c(12,12))
     dev.off()
 
     # define marker panels of interest
@@ -144,9 +135,8 @@ samples_integration <- function(sample_files, sample_names, output_dir,
 
     # define expression visualization function
     plot_DEG <- function(data, features, name, sample_order = NULL) {
-      dir.create(paste0("Plots/", name, "/"))
-      dir.create(paste0("Plots/", name, "/Feature/"))
-      dir.create(paste0("Plots/", name, "/Feature_split/"))
+      dir.create(file.path(output_dir, 'plots' , name, 'feature'), recursive = T)
+      dir.create(file.path(output_dir, 'plots', name, 'feature_split'))
 
       # set plot sample order
       if(!is.null(sample_order)) {
@@ -157,10 +147,10 @@ samples_integration <- function(sample_files, sample_names, output_dir,
       for (i in seq_along(features)) {
         tryCatch({
           p <- Seurat::FeaturePlot(data, features = features[i])
-          ggplot2::ggsave(file=paste0("Plots/", name ,"/Feature/", features[i], ".png"), width = 30, height = 20, units = "cm")
+          ggplot2::ggsave(file = file.path(output_dir, 'plots', name , 'feature', paste0(features[i], ".png")), width = 30, height = 20, units = "cm")
 
           p <- Seurat::FeaturePlot(data, features = features[i], split.by = "orig.ident", by.col = FALSE, order = TRUE, cols = c("grey", "red"))
-          ggplot2::ggsave(file=paste0("Plots/", name ,"/Feature_split/", features[i], ".png"), width = 30, height = 20, units = "cm")
+          ggplot2::ggsave(file = file.path(output_dir, 'plots', name , 'feature_split', paste0(features[i], ".png")), width = 30, height = 20, units = "cm")
         },
         error=function(e) {
           message(features[i], ' plot is skipped, as feature was not found with FetchData')
@@ -169,29 +159,29 @@ samples_integration <- function(sample_files, sample_names, output_dir,
 
       # expression plots
       p <- Seurat::VlnPlot(data, features = features, split.by = "orig.ident") + Seurat::RestoreLegend()
-      ggplot2::ggsave(file = paste0("Plots/", name, "/violin-split.png"), width = 30, height = 20, units = "cm")
+      ggplot2::ggsave(file = file.path(output_dir, 'plots', name, 'violin-split.png'), width = 30, height = 20, units = "cm")
       p <- Seurat::FeaturePlot(data, features = features, order = TRUE)
-      ggplot2::ggsave(file=paste0("Plots/", name, "/features.png"), width = 30, height = 20, units = "cm")
+      ggplot2::ggsave(file = file.path(output_dir, 'plots', name, 'features.png'), width = 30, height = 20, units = "cm")
       p <- Seurat::VlnPlot(data, features = features)
-      ggplot2::ggsave(file = paste0("Plots/", name, "/violins.png"), width = 30, height = 20, units = "cm")
+      ggplot2::ggsave(file = file.path(output_dir, 'plots', name, 'violins.png'), width = 30, height = 20, units = "cm")
       p <- Seurat::RidgePlot(data, features = features, ncol = 3)
-      ggplot2::ggsave(file = paste0("Plots/", name, "/ridges.png"), width = 30, height = 20, units = "cm")
+      ggplot2::ggsave(file = file.path(output_dir, 'plots', name, 'ridges.png'), width = 30, height = 20, units = "cm")
 
       # dotplot with custom labels
       cell.num <- table(data$seurat_clusters)
       cluster.labels = paste("Cluster", names(cell.num), paste0("(", round(cell.num/sum(cell.num), 2)*100, "%, n = ", cell.num, ")"))
       levels(SeuratObject::Idents(data)) <- cluster.labels
       p <- Seurat::DotPlot(data, features = features) + Seurat::RotatedAxis() + Seurat::WhiteBackground()
-      ggplot2::ggsave(file = paste0("Plots/", name, "/dots.png"), width = 30, height = 20, units = "cm")
+      ggplot2::ggsave(file = file.path(output_dir, 'plots', name, 'dots.png'), width = 30, height = 20, units = "cm")
 
       p <- Seurat::DotPlot(data, features = features, split.by = "orig.ident", cols="RdYlGn") + Seurat::RotatedAxis() + Seurat::WhiteBackground()
-      ggplot2::ggsave(file = paste0("Plots/", name, "/dots-split.png"), width = 30, height = 20, units = "cm")
+      ggplot2::ggsave(file = file.path(output_dir, 'plots', name, 'dots-split.png'), width = 30, height = 20, units = "cm")
 
       levels(SeuratObject::Idents(data)) <- c(0:(length(levels(SeuratObject::Idents(data)))-1))
       Seurat::DefaultAssay(data) <- "SCT"
 
       p <- Seurat::DoHeatmap(data, features = features) + Seurat::NoLegend()
-      ggplot2::ggsave(file = paste0("Plots/", name, "/heatmap.png"), width = 30, height = 20, units = "cm")
+      ggplot2::ggsave(file = file.path(output_dir, 'plots', name, 'heatmap.png'), width = 30, height = 20, units = "cm")
     }
     plot_DEG(data = integrated, features = astrocyte_interest, name = "astrocyte", sample_order = sample_names)
     plot_DEG(data = integrated, features = astrocyte_maturity, name = "astrocyte_maturity", sample_order = sample_names)
@@ -201,7 +191,7 @@ samples_integration <- function(sample_files, sample_names, output_dir,
     plot_DEG(data = integrated, features = sloan_2017_interest, name = "Sloan2017", sample_order = sample_names)
     plot_DEG(data = integrated, features = interneuron_interest, name = "interneuron", sample_order = sample_names)
 
-    saveRDS(integrated, file = paste0(sample_name, ".rds"))
+    saveRDS(integrated, file = file.path(output_dir, paste0(sample_name, ".rds")))
 
     # if selection not yet and to be ran, return object
     if (!selection_performed && perform_cluster_level_selection || perform_cell_level_selection) {
