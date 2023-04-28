@@ -17,20 +17,18 @@
 #' differential_expression_analysis(
 #'   sample_name = "T1",
 #'   rds_file = file.path("EMC-SKlab-scRNAseq", "results", "T1.rds"),
-#'   file.path("EMC-SKlab-scRNAseq", "results")
+#'   output_dir = file.path("EMC-SKlab-scRNAseq", "results", 'integrated', 'sample_name')
 #' )
 differential_expression_analysis <- function(sample_name, rds_file, output_dir) {
-  # set working directory and create output directories
-  dir.create(paste0(output_dir, 'results/integrated/', sample_name, "/DE_analysis/"), recursive = T)
-  output_dir <- paste0(output_dir, 'results/integrated/', sample_name, "/DE_analysis/")
-  setwd(output_dir)
-  dir.create(paste0(output_dir, "../GSE_analysis/"))
-  dir.create(paste0(output_dir, "markers/"))
+  # create output directories
+  output_dir <- file.path(output_dir, 'DEA')
+  dir.create(file.path(output_dir, 'markers'), recursive = T)
+
   integrated <- readRDS(rds_file)
   if (length(table(integrated$orig.ident)) != 1) {
-    dir.create(paste0(output_dir, "sample_markers/"))
-    dir.create(paste0(output_dir, "conserved_markers/"))
-    dir.create(paste0(output_dir, "condition_markers/"))
+    dir.create(paste0(output_dir, 'sample_markers'))
+    dir.create(paste0(output_dir, 'conserved_markers'))
+    dir.create(paste0(output_dir, 'condition_markers'))
   }
 
   ## perform sample level comparison for integration
@@ -49,7 +47,7 @@ differential_expression_analysis <- function(sample_name, rds_file, output_dir) 
       sample_markers_df[nrow(sample_markers_df) + 1,] = c(table(integrated$orig.ident)[1],
                                                           table(integrated$orig.ident)[2])
       # write n cells for comparison to CSV files
-      write.csv2(sample_markers_df, file = "sample_markers/n_cells_for_comparison_m.csv", row.names = FALSE)
+      write.csv2(sample_markers_df, file = file.path(output_dir, 'sample_markers', 'n_cells_for_comparison_m.csv'), row.names = FALSE)
 
       # get sample markers (note: p_val_adj based on Bonferroni correction using ALL genes)
       sample_markers <- Seurat::FindMarkers(integrated, assay = "SCT", ident.1 = names(table(integrated$orig.ident))[1], only.pos = FALSE, verbose = T,
@@ -63,7 +61,7 @@ differential_expression_analysis <- function(sample_name, rds_file, output_dir) 
       # order by avg_log2FC
       sample_markers_pval_adj <- sample_markers %>% dplyr::arrange(dplyr::desc(avg_log2FC)) # DEPRECATED: filter(pct > 0.1)
 
-      write.csv2(sample_markers_pval_adj, file = paste0("sample_markers/pct1=", names(table(integrated$orig.ident))[1], "-pct2=", names(table(integrated$orig.ident))[2], " - (nz-)p-val st 0.05.csv"), row.names = TRUE)
+      write.csv2(sample_markers_pval_adj, file = file.path(output_dir, 'sample_markers', paste0('pct1=', names(table(integrated$orig.ident))[1], "-pct2=", names(table(integrated$orig.ident))[2], " - (nz-)p-val st 0.05.csv")), row.names = TRUE)
 
       # add sample markers and n cells count as miscellaneous data to Seurat object
       SeuratObject::Misc(object = integrated, slot = paste0("DEG.sample_markers")) <- sample_markers
@@ -103,7 +101,7 @@ differential_expression_analysis <- function(sample_name, rds_file, output_dir) 
                                           table(integrated$seurat_clusters)[i],
                                           sum(table(integrated$seurat_clusters)[-as.integer(i)]))
     # write n cells for comparison to CSV files
-    write.csv2(markers_df, file = "markers/n_cells_for_comparison_m.csv", row.names = FALSE)
+    write.csv2(markers_df, file = file.path(output_dir, 'markers', 'n_cells_for_comparison_m.csv'), row.names = FALSE)
     # check more than 2 cells in ident (cluster) before comparison
     if (table(integrated$seurat_clusters)[i] < 3) {
       message("For markers, skipping ident (cluster) ", i, " comparison because < 3 cells")
@@ -113,7 +111,7 @@ differential_expression_analysis <- function(sample_name, rds_file, output_dir) 
       # filters rows (genes) if they are >0.05 for both p_val and non-zero p_val with Bonferroni correction
       markers <- markers[!(markers$p_val_adj > 0.05 & markers$nz_p_val_adj > 0.05),]
 
-      write.csv2(markers, file = paste0("markers/all_cluster", i, "_m.csv"))
+      write.csv2(markers, file = file.path(output_dir, 'markers', paste0('all_cluster', i, '_m.csv')))
 
       # add as miscellaneous data to Seurat object
       SeuratObject::Misc(object = integrated, slot = paste0("DEG.markers")) <- markers
@@ -135,7 +133,7 @@ differential_expression_analysis <- function(sample_name, rds_file, output_dir) 
       cm_val4 <- nrow(df %>% dplyr::filter(orig.ident == names(table(integrated$orig.ident))[2] & seurat_clusters != i))
       conserved_markers_df[nrow(conserved_markers_df) + 1,] = c(i, cm_val1, cm_val2, cm_val3, cm_val4)
       # write n cells for comparison to CSV files
-      write.csv2(conserved_markers_df, file = "conserved_markers/n_cells_for_comparison_cm.csv", row.names = FALSE)
+      write.csv2(conserved_markers_df, file = file.path(output_dir, 'conserved_markers', 'n_cells_for_comparison_cm.csv'), row.names = FALSE)
       # check more than 2 cells in ident (cluster) for each group before comparison
       if (any(c(cm_val1, cm_val2, cm_val3, cm_val4) < 3)) {
         message("For conserved markers, skipping ident (cluster) ", i, " comparison because < 3 cells")
@@ -149,7 +147,7 @@ differential_expression_analysis <- function(sample_name, rds_file, output_dir) 
         conserved_markers <- conserved_markers[!(conserved_markers[, paste0(names(table(integrated$orig.ident))[1], "_p_val_adj")] > 0.05 & conserved_markers[, paste0(names(table(integrated$orig.ident))[1], "_nz_p_val_adj")] > 0.05),]
         conserved_markers <- conserved_markers[!(conserved_markers[, paste0(names(table(integrated$orig.ident))[2], "_p_val_adj")] > 0.05 & conserved_markers[, paste0(names(table(integrated$orig.ident))[2], "_nz_p_val_adj")] > 0.05),]
 
-        write.csv2(conserved_markers, file = paste0("conserved_markers/all_cluster", i, "_cm.csv"))
+        write.csv2(conserved_markers, file = file.path(output_dir, 'conserved_markers', paste0('all_cluster', i, '_cm.csv')))
 
         # add as miscellaneous data to Seurat object
         SeuratObject::Misc(object = integrated, slot = paste0("DEG.conserved_markers")) <- conserved_markers
@@ -170,7 +168,7 @@ differential_expression_analysis <- function(sample_name, rds_file, output_dir) 
       # add amount of cells used for condition_markers comparison to df
       condition_markers_df[nrow(condition_markers_df) + 1,] = c(i, table(subset$orig.ident)[1], table(subset$orig.ident)[2])
       # write n cells for comparison to CSV files
-      write.csv2(condition_markers_df, file = "condition_markers/n_cells_for_comparison.csv", row.names = FALSE)
+      write.csv2(condition_markers_df, file = file.path(output_dir, 'condition_markers', 'n_cells_for_comparison.csv'), row.names = FALSE)
       # check more than 2 cells in subset ident (cluster) before comparison
       if (any(c(table(subset$orig.ident)[1], table(subset$orig.ident)[2]) < 3)) {
         message("For condition markers, skipping ident (cluster) ", i, " comparison because < 3 cells")
@@ -180,7 +178,7 @@ differential_expression_analysis <- function(sample_name, rds_file, output_dir) 
         # filters rows (genes) if they are >0.05 for both p_val and non-zero p_val with Bonferroni correction
         condition_markers <- condition_markers[!(condition_markers$p_val_adj > 0.05 & condition_markers$nz_p_val_adj > 0.05),]
 
-        write.csv2(condition_markers, file = paste0("condition_markers/all_cluster", i, ".csv"))
+        write.csv2(condition_markers, file = file.path(output_dir, 'condition_markers', paste0('all_cluster', i, '.csv')))
 
         # add as miscellaneous data to Seurat object
         SeuratObject::Misc(object = integrated, slot = paste0("DEG.condition_markers")) <- condition_markers
@@ -191,5 +189,5 @@ differential_expression_analysis <- function(sample_name, rds_file, output_dir) 
   }
 
   # save data for possible adjustments
-  saveRDS(integrated, file = rds_file)
+  saveRDS(integrated, file = file.path(output_dir, rds_file))
 }
