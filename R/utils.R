@@ -72,7 +72,7 @@ generate_color_palette <- function(type = 'mixed', n = NULL) {
   }
   if (!is.null(n)) {
     if (n > length(palette)) {
-      print(paste0('WARNING: asked for ', n, ' colors but only ', length(palette), ' are available and selected from the palette'))
+      message(paste0('WARNING: asked for ', n, ' colors but only ', length(palette), ' are available and selected from the palette'))
       n <- length(palette)
     }
     palette <- palette[1:n]
