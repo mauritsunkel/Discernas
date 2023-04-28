@@ -31,41 +31,40 @@ chunk_kriegstein_data <- function(n_chunks, kriegstein_data_dir, kriegstein_chun
   start_run_time <- Sys.time()
 
   # set working directory
-  setwd(kriegstein_data_dir)
-  if (!file.exists("meta.tsv") || !file.exists("exprMatrix.tsv.gz")) {
+  if (!file.exists(file.path(kriegstein_data_dir, "meta.tsv")) || !file.exists(file.path(kriegstein_data_dir, "exprMatrix.tsv.gz"))) {
     stop("Kriegstein data folder should contain meta.tsv and exprMatrix.tsv.gz")
   }
   dir.create(kriegstein_chunks_output_dir, recursive = T)
 
   # get custom meta data from file, create from original if doesn't exist yet
-  if (file.exists("custom.meta.tsv")) {
-    meta <- utils::read.table("custom.meta.tsv", header=T, sep="\t", as.is=T, row.names=1)
+  if (file.exists(file.path(kriegstein_data_dir, "custom.meta.tsv"))) {
+    meta <- utils::read.table(file.path(kriegstein_data_dir, "custom.meta.tsv"), header=T, sep="\t", as.is=T, row.names=1)
   } else {
-    meta <- utils::read.table("meta.tsv", header=T, sep="\t", as.is=T, row.names=1)
+    meta <- utils::read.table(file.path(kriegstein_data_dir, "meta.tsv"), header=T, sep="\t", as.is=T, row.names=1)
     # create custom merged cluster annotations for clusterv2 from reference data
     anno_df <- read.csv2(kriegstein_custom_annotation)
     meta$custom.clusterv2 <- plyr::mapvalues(meta$clusterv2, anno_df$from, anno_df$to)
 
     # save custom annotation for use in processing and visualization
-    utils::write.table(meta, file = "custom.meta.tsv", sep="\t", row.names=T)
+    utils::write.table(meta, file = file.path(kriegstein_data_dir, "custom.meta.tsv"), sep="\t", row.names=T)
   }
 
   # get genes, if non-existent create from reference data
-  if (file.exists("kriegstein_genes.csv") & file.exists("n_cols.txt")) {
-    genes = utils::read.table("kriegstein_genes.csv", sep = "\t", col.names = 'gene')
+  if (file.exists(file.path(kriegstein_data_dir, "kriegstein_genes.csv")) & file.exists(file.path(kriegstein_data_dir, "n_cols.txt"))) {
+    genes = utils::read.table(file.path(kriegstein_data_dir, "kriegstein_genes.csv"), sep = "\t", col.names = 'gene')
     genes = genes$gene[2:length(genes$gene)]
-    n_cols <- read.csv2("n_cols.txt", header = F)
+    n_cols <- read.csv2(file.path(kriegstein_data_dir, "n_cols.txt"), header = F)
     n_cols <- n_cols$V1
   } else {
     # read only columns for efficiency
-    initial <- data.table::fread("exprMatrix.tsv.gz", nrows=0, colClasses=c("gene"="character"))
+    initial <- data.table::fread(file.path(kriegstein_data_dir, "exprMatrix.tsv.gz"), nrows=0, colClasses=c("gene"="character"))
     n_cols <- dim(initial)[2]
     # read first row only for efficiency
-    initial <- data.table::fread("exprMatrix.tsv.gz", select=c(1), colClasses=c("gene"="character"))
+    initial <- data.table::fread(file.path(kriegstein_data_dir, "exprMatrix.tsv.gz"), select=c(1), colClasses=c("gene"="character"))
     genes = initial[,1][[1]]
     genes = gsub(".+[|]", "", genes)
-    utils::write.csv2(genes, file = paste0("kriegstein_genes.csv"), row.names = FALSE)
-    write(n_cols, "n_cols.txt")
+    utils::write.csv2(genes, file = file.path(kriegstein_data_dir, "kriegstein_genes.csv"), row.names = FALSE)
+    write(n_cols, file.path(kriegstein_data_dir, "n_cols.txt"))
   }
 
   # set constants for data chunking
@@ -102,7 +101,7 @@ chunk_kriegstein_data <- function(n_chunks, kriegstein_data_dir, kriegstein_chun
     # store sampled cells
     sampled_cells <- c(sampled_cells, sample_cells)
 
-    cell_data <- data.table::fread("exprMatrix.tsv.gz", select = c(unique(sample_cells)), colClasses=c("gene"="character"))
+    cell_data <- data.table::fread(file.path(kriegstein_data_dir, "exprMatrix.tsv.gz"), select = c(unique(sample_cells)), colClasses=c("gene"="character"))
     rownames(cell_data) <- genes
     # convert table to SO and add metadata matching by cell name
     cell_data <- SeuratObject::CreateSeuratObject(counts = cell_data, meta.data = meta[names(cell_data),])
@@ -152,10 +151,9 @@ annotate_with_kriegstein_data <- function(
     kriegstein_annotated_output_dir,
     annotations = c("age", "structure", "custom.clusterv2")) {
 
-  setwd(kriegstein_data_dir)
   dir.create(kriegstein_annotated_output_dir)
 
-  genes <- getGenes()
+  genes <- getGenes(kriegstein_data_dir)
 
   # iterate files and perform SingleR for annotation with Pearson correlation
   for (j in 1:length(sample_files)) {
@@ -202,7 +200,7 @@ annotate_with_kriegstein_data <- function(
           clusters = SummarizedExperiment::colData(sample_data)[, "seurat_clusters"],
           de.method = 'wilcox',
           aggr.ref = FALSE)
-        save(result, file = paste0(filename_base, ".", annotation, ".RData"))
+        save(result, file = file.path(kriegstein_data_dir, paste0(filename_base, ".", annotation, ".RData")))
         # remove result before next iteration to save memory
         rm(result)
       }
@@ -244,14 +242,12 @@ visualize_kriegstein_annotated_data <- function(
     annotations_to_plot = c("custom.clusterv2"),
     ref_aggr_strategy = "max") {
 
-  setwd(kriegstein_data_dir)
-
   dir.create(output_dir, recursive = TRUE)
 
   names(sample_files) <- sample_names
 
   # get Kriegstein custom feature metadata with custom clusterv2 celltype mapping
-  meta <- getMeta()
+  meta <- getMeta(kriegstein_data_dir)
 
   # read and get .rds data
   data.list <- lapply(X = sample_files, FUN = function(x) {
@@ -393,8 +389,8 @@ visualize_kriegstein_annotated_data <- function(
 #' Get Kriegstein genes
 #'
 #' @return Kriegstein genes character vector.
-getGenes <- function() {
-  genesFile <- "kriegstein_genes.csv"
+getGenes <- function(kriegstein_data_dir) {
+  genesFile <- file.path(kriegstein_data_dir, "kriegstein_genes.csv")
   if (!file.exists(genesFile)) {
     stop(genesFile, " does not exist, generate this file with EMC.SKlab.scRNAseq::chunk_kriegstein_data().")
   } else {
@@ -406,8 +402,8 @@ getGenes <- function() {
 #' Get Kriegstein meta with custom annotation mapping
 #'
 #' @return Kriegstein meta features with custom clusterv2 mapping.
-getMeta <- function() {
-  metaFile <- "custom.meta.tsv"
+getMeta <- function(kriegstein_data_dir) {
+  metaFile <- file.path(kriegstein_data_dir, "custom.meta.tsv")
   if (!file.exists(metaFile)) {
     stop(metaFile, " does not exist, generate this file with EMC.SKlab.scRNAseq::chunk_kriegstein_data().")
   } else {
