@@ -40,15 +40,14 @@
 #' return.only.var.genes = TRUE, as non-sparse matrix is returned and used in PCA
 #' set transformed data as default data assay for downstream processing
 sample_analysis <- function(samples_dir, sample_name, output_dir, run_cell_cycle_regression = F) {
-  sample_path <- file.path(output_dir, sample_name)
-  if (dir.exists(sample_path)) {
+  if (dir.exists(output_dir)) {
     stop("Output directory already exists, please choose a non-existing directory...")
   }
+  sample_path <- file.path(output_dir, sample_name)
   dir.create(sample_path, recursive = T)
-  setwd(sample_path)
-  dir.create('Quality_Control/')
-  dir.create('Principal_Component_Analysis/')
-  dir.create('DE_analysis/')
+  dir.create(file.path(sample_path, 'Quality_Control'))
+  dir.create(file.path(sample_path, 'Principal_Component_Analysis'))
+  dir.create(file.path(sample_path, 'DE_analysis'))
 
   # read 10X data (preprocessed by 10X Cellranger pipeline) and convert to Seurat object
   data.data <- Seurat::Read10X(data.dir = file.path(samples_dir, sample_name, "filtered_feature_bc_matrix"), strip.suffix = TRUE)
@@ -58,12 +57,12 @@ sample_analysis <- function(samples_dir, sample_name, output_dir, run_cell_cycle
   # calculate percentage of all counts belonging to mitochondrial (^MT-) DNA, for filtering
   data <- Seurat::PercentageFeatureSet(data, pattern = "^MT-", col.name = "percent.mt")
   # Visualize quality control metrics
-  png(file.path("Quality_Control", paste0("QC_nFeat_nCount_percent.mt_", sample_name, ".png")))
+  png(file.path(sample_path, "Quality_Control", paste0("QC_nFeat_nCount_percent.mt_", sample_name, ".png")))
   plot(Seurat::VlnPlot(data, features = c("nFeature_RNA", "nCount_RNA", "percent.mt"), ncol = 3, cols = c("#85d0f5", "#2b2f70")))
   dev.off()
   plot1 <- Seurat::FeatureScatter(data, feature1 = "percent.mt", feature2 = "nCount_RNA", cols = c("#85d0f5", "#2b2f70"))
   plot2 <- Seurat::FeatureScatter(data, feature1 = "nFeature_RNA", feature2 = "nCount_RNA", cols = c("#85d0f5", "#2b2f70"))
-  png(file.path("Quality_Control", paste0("QC_feature-scatter_", sample_name, ".png")))
+  png(file.path(sample_path, "Quality_Control", paste0("QC_feature-scatter_", sample_name, ".png")))
   plot(plot1 + plot2)
   dev.off()
 
@@ -73,7 +72,7 @@ sample_analysis <- function(samples_dir, sample_name, output_dir, run_cell_cycle
   # plot variable features, label top 10
   plot1 <- Seurat::VariableFeaturePlot(data, cols = c("#85d0f5", "#2b2f70"), selection.method = 'SCT')
   plot2 <- Seurat::LabelPoints(plot = plot1, points = head(SeuratObject::VariableFeatures(data), 10), repel = TRUE)
-  png(file.path("Quality_Control", paste0("Feature-selection_variable-genes_", sample_name, ".png")))
+  png(file.path(sample_path, "Quality_Control", paste0("Feature-selection_variable-genes_", sample_name, ".png")))
   plot(plot2)
   dev.off()
 
@@ -117,13 +116,13 @@ sample_analysis <- function(samples_dir, sample_name, output_dir, run_cell_cycle
 
   # run Principal Component Analysis as linear dimension reduction
   data <- Seurat::RunPCA(data, features = SeuratObject::VariableFeatures(object = data), npcs = 50, verbose = FALSE)
-  png(file.path("Principal_Component_Analysis", paste0("/PCA-scores_", sample_name, ".png")))
+  png(file.path(sample_path, "Principal_Component_Analysis", paste0("/PCA-scores_", sample_name, ".png")))
   plot(Seurat::DimPlot(data, reduction = "pca", label = TRUE))
   dev.off()
-  png(file.path("Principal_Component_Analysis", paste0("PCA-loadings_", sample_name, ".png")))
+  png(file.path(sample_path, "Principal_Component_Analysis", paste0("PCA-loadings_", sample_name, ".png")))
   plot(Seurat::VizDimLoadings(data, dims = 1:2, reduction = "pca"))
   dev.off()
-  png(file.path("Principal_Component_Analysis", paste0("PCA-genes-heatmap_", sample_name, ".png")))
+  png(file.path(sample_path, "Principal_Component_Analysis", paste0("PCA-genes-heatmap_", sample_name, ".png")))
   plot(Seurat::DimHeatmap(data, dims = 1:2, cells = 2000, balanced = TRUE, fast = FALSE))
   dev.off()
   # custom Elbow (or Scree) plot -> Variance explained
@@ -136,7 +135,7 @@ sample_analysis <- function(samples_dir, sample_name, output_dir, run_cell_cycle
   plotdf <- plotdf[, c(2, 1)]
   colnames(plotdf) <- c('Cumulative', 'Individual')
   longdf <- reshape2::melt(plotdf)
-  png(file.path("Principal_Component_Analysis", paste0("PCA-variance_", sample_name, ".png")))
+  png(file.path(sample_path, "Principal_Component_Analysis", paste0("PCA-variance_", sample_name, ".png")))
   p <- ggplot2::ggplot(data = longdf, ggplot2::aes(x=rep(1:length(varExplained), times=2), y = .data$value*100, fill = .data$variable, color = .data$variable)) +
     ggplot2::geom_bar(stat="identity", width = .7) +
     # ggplot2::geom_point(stat="identity") +
@@ -148,7 +147,7 @@ sample_analysis <- function(samples_dir, sample_name, output_dir, run_cell_cycle
     ggplot2::scale_color_manual(values = c('darkgreen', 'darkred'))
   plot(p)
   dev.off()
-  png(file.path("Principal_Component_Analysis", paste0("PCA_elbow-plot_", sample_name, ".png")))
+  png(file.path(sample_path, "Principal_Component_Analysis", paste0("PCA_elbow-plot_", sample_name, ".png")))
   plot(Seurat::ElbowPlot(data))
   dev.off()
 
@@ -158,10 +157,10 @@ sample_analysis <- function(samples_dir, sample_name, output_dir, run_cell_cycle
   data <- Seurat::FindNeighbors(data, dims = 1:choose_N_PCs)
   # use Leiden algorithm for clustering (https://www.nature.com/articles/s41598-019-41695-z/)
   ## method = "igraph" (for large datasets when using Leiden algorithm)
-  data <- Seurat::FindClusters(data, resolution = 0.5, algorithm = 4)
+  data <- Seurat::FindClusters(data, resolution = 0.5, algorithm = 1)
   # visualize clustering with Uniform Manifold Projection Approximation (UMAP) as non-linear dimension reduction
   data <- Seurat::RunUMAP(data, reduction = "pca", dims = 1:choose_N_PCs)
-  png(paste0("UMAP_unsupervised_", sample_name, ".png"))
+  png(file.path(sample_path, paste0("UMAP_unsupervised_", sample_name, ".png")))
   plot(Seurat::DimPlot(data, reduction = "umap", label = TRUE))
   dev.off()
 
@@ -175,7 +174,7 @@ sample_analysis <- function(samples_dir, sample_name, output_dir, run_cell_cycle
   ## finds markers for every cluster compared to all remaining cells
   ### report only up-regulated genes as down-regulated genes represent all other cells/clusters here
   data.markers <- Seurat::FindAllMarkers(data, assay = "SCT", only.pos = TRUE, min.pct = 0.1)
-  utils::write.csv2(data.markers, file = file.path("DE_analysis", paste0("marker-list_", sample_name, ".csv")))
+  utils::write.csv2(data.markers, file = file.path(sample_path, "DE_analysis", paste0("marker-list_", sample_name, ".csv")))
 
   # select top gene per cluster for exploration
   topn <- data.markers %>%
@@ -199,14 +198,14 @@ sample_analysis <- function(samples_dir, sample_name, output_dir, run_cell_cycle
   interneuron_interest <- c("SST", "PVALB", "GAD1")
 
   plot_DEG <- function(data, features, name) {
-    dir.create(file.path("DE_analysis", name))
-    dir.create(file.path("DE_analysis", name, "Feature"))
+    dir.create(file.path(sample_path, "DE_analysis", name))
+    dir.create(file.path(sample_path, "DE_analysis", name, "Feature"))
 
     # plot feature expression, if available in Seurat
     for (i in seq_along(features)) {
       tryCatch({
         p <- Seurat::FeaturePlot(data, features = features[i])
-        ggplot2::ggsave(file=file.path("DE_analysis", name ,"Feature", paste0(features[i], ".png")), width = 30, height = 20, units = "cm")
+        ggplot2::ggsave(file=file.path(sample_path, "DE_analysis", name ,"Feature", paste0(features[i], ".png")), width = 30, height = 20, units = "cm")
       },
       error=function(e) {
         message(features[i], ' plot is skipped, as gene was not found with FetchData')
@@ -215,19 +214,19 @@ sample_analysis <- function(samples_dir, sample_name, output_dir, run_cell_cycle
 
     # expression plots
     p <- Seurat::FeaturePlot(data, features = features)
-    ggplot2::ggsave(file=file.path("DE_analysis", name, paste0("feature-plot_", name, "_", sample_name, ".png")), width = 30, height = 20, units = "cm")
+    ggplot2::ggsave(file=file.path(sample_path, "DE_analysis", name, paste0("feature-plot_", name, "_", sample_name, ".png")), width = 30, height = 20, units = "cm")
     p <- Seurat::VlnPlot(data, features = features)
-    ggplot2::ggsave(file = file.path("DE_analysis", name, paste0("violin-plot_ ", name, "_", sample_name, ".png")), width = 30, height = 20, units = "cm")
+    ggplot2::ggsave(file = file.path(sample_path, "DE_analysis", name, paste0("violin-plot_ ", name, "_", sample_name, ".png")), width = 30, height = 20, units = "cm")
     p <- Seurat::DoHeatmap(data, features = features) + NoLegend()
-    ggplot2::ggsave(file = file.path("DE_analysis", name, paste0("heatmap_", name, "_", sample_name, ".png")), width = 30, height = 20, units = "cm")
+    ggplot2::ggsave(file = file.path(sample_path, "DE_analysis", name, paste0("heatmap_", name, "_", sample_name, ".png")), width = 30, height = 20, units = "cm")
     p <- Seurat::RidgePlot(data, features = features, ncol = 3)
-    ggplot2::ggsave(file = file.path("DE_analysis", name, paste0("ridge-plot_", name, "_", sample_name, ".png")), width = 30, height = 20, units = "cm")
+    ggplot2::ggsave(file = file.path(sample_path, "DE_analysis", name, paste0("ridge-plot_", name, "_", sample_name, ".png")), width = 30, height = 20, units = "cm")
     # dotplot with custom labels
     cell.num <- table(SeuratObject::Idents(data))
     cluster.labels = paste(names(cell.num), paste0("(", round(cell.num/sum(cell.num), 2)*100, "%, n = ", cell.num, ")"))
     levels(SeuratObject::Idents(data)) <- cluster.labels
     p <- Seurat::DotPlot(data, features = features) + Seurat::RotatedAxis() + Seurat::WhiteBackground()
-    ggplot2::ggsave(file = file.path("DE_analysis", name, paste0("dot-plot_", name, "_", sample_name, ".png")), width = 30, height = 20, units = "cm")
+    ggplot2::ggsave(file = file.path(sample_path, "DE_analysis", name, paste0("dot-plot_", name, "_", sample_name, ".png")), width = 30, height = 20, units = "cm")
     levels(SeuratObject::Idents(data)) <- sapply(stringr::str_split(levels(SeuratObject::Idents(data)), " "), "[[", 1)
   }
   plot_DEG(data = data, features = unique(topn), name = "topn-features")
@@ -246,8 +245,8 @@ sample_analysis <- function(samples_dir, sample_name, output_dir, run_cell_cycle
     dplyr::ungroup() %>%
     dplyr::pull(.data$gene)
   p <- Seurat::DoHeatmap(data, features = heatmap_features) + Seurat::NoLegend()
-  ggplot2::ggsave(file = paste0("DEG-analysis_big-heatmap_", sample_name, ".png"), width = 30, height = 20, units = "cm")
+  ggplot2::ggsave(file = file.path(sample_path, paste0("DEG-analysis_big-heatmap_", sample_name, ".png")), width = 30, height = 20, units = "cm")
 
   # save data
-  saveRDS(data, file = paste0(sample_name, ".rds"))
+  saveRDS(data, file = file.path(sample_path, paste0(sample_name, ".rds")))
 }
