@@ -41,23 +41,19 @@
 #' EMC.SKlab.scRNAseq::pseudotime(
 #'   input_files = c(file.path("path", "to", "seurat.rds")),
 #'   input_names = c('sample_name'),
-#'   output_dir = file.path(getwd(), "results", "test", "pseudotime"),
+#'   output_dir = file.path("path", "to", results"),
 #'   genes_of_interest = c("GENES", "OF", "INTEREST")
 #' )
 pseudotime <- function(input_files, input_names, output_dir, genes_of_interest) {
-  message(paste0(output_dir, 'results/monocle-pseudotime/'), recursive = TRUE)
-  dir.create(paste0(output_dir, 'results/monocle-pseudotime/'), recursive = TRUE)
-
   # set input names on files
   names(input_files) <- input_names
 
   # initialize plots to wrap
   plots <- list()
   for (input_name in input_names) {
-    message(input_name)
-    # set and create sample specific directory
-    dir.create(paste0(output_dir, 'results/monocle-pseudotime/', input_name, "/pseudotime/"), recursive = TRUE)
-    setwd(paste0(output_dir, 'results/monocle-pseudotime/', input_name, "/"))
+    # create sample specific directory
+    output_dir <- file.path(output_dir, 'pseudotime', input_name)
+    dir.create(output_dir, recursive = TRUE)
 
     # get data
     integrated <- readRDS(input_files[[input_name]])
@@ -82,7 +78,7 @@ pseudotime <- function(input_files, input_names, output_dir, genes_of_interest) 
           cds <- monocle3::cluster_cells(monocle_obj, cluster_method = "leiden", resolution = resolution, num_iter = 10, verbose = F)
           n_clusters_seurat <- length(levels(Seurat::Idents(seurat_obj)))
           n_clusters_monocle <- length(levels(clusters(cds)))
-          print(paste0("resolution: ", resolution, " - n_seurat_clusters: ", n_clusters_seurat, " - n_monocle_clusters: ", n_clusters_monocle))
+          message(paste0("resolution: ", resolution, " - n_seurat_clusters: ", n_clusters_seurat, " - n_monocle_clusters: ", n_clusters_monocle))
         }
         SummarizedExperiment::colData(cds)$monocle3_clustering_resolution <- resolution
         return(cds)
@@ -104,7 +100,7 @@ pseudotime <- function(input_files, input_names, output_dir, genes_of_interest) 
                                 cell_size = 1,
                                 trajectory_graph_segment_size = 2)
       p1 <- p1 + ggplot2::labs(title="Seurat sample identity")
-      ggplot2::ggsave(file = paste0("pseudotime/seurat_sample_identity.png"), width = 30, height = 20, units = "cm")
+      ggplot2::ggsave(file = file.path(output_dir, 'seurat_sample_identity.png'), width = 30, height = 20, units = "cm")
       plots[[length(plots)+1]] <- p1
     }
 
@@ -119,7 +115,7 @@ pseudotime <- function(input_files, input_names, output_dir, genes_of_interest) 
                                cell_size = 1,
                                trajectory_graph_segment_size = 2)
     p2 <- p2 + ggplot2::labs(title="Monocle partition(s)")
-    ggplot2::ggsave(file = paste0("pseudotime/monocle_partitions.png"), width = 30, height = 20, units = "cm")
+    ggplot2::ggsave(file = file.path(output_dir, 'monocle_partitions.png'), width = 30, height = 20, units = "cm")
     plots[[length(plots)+1]] <- p2
 
     # learn principal graph
@@ -154,7 +150,7 @@ pseudotime <- function(input_files, input_names, output_dir, genes_of_interest) 
                                    trajectory_graph_segment_size = 2)
         p3 <- p3 + ggplot2::guides(color = ggplot2::guide_legend(title = "", ncol=2, override.aes = list(size = 4)))
         p3 <- p3 + ggplot2::labs(title="Monocle clusters + trajectory")
-        ggplot2::ggsave(file = paste0("pseudotime/monocle_clusters_trajectory.png"), width = 30, height = 20, units = "cm")
+        ggplot2::ggsave(file = file.path(output_dir, 'monocle_clusters_trajectory.png'), width = 30, height = 20, units = "cm")
         plots[[length(plots)+1]] <- p3
 
         # plot reference clusters UMAP
@@ -173,7 +169,7 @@ pseudotime <- function(input_files, input_names, output_dir, genes_of_interest) 
                                   trajectory_graph_segment_size = 2)
         p4 <- p4 + ggplot2::guides(color = ggplot2::guide_legend(title = "", ncol=2, override.aes = list(size = 4)))
         p4 <- p4 + ggplot2::labs(title="Kriegstein clusters UMAP")
-        ggplot2::ggsave(file = paste0("pseudotime/kriegstein clusters UMAP.png"), width = 30, height = 20, units = "cm")
+        ggplot2::ggsave(file = file.path(output_dir, 'kriegstein_clusters_UMAP.png'), width = 30, height = 20, units = "cm")
         plots[[length(plots)+1]] <- p4
 
         # plot reference data trajectory
@@ -192,7 +188,7 @@ pseudotime <- function(input_files, input_names, output_dir, genes_of_interest) 
                                   trajectory_graph_segment_size = 2)
         p5 <- p5 + ggplot2::guides(color = ggplot2::guide_legend(title = "", ncol=2, override.aes = list(size = 4)))
         p5 <- p5 + ggplot2::labs(title="Kriegstein clusters + trajectory")
-        ggplot2::ggsave(file = paste0("pseudotime/kriegstein clusters trajectory.png"), width = 30, height = 20, units = "cm")
+        ggplot2::ggsave(file = file.path(output_dir, 'kriegstein_clusters_trajectory.png'), width = 30, height = 20, units = "cm")
         plots[[length(plots)+1]] <- p5
       }
 
@@ -209,13 +205,13 @@ pseudotime <- function(input_files, input_names, output_dir, genes_of_interest) 
                                  cell_size = 1,
                                  trajectory_graph_segment_size = 2)
       p6 <- p6 + ggplot2::labs(title=paste0("Pseudotime + trajectory: partition ", partition))
-      ggplot2::ggsave(file = paste0("pseudotime/pseudotime_trajectory_partition_", partition, ".png"), width = 30, height = 20, units = "cm")
+      ggplot2::ggsave(file = file.path(output_dir, paste0('pseudotime_trajectory_partition_', partition, '.png')), width = 30, height = 20, units = "cm")
       plots[[length(plots)+1]] <- p6
     }
 
     # wrap and save plots
     pw <- patchwork::wrap_plots(plots, ncol = 2)
-    ggplot2::ggsave(file = paste0("pseudotime/Overview_", input_name, ".png"), width = 30, height = 20, units = "cm")
+    ggplot2::ggsave(file = file.path(output_dir, paste0('Overview_', input_name, '.png')), width = 30, height = 20, units = "cm")
 
     # reset plots list
     plots <- list()
