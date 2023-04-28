@@ -5,7 +5,7 @@ NULL
 
 #' Run GSEA and ORA.
 #'
-#' Run gene set enrichment and over representation analyses with clusterProfiler using fgsea.
+#' Run gene set enrichment and over representation analyses with clusterProfiler using fgsea package.
 #'
 #' @param output_dir output directory for plots, string
 #' @param dea_result_file Seurat differential expression analysis result object in .csv
@@ -23,8 +23,8 @@ NULL
 #' @param max_gene_set_size_ora maximum gene set size for ORA, default: NA
 #' @param plot_n_category plot top n most significant terms, default: 30
 #' @param run_msigdb To compare against Molecular Signatures Database genesets or not, default: FALSE
-#' @param gsea_plot_folder string with output folder for GSEA results
-#' @param ora_plot_folder string with output folder for ORA results
+#' @param gsea_plot_folder string with relative extra output folder for GSEA results
+#' @param ora_plot_folder string with relative extra output folder for ORA results
 #'
 #' @examplesIf FALSE
 #' cellRanger_ensembl_features <- system.file("extdata", "ensembl_genes.tsv", package = 'EMC.SKlab.scRNAseq')
@@ -76,20 +76,20 @@ run_fgsea <- function(
     min_gene_set_size_gsea = 10, max_gene_set_size_gsea = 500,
     min_gene_set_size_ora = 3, max_gene_set_size_ora = NA,
     plot_n_category = 30, run_msigdb = FALSE,
-    gsea_plot_folder = "gene_set_enrichment_analysis",
-    ora_plot_folder = "over_representation_analysis") {
+    gsea_plot_folder = "GSEA",
+    ora_plot_folder = "ORA") {
 
   ## set and create output directories
+  output_dir <- file.path(output_dir, 'FGSEA')
   dir.create(output_dir, recursive = TRUE)
-  setwd(output_dir)
 
   fgsea_dbs <- c(
     "gene_ontology", "disease_ontology", "disease_gene_network",
     "wiki_pathways", "reactome_pathways", "KEGG", "molecular_signatures")
   for (db in fgsea_dbs) {
-    dir.create(file.path(gsea_plot_folder, db), recursive = TRUE)
-    dir.create(file.path(ora_plot_folder, "upregulated", db), recursive = TRUE)
-    dir.create(file.path(ora_plot_folder, "downregulated", db), recursive = TRUE)
+    dir.create(file.path(output_dir, gsea_plot_folder, db), recursive = TRUE)
+    dir.create(file.path(output_dir, ora_plot_folder, "upregulated", db), recursive = TRUE)
+    dir.create(file.path(output_dir, ora_plot_folder, "downregulated", db), recursive = TRUE)
   }
 
   ## prep GSEA/ORA input
@@ -117,7 +117,8 @@ run_fgsea <- function(
   fgsea_examine_unmapped_genes(
     gene_names = dea_result$X,
     dea_ensembl_ids = dea_result$ensembl_id,
-    bitr_ensembl_ids = entrez_ids$ENSEMBL)
+    bitr_ensembl_ids = entrez_ids$ENSEMBL,
+    output_dir = output_dir)
 
   ## prep GSEA input
   # get log fold-change (lfc)
@@ -154,8 +155,8 @@ run_fgsea <- function(
     to = ensembl_genes_ids$ensembl_gene_name,
     warn_missing = FALSE)
   deg_names_negative <- deg_names_negative[!grepl("^ENSG", deg_names_negative)]
-  write.csv2(deg_names_positive, file = file.path(ora_plot_folder, "upregulated", "deg_subset_pos.csv"))
-  write.csv2(deg_names_negative, file = file.path(ora_plot_folder, "downregulated", "deg_subset_neg.csv"))
+  write.csv2(deg_names_positive, file = file.path(output_dir, ora_plot_folder, "upregulated", "deg_subset_pos.csv"))
+  write.csv2(deg_names_negative, file = file.path(output_dir, ora_plot_folder, "downregulated", "deg_subset_neg.csv"))
 
   # define background gene universe, either internal (all measured/measurable genes) or external (package function built-in)
   if (use_internal_universe) {
@@ -165,7 +166,8 @@ run_fgsea <- function(
     fgsea_compare_DEG_GO_universe(
       deg_universe = universe,
       go_universe = go_universe,
-      ensembl_genes_ids = ensembl_genes_ids)
+      ensembl_genes_ids = ensembl_genes_ids,
+      output_dir)
   } else {
     universe <- NULL
   }
@@ -207,6 +209,7 @@ run_fgsea <- function(
       res_name = res_name,
       plot_n_category,
       dea_ids_lfc,
+      output_dir,
       gsea_plot_folder,
       ora_plot_folder
     )
@@ -245,18 +248,18 @@ date2gene <- function(gene_names) {
 #' @param gene_names character vector with gene names
 #' @param dea_ensembl_ids character vector with gene names from the DEA
 #' @param bitr_ensembl_ids character vector with gene names from bitr
-fgsea_examine_unmapped_genes <- function(gene_names, dea_ensembl_ids, bitr_ensembl_ids) {
-  dir.create("gene_mapping_bitr")
+fgsea_examine_unmapped_genes <- function(gene_names, dea_ensembl_ids, bitr_ensembl_ids, output_dir) {
+  dir.create(file.path(output_dir, "gene_mapping_bitr"))
   d <- dea_ensembl_ids
   b <- bitr_ensembl_ids
 
   ratio_mapped <- round(length(b)/(length(d)-sum(is.na(d)))*100, digits = 2)
 
   genes_not_mapped <- gene_names[d %in% d[!d %in% b]]
-  write.csv2(x = genes_not_mapped, file = "gene_mapping_bitr/genes_not_mapped.csv")
+  write.csv2(x = genes_not_mapped, file = file.path(output_dir, 'gene_mapping_bitr', 'genes_not_mapped.csv'))
 
   rank_genes_not_mapped <- which(d %in% d[!d %in% b])
-  png("gene_mapping_bitr/distribution_rank_genes_not_mapped.png")
+  png(file.path(output_dir, 'gene_mapping_bitr', 'distribution_rank_genes_not_mapped.png'))
   hist(rank_genes_not_mapped, breaks = 200, main = paste0("bitr rank unmapped genes - %mapped: ", ratio_mapped))
   dev.off()
 }
@@ -273,7 +276,7 @@ fgsea_examine_unmapped_genes <- function(gene_names, dea_ensembl_ids, bitr_ensem
 #' @param deg_universe character vector of all DEG genes
 #' @param go_universe character vector of all GO genes
 #' @param ensembl_genes_ids translation table with ensembl IDs and gene names
-fgsea_compare_DEG_GO_universe <- function(deg_universe, go_universe, ensembl_genes_ids) {
+fgsea_compare_DEG_GO_universe <- function(deg_universe, go_universe, ensembl_genes_ids, output_dir) {
   overlapping_gene_ids <- go_universe[go_universe %in% deg_universe]
   gene_ids_not_in_go <- go_universe[!go_universe %in% deg_universe]
 
@@ -290,8 +293,8 @@ fgsea_compare_DEG_GO_universe <- function(deg_universe, go_universe, ensembl_gen
     from = ensembl_genes_ids$ensembl_gene_id,
     to = ensembl_genes_ids$ensembl_gene_name,
     warn_missing = FALSE)
-  write.csv2(overlapping_gene_names, file = "DEG_GO_universe_overlapping_genes.csv")
-  write.csv2(gene_names_not_in_go, file = "DEG_GO_universe_nonOverlapping_genes.csv")
+  write.csv2(overlapping_gene_names, file = file.path(output_dir, "DEG_GO_universe_overlapping_genes.csv"))
+  write.csv2(gene_names_not_in_go, file = file.path(output_dir, "DEG_GO_universe_nonOverlapping_genes.csv"))
 }
 
 
@@ -626,7 +629,7 @@ run_fgsea_ora <- function(
 #' @param ora_plot_folder output folder basename for ORA results
 plot_fgsea_result <- function(
     res, res_name, plot_n_category, dea_ids_lfc,
-    gsea_plot_folder, ora_plot_folder) {
+    output_dir, gsea_plot_folder, ora_plot_folder) {
   message("plotting: ", res_name)
   # get db folder name by res name
   fgsea_dbs <- c(
@@ -648,7 +651,7 @@ plot_fgsea_result <- function(
   if (class(res) == "enrichResult") {
     # set plot_folder name
     ora_posneg_folder <- tail(strsplit(res_name, "-")[[1]], n = 1)
-    plot_folder <- file.path(ora_plot_folder, ora_posneg_folder, db_folder)
+    plot_folder <- file.path(output_dir, ora_plot_folder, ora_posneg_folder, db_folder)
     if (grepl("^GO:", as.data.frame(res)$ID[1])) {
       plot_folder <- file.path(plot_folder, res@ontology)
 
@@ -677,7 +680,7 @@ plot_fgsea_result <- function(
 
   if (class(res) == "gseaResult") {
     # set plot_folder name
-    plot_folder <- file.path(gsea_plot_folder, db_folder)
+    plot_folder <- file.path(output_dir, gsea_plot_folder, db_folder)
     if (grepl("^GO:", as.data.frame(res)$ID[1])) {
       plot_folder <- file.path(plot_folder, res@setType)
     }
