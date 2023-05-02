@@ -40,10 +40,10 @@
 #' return.only.var.genes = TRUE, as non-sparse matrix is returned and used in PCA
 #' set transformed data as default data assay for downstream processing
 sample_analysis <- function(samples_dir, sample_name, output_dir, run_cell_cycle_regression = F) {
-  if (dir.exists(output_dir)) {
-    stop("Output directory already exists, please choose a non-existing directory...")
-  }
   sample_path <- file.path(output_dir, sample_name)
+  if (dir.exists(sample_path)) {
+    stop("Sample already exists in output directory, please choose another to avoid overwriting results...")
+  }
   dir.create(sample_path, recursive = T)
   dir.create(file.path(sample_path, 'Quality_Control'))
   dir.create(file.path(sample_path, 'Principal_Component_Analysis'))
