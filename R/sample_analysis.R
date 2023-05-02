@@ -238,6 +238,10 @@ sample_analysis <- function(samples_dir, sample_name, output_dir, run_cell_cycle
   plot_DEG(data = data, features = sloan_2017_interest, name = "Sloan2017")
   plot_DEG(data = data, features = interneuron_interest, name = "interneuron")
 
+
+  # TODO remove after bug fix
+  saveRDS(data, file = file.path(sample_path, "BUGFIX.rds"))
+
   # plot heatmap for topn genes per cluster
   heatmap_features <- data.markers %>%
     dplyr::group_by(.data$cluster) %>%
