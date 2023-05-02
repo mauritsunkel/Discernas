@@ -213,12 +213,14 @@ sample_analysis <- function(samples_dir, sample_name, output_dir, run_cell_cycle
     }
 
     # expression plots
+    if (any(features %in% rownames(data@assays$SCT@scale.data))) {
+      p <- Seurat::DoHeatmap(data, features = features) + Seurat::NoLegend()
+      ggplot2::ggsave(file = file.path(sample_path, "DE_analysis", name, paste0("heatmap_", name, "_", sample_name, ".png")), width = 30, height = 20, units = "cm")
+    }
     p <- Seurat::FeaturePlot(data, features = features)
     ggplot2::ggsave(file=file.path(sample_path, "DE_analysis", name, paste0("feature-plot_", name, "_", sample_name, ".png")), width = 30, height = 20, units = "cm")
     p <- Seurat::VlnPlot(data, features = features)
     ggplot2::ggsave(file = file.path(sample_path, "DE_analysis", name, paste0("violin-plot_ ", name, "_", sample_name, ".png")), width = 30, height = 20, units = "cm")
-    p <- Seurat::DoHeatmap(data, features = features) + Seurat::NoLegend()
-    ggplot2::ggsave(file = file.path(sample_path, "DE_analysis", name, paste0("heatmap_", name, "_", sample_name, ".png")), width = 30, height = 20, units = "cm")
     p <- Seurat::RidgePlot(data, features = features, ncol = 3)
     ggplot2::ggsave(file = file.path(sample_path, "DE_analysis", name, paste0("ridge-plot_", name, "_", sample_name, ".png")), width = 30, height = 20, units = "cm")
     # dotplot with custom labels
