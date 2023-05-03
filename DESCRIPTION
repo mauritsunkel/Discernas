@@ -13,7 +13,6 @@ Depends:
 	R (>= 4.2)
 Imports:
     Seurat,
-	leidenbase,
     SeuratObject (>= 4.1.3),
 	SeuratWrappers (>= 0.3.0),
 	SingleCellExperiment (>= 1.18.1),
@@ -36,8 +35,7 @@ Imports:
 	msigdb (>= 1.4.0),
 	org.Hs.eg.db (>= 3.15.0)
 Remotes:
-    mauritsunkel/Seurat,
-	cole-trapnell-lab/leidenbase
+    mauritsunkel/Seurat
 Suggests: 
     testthat (>= 3.0.0),
 	DOSE (>= 3.22.1),
