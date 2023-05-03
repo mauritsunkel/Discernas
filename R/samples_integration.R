@@ -40,7 +40,8 @@ samples_integration <- function(sample_files, sample_names, output_dir,
                                 perform_cluster_level_selection = TRUE,
                                 perform_cell_level_selection = FALSE,
                                 selection_panel = c(),
-                                selection_percent_expressed = 20) {
+                                selection_percent_expressed = 20,
+                                features_of_interest = features_of_interest) {
   # read/load all sample data
   data.list <- lapply(X = sample_files, FUN = function(x) {
     readRDS(file = x)
@@ -118,21 +119,6 @@ samples_integration <- function(sample_files, sample_names, output_dir,
     ggplot2::ggsave(file.path(output_dir, paste0("UMAPs_", sample_name, ".png")), plot = p, width = c(12,12), height = c(12,12))
     dev.off()
 
-    # define marker panels of interest
-    astrocyte_interest <- c("GFAP", "VIM", "S100B", "SOX9", "CD44", "AQP4", "ALDH1L1",
-                            "HIST1H4C", "FABP7", "SLC1A2", "SLC1A3", "GJA1", "APOE")
-    astrocyte_maturity <- c("CD44", "FABP7", "VIM", "SOX9", "TOP2A", "S100B",
-                            "GJA", "SLC1A3", "IGFBP7", "ALDH1L1", "APOE")
-    neuron_interest <- c("TUBB3", "MAP2", "CAMK2A", "GAD2", "NEUROG2", "SYN1", "RBFOX3", "GJA1", "DCX")
-    neuron_maturity <- c("NEUROG2", "DCX", "MAP2", "RBFOX3",
-                         "SYN1", "SNAP25", "SYT1", "APOE")
-    schema_psych_interest <- c("SETD1A", "CUL1", "XPO7", "TRIO", "CACNA1G", "SP4",
-                               "GRIA3", "GRIN2A", "HERC1", "RB1CC1", "HCN4", "AKAP11")
-    sloan_2017_interest <- c("AQP4", "ALDH1L1", "RANBP3L", "IGFBP7", "TOP2A", "TMSB15A", "NNAT", "HIST1H3B",
-                             "STMN2", "SYT1", "SNAP25", "SOX9", "CLU", "SLC1A3", "UBE2C", "NUSAP1", "PTPRZ1",
-                             "HOPX", "FAM107A", "AGT")
-    interneuron_interest <- c("SST", "PVALB", "GAD1")
-
     # define expression visualization function
     plot_DEG <- function(data, features, name, sample_order = NULL) {
       dir.create(file.path(output_dir, 'plots' , name, 'feature'), recursive = T)
@@ -183,13 +169,10 @@ samples_integration <- function(sample_files, sample_names, output_dir,
       p <- Seurat::DoHeatmap(data, features = features) + Seurat::NoLegend()
       ggplot2::ggsave(file = file.path(output_dir, 'plots', name, 'heatmap.png'), width = 30, height = 20, units = "cm")
     }
-    plot_DEG(data = integrated, features = astrocyte_interest, name = "astrocyte", sample_order = sample_names)
-    plot_DEG(data = integrated, features = astrocyte_maturity, name = "astrocyte_maturity", sample_order = sample_names)
-    plot_DEG(data = integrated, features = neuron_interest, name = "neuron", sample_order = sample_names)
-    plot_DEG(data = integrated, features = neuron_maturity, name = "neuron_maturity", sample_order = sample_names)
-    plot_DEG(data = integrated, features = schema_psych_interest, name = "SCHEMA", sample_order = sample_names)
-    plot_DEG(data = integrated, features = sloan_2017_interest, name = "Sloan2017", sample_order = sample_names)
-    plot_DEG(data = integrated, features = interneuron_interest, name = "interneuron", sample_order = sample_names)
+
+    for (feat_name in names(features_of_interest)) {
+      plot_DEG(data = data, features = features_of_interest[[feat_name]], name = feat_name, sample_order = sample_names)
+    }
 
     saveRDS(integrated, file = file.path(output_dir, paste0(sample_name, ".rds")))
 
