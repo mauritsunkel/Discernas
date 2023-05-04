@@ -13,9 +13,6 @@
 #'
 #' @export
 #'
-#' @importFrom gridExtra grid.arrange arrangeGrob
-#' @importFrom RcppAnnoy AnnoyAngular
-#'
 #' @examplesIf FALSE
 #' output_dir <- file.path("EMC-SKlab-scRNAseq", "results")
 #'
@@ -36,6 +33,8 @@
 #' Calling leidenalg via reticulate to run Leiden algorithm instead of Louvain
 #' algorithm with Seurat::FindClusters() used to work, now it has stopped
 #' working. Still trying to find the cause of this, issued on their Github.
+#' @importFrom gridExtra grid.arrange arrangeGrob
+#' @import RcppAnnoy
 samples_integration <- function(sample_files, sample_names, output_dir,
                                 ref_sample = NULL,
                                 perform_cluster_level_selection = TRUE,
