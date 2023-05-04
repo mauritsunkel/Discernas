@@ -133,7 +133,7 @@ samples_integration <- function(sample_files, sample_names, output_dir,
       # TODO remove
       message(sample_order)
       print(sample_order)
-      saveRDS(file.path(output_dir, 'bugfix_data$orig.ident.rds'))
+      saveRDS(data$orig.ident, file.path(output_dir, 'bugfix_data$orig.ident.rds'))
 
       # set plot sample order
       if(!is.null(sample_order)) {
