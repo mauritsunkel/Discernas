@@ -4,6 +4,7 @@
 #'
 #' @importFrom gridExtra grid.arrange arrangeGrob
 #' @require RcppAnnoy
+#' @require Seurat
 #'
 #' @param sample_files character vector with paths to .rds data files to be integrated
 #' @param sample_names character vector with sample names of .rds data files
