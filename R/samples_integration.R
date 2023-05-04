@@ -3,8 +3,7 @@
 #' Seurat sample integration by Canonical Correlation Analysis.
 #'
 #' @importFrom gridExtra grid.arrange arrangeGrob
-#' @import RcppAnnoy
-#' @import Seurat
+#' @require RcppAnnoy
 #'
 #' @param sample_files character vector with paths to .rds data files to be integrated
 #' @param sample_names character vector with sample names of .rds data files
