@@ -14,6 +14,7 @@
 #' @export
 #'
 #' @importFrom gridExtra grid.arrange arrangeGrob
+#' @importFrom RcppAnnoy AnnoyAngular
 #'
 #' @examplesIf FALSE
 #' output_dir <- file.path("EMC-SKlab-scRNAseq", "results")
