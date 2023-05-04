@@ -130,6 +130,11 @@ samples_integration <- function(sample_files, sample_names, output_dir,
       dir.create(file.path(output_dir, 'plots' , name, 'feature'), recursive = T)
       dir.create(file.path(output_dir, 'plots', name, 'feature_split'))
 
+      # TODO remove
+      message(sample_order)
+      print(sample_order)
+      saveRDS(file.path(output_dir, 'bugfix_data$orig.ident.rds'))
+
       # set plot sample order
       if(!is.null(sample_order)) {
         data$orig.ident <- factor(data$orig.ident, levels = sample_order)
