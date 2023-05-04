@@ -3,8 +3,6 @@
 #' Seurat sample integration by Canonical Correlation Analysis.
 #'
 #' @importFrom gridExtra grid.arrange arrangeGrob
-#' @require RcppAnnoy
-#' @require Seurat
 #'
 #' @param sample_files character vector with paths to .rds data files to be integrated
 #' @param sample_names character vector with sample names of .rds data files
@@ -44,6 +42,12 @@ samples_integration <- function(sample_files, sample_names, output_dir,
                                 selection_panel = c(),
                                 selection_percent_expressed = 20,
                                 features_of_interest = features_of_interest) {
+  library(Seurat) # added because of error
+  # Error: package or namespace load failed for ‘Seurat’ in .doLoadActions(where, attach):
+  #   error in load action .__A__.1 for package RcppAnnoy: loadModule(module = "AnnoyAngular", what = TRUE, env = ns, loadNow = TRUE): Unable to load module "AnnoyAngular": attempt to apply non-function
+  # Error in .requirePackage(package) :
+  #   unable to find required package ‘Seurat’
+
   # read/load all sample data
   data.list <- lapply(X = sample_files, FUN = function(x) {
     readRDS(file = x)
