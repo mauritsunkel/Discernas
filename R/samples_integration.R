@@ -103,8 +103,6 @@ samples_integration <- function(sample_files, sample_names, output_dir,
     # save Seurat object in .RDS data file
     saveRDS(integrated, file = file.path(output_dir, paste0(sample_name, ".rds")))
 
-    message(1)
-
     ### VISUALIZATION
     p1 <- Seurat::DimPlot(integrated, reduction = "umap", group.by = 'orig.ident') +
       ggplot2::labs(title = "Original sample identity") +
@@ -114,7 +112,7 @@ samples_integration <- function(sample_files, sample_names, output_dir,
       ggplot2::theme(plot.title = ggplot2::element_text(hjust = 0.5))
     # initiate plot_list for arranging ggplot objects in final visualization
     plot_list <- list(p1, p2)
-    message(2)
+
     for (sample in sample_names) {
       p <- Seurat::DimPlot(integrated, reduction = "umap", label = TRUE, repel = TRUE, cells = names(integrated$orig.ident[integrated$orig.ident == sample])) +
         ggplot2::labs(title = sample) +
@@ -131,17 +129,10 @@ samples_integration <- function(sample_files, sample_names, output_dir,
       dir.create(file.path(output_dir, 'plots' , name, 'feature'), recursive = T)
       dir.create(file.path(output_dir, 'plots', name, 'feature_split'))
 
-      # TODO remove
-      message(sample_order)
-      print(sample_order)
-      saveRDS(data$orig.ident, file.path(output_dir, 'bugfix_data_orig.ident.rds'))
-
       # set plot sample order
       if(!is.null(sample_order)) {
         data$orig.ident <- factor(data$orig.ident, levels = sample_order)
       }
-
-      message(3)
 
       # plot feature expression, if available in Seurat
       for (i in seq_along(features)) {
@@ -185,7 +176,7 @@ samples_integration <- function(sample_files, sample_names, output_dir,
     }
 
     for (feat_name in names(features_of_interest)) {
-      plot_DEG(data = data, features = features_of_interest[[feat_name]], name = feat_name, sample_order = sample_names)
+      plot_DEG(data = integrated, features = features_of_interest[[feat_name]], name = feat_name, sample_order = sample_names)
     }
 
     saveRDS(integrated, file = file.path(output_dir, paste0(sample_name, ".rds")))
