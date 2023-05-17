@@ -226,10 +226,13 @@ annotate_with_kriegstein_data <- function(
 #' @export
 #'
 #' @examplesIf FALSE
+#' kriegstein_data_dir <-  "path/to/Kriegstein_data/"
+#'
 #' visualize_kriegstein_annotated_data(
 #'   sample_names = c("A", "B"),
 #'   sample_files = c(file.path("path", "to", "sampleA.rds"), file.path("path", "to", "sampleB.rds")),
 #'   output_dir = file.path("path", "to", "results"),
+#'   kriegstein_data_dir = kriegstein_data_dir,
 #'   kriegstein_annotated_input_dir = file.path("path", "to", "kriegstein_annotated_Rdata"),
 #'   annotations = c("age", "structure", "custom.clusterv2"),
 #'   annotations_to_plot = c("custom.clusterv2"),
@@ -241,6 +244,12 @@ visualize_kriegstein_annotated_data <- function(
     annotations = c("age", "structure", "custom.clusterv2"),
     annotations_to_plot = c("custom.clusterv2"),
     ref_aggr_strategy = "max") {
+
+  library(Seurat) # added because of error
+  # Error: package or namespace load failed for ‘Seurat’ in .doLoadActions(where, attach):
+  #   error in load action .__A__.1 for package RcppAnnoy: loadModule(module = "AnnoyAngular", what = TRUE, env = ns, loadNow = TRUE): Unable to load module "AnnoyAngular": attempt to apply non-function
+  # Error in .requirePackage(package) :
+  #   unable to find required package ‘Seurat’
 
   dir.create(output_dir, recursive = TRUE)
 
