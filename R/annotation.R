@@ -341,7 +341,7 @@ visualize_kriegstein_annotated_data <- function(
     levels(data.list[[sample]]$kriegstein.seurat.custom.clusters.mean) <- paste0(combined.results[[paste(sample, "custom.clusterv2")]]$mean.labels, ".", levels(data.list[[sample]]$kriegstein.seurat.custom.clusters.mean))
 
     # overwrite rds file with new misc annotation
-    saveRDS(data.list[[sample]], file = file.path(output_dir, sample_files[[sample]]))
+    saveRDS(data.list[[sample]], file = sample_files[[sample]])
   }
 
   # custom visualizations per sample-reference comparison for each annotation
