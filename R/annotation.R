@@ -216,7 +216,7 @@ annotate_with_kriegstein_data <- function(
 #' @param sample_files Character vector with sample .rds files.
 #' @param output_dir String with output directory for results.
 #' @param kriegstein_data_dir String with Kriegstein folder path, containing (custom.)meta.tsv and exprMatrix.tsv.gz.
-#' @param kriegstein_Rdata_input_dir String with Kriegstein input directory containing annotated data chunks.
+#' @param kriegstein_annotated_input_dir String with Kriegstein input directory containing annotated data chunks.
 #' @param annotations default: c("age", "structure", "custom.clusterv2"), annotations from meta features used for heatmap metadata.
 #' @param annotations_to_plot default: c("custom.clusterv2"), annotations from meta features used for individual heatmaps.
 #' @param ref_aggr_strategy default: "max", choose one of "max" or "mean".
@@ -230,14 +230,14 @@ annotate_with_kriegstein_data <- function(
 #'   sample_names = c("A", "B"),
 #'   sample_files = c(file.path("path", "to", "sampleA.rds"), file.path("path", "to", "sampleB.rds")),
 #'   output_dir = file.path("path", "to", "results"),
-#'   kriegstein_Rdata_input_dir = file.path("path", "to", kriegstein_annotated_Rdata"),
+#'   kriegstein_annotated_input_dir = file.path("path", "to", "kriegstein_annotated_Rdata"),
 #'   annotations = c("age", "structure", "custom.clusterv2"),
 #'   annotations_to_plot = c("custom.clusterv2"),
 #'   ref_aggr_strategy = "max"
 #' )
 visualize_kriegstein_annotated_data <- function(
     sample_names, sample_files, output_dir,
-    kriegstein_data_dir, kriegstein_Rdata_input_dir,
+    kriegstein_data_dir, kriegstein_annotated_input_dir,
     annotations = c("age", "structure", "custom.clusterv2"),
     annotations_to_plot = c("custom.clusterv2"),
     ref_aggr_strategy = "max") {
@@ -260,8 +260,8 @@ visualize_kriegstein_annotated_data <- function(
   # iterate sample_names and annotations: grab all corresponding files, then load and get corresponding data
   for (sample in sample_names) {
     for (anno in annotations) {
-      # list all files in kriegstein_Rdata_input_dir based on sample and annotation
-      files <- list.files(path = kriegstein_Rdata_input_dir, pattern = paste0(stringr::str_replace(sample, " \\+ ", " .* "), ".*", anno), full.names=T)
+      # list all files in kriegstein_annotated_input_dir based on sample and annotation
+      files <- list.files(path = kriegstein_annotated_input_dir, pattern = paste0(stringr::str_replace(sample, " \\+ ", " .* "), ".*", anno), full.names=T)
 
       # if '+' not in sample (name), then
       if (!grepl("+", sample, fixed = T)) {
