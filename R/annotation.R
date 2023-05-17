@@ -200,7 +200,7 @@ annotate_with_kriegstein_data <- function(
           clusters = SummarizedExperiment::colData(sample_data)[, "seurat_clusters"],
           de.method = 'wilcox',
           aggr.ref = FALSE)
-        save(result, file = file.path(kriegstein_data_dir, paste0(filename_base, ".", annotation, ".RData")))
+        save(result, file = paste0(filename_base, ".", annotation, ".RData"))
         # remove result before next iteration to save memory
         rm(result)
       }
