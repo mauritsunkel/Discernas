@@ -251,9 +251,14 @@ visualize_kriegstein_annotated_data <- function(
   # Error in .requirePackage(package) :
   #   unable to find required package ‘Seurat’
 
-  dir.create(output_dir, recursive = TRUE)
-
   names(sample_files) <- sample_names
+  for (sample in sample_names) {
+    if (grepl('postSelect', sample_files[[sample]])) {
+      dir.create(file.path(output_dir, 'integrated', sample, 'postSelect', 'annotation_kriegstein', recursive = TRUE))
+    } else {
+      dir.create(file.path(output_dir, 'integrated', sample, 'annotation_kriegstein', recursive = TRUE))
+    }
+  }
 
   # get Kriegstein custom feature metadata with custom clusterv2 celltype mapping
   meta <- getMeta(kriegstein_data_dir)
@@ -309,7 +314,12 @@ visualize_kriegstein_annotated_data <- function(
     combined$max.labels <- colnames(combined$max.scores)[max.col(combined$max.scores)]
 
     # write scores for figure reference
-    utils::write.csv2(combined$max.scores, file = file.path(output_dir, paste0("Kriegstein_Pearson.correlation.max_", sample, "_", anno ,".csv")))
+    if (grepl('postSelect', sample_files[[sample]])) {
+      filename <- file.path(output_dir, 'integrated', sample, 'postSelect', 'annotation_kriegstein', paste0("Pearson.correlation.max_", sample, "_", anno ,".csv"))
+    } else {
+      filename <- file.path(output_dir, 'integrated', sample, 'annotation_kriegstein', paste0("Pearson.correlation.max_", sample, "_", anno ,".csv"))
+    }
+    utils::write.csv2(combined$max.scores, file = filename)
 
     ## get mean score and label of all references
     # for each unique column name select all columns
@@ -319,7 +329,12 @@ visualize_kriegstein_annotated_data <- function(
     combined$mean.labels <- colnames(combined$mean.scores)[max.col(combined$mean.scores)]
 
     # write scores for figure reference
-    write.csv2(combined$mean.scores, file = file.path(output_dir, paste0("Kriegstein_Pearson.correlation.mean_", sample, "_", anno ,".csv")))
+    if (grepl('postSelect', sample_files[[sample]])) {
+      filename <- file.path(output_dir, 'integrated', sample, 'postSelect', 'annotation_kriegstein', paste0("Pearson.correlation.mean_", sample, "_", anno ,".csv"))
+    } else {
+      filename <- file.path(output_dir, 'integrated', sample, 'annotation_kriegstein', paste0("Pearson.correlation.mean_", sample, "_", anno ,".csv"))
+    }
+    utils::write.csv2(combined$mean.scores, file = filename)
 
     return(combined)
   })
@@ -374,7 +389,13 @@ visualize_kriegstein_annotated_data <- function(
     annotation_col <- annotation_col[, c("fetal.brain.celltype", "fetal.brain.structure", "fetal.brain.age")]
 
     for (anno in annotations_to_plot) {
-      filename <- file.path(output_dir, paste0("Kriegstein_heatmap_", sample, "_", anno ,".png"))
+
+
+      if (grepl('postSelect', sample_files[[sample]])) {
+        filename <- file.path(output_dir, 'integrated', sample, 'postSelect', 'annotation_kriegstein', paste0("Heatmap_", sample, "_", anno ,".csv"))
+      } else {
+        filename <- file.path(output_dir, 'integrated', sample, 'annotation_kriegstein', paste0("Heatmap_", sample, "_", anno ,".csv"))
+      }
       message("plotting: ", filename)
 
       # set rownames for identification of rows during plotting
