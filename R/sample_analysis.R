@@ -184,7 +184,6 @@ sample_analysis <- function(
     dplyr::top_n(n = 1, wt = .data$avg_log2FC) %>%
     dplyr::ungroup() %>%
     dplyr::pull(.data$gene)
-  test[["naam2"]] <- c(3,4)
   features_of_interest[["topn-features"]] <- topn
 
   plot_DEG <- function(data, features, name) {
