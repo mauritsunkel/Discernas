@@ -251,14 +251,21 @@ visualize_kriegstein_annotated_data <- function(
   # Error in .requirePackage(package) :
   #   unable to find required package ‘Seurat’
 
+  # TODO remove prints
   names(sample_files) <- sample_names
   for (sample in sample_names) {
+    print(sample)
     if (grepl('postSelect', sample_files[[sample]])) {
-      dir.create(file.path(output_dir, 'integrated', sample, 'postSelect', 'annotation_kriegstein', recursive = TRUE))
+      print(2)
+
+      print(file.path(output_dir, 'integrated', sample, 'postSelect', 'annotation_kriegstein'))
+      dir.create(file.path(output_dir, 'integrated', sample, 'postSelect', 'annotation_kriegstein'), recursive = T)
     } else {
-      dir.create(file.path(output_dir, 'integrated', sample, 'annotation_kriegstein', recursive = TRUE))
+      print(3)
+      dir.create(file.path(output_dir, 'integrated', sample, 'postSelect', 'annoptation_kriegstein'), recursive = T)
     }
   }
+  print(4)
 
   # get Kriegstein custom feature metadata with custom clusterv2 celltype mapping
   meta <- getMeta(kriegstein_data_dir)
