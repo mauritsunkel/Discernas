@@ -256,7 +256,7 @@ visualize_kriegstein_annotated_data <- function(
     if (grepl('postSelect', sample_files[[sample]])) {
       dir.create(file.path(output_dir, 'integrated', sample, 'postSelect', 'annotation_kriegstein'), recursive = T)
     } else {
-      dir.create(file.path(output_dir, 'integrated', sample, 'postSelect', 'annoptation_kriegstein'), recursive = T)
+      dir.create(file.path(output_dir, 'integrated', sample, 'annotation_kriegstein'), recursive = T)
     }
   }
 
@@ -319,8 +319,10 @@ visualize_kriegstein_annotated_data <- function(
     } else {
       filename <- file.path(output_dir, 'integrated', sample, 'annotation_kriegstein', paste0("Pearson.correlation.max_", sample, "_", anno ,".csv"))
     }
+    # TODO remove prints
+    print(filename)
     utils::write.csv2(combined$max.scores, file = filename)
-
+    print(2)
     ## get mean score and label of all references
     # for each unique column name select all columns
     combined$mean.scores <- sapply(unique(names(df)), function(names) {
@@ -330,11 +332,14 @@ visualize_kriegstein_annotated_data <- function(
 
     # write scores for figure reference
     if (grepl('postSelect', sample_files[[sample]])) {
-      filename <- file.path(output_dir, 'integrated', sample, 'postSelect', 'annotation_kriegstein', paste0("Pearson.correlation.mean_", sample, "_", anno ,".csv"))
+      filename <- file.path(output_dir, 'integrated', sample, 'postSelect', 'annotation_kriegstein', paste0("Pearson.correlation.mean_", sample, "_", anno, ".csv"))
     } else {
-      filename <- file.path(output_dir, 'integrated', sample, 'annotation_kriegstein', paste0("Pearson.correlation.mean_", sample, "_", anno ,".csv"))
+      filename <- file.path(output_dir, 'integrated', sample, 'annotation_kriegstein', paste0("Pearson.correlation.mean_", sample, "_", anno, ".csv"))
     }
+    # TODO remove prints
+    print(filename)
     utils::write.csv2(combined$mean.scores, file = filename)
+    print(2)
 
     return(combined)
   })
@@ -392,9 +397,9 @@ visualize_kriegstein_annotated_data <- function(
 
 
       if (grepl('postSelect', sample_files[[sample]])) {
-        filename <- file.path(output_dir, 'integrated', sample, 'postSelect', 'annotation_kriegstein', paste0("Heatmap_", sample, "_", anno ,".png"))
+        filename <- file.path(output_dir, 'integrated', sample, 'postSelect', 'annotation_kriegstein', paste0("Heatmap_", sample, "_", anno, ".png"))
       } else {
-        filename <- file.path(output_dir, 'integrated', sample, 'annotation_kriegstein', paste0("Heatmap_", sample, "_", anno ,".png"))
+        filename <- file.path(output_dir, 'integrated', sample, 'annotation_kriegstein', paste0("Heatmap_", sample, "_", anno, ".png"))
       }
       message("plotting: ", filename)
 
