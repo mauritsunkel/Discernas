@@ -251,21 +251,14 @@ visualize_kriegstein_annotated_data <- function(
   # Error in .requirePackage(package) :
   #   unable to find required package ‘Seurat’
 
-  # TODO remove prints
   names(sample_files) <- sample_names
   for (sample in sample_names) {
-    print(sample)
     if (grepl('postSelect', sample_files[[sample]])) {
-      print(2)
-
-      print(file.path(output_dir, 'integrated', sample, 'postSelect', 'annotation_kriegstein'))
       dir.create(file.path(output_dir, 'integrated', sample, 'postSelect', 'annotation_kriegstein'), recursive = T)
     } else {
-      print(3)
       dir.create(file.path(output_dir, 'integrated', sample, 'postSelect', 'annoptation_kriegstein'), recursive = T)
     }
   }
-  print(4)
 
   # get Kriegstein custom feature metadata with custom clusterv2 celltype mapping
   meta <- getMeta(kriegstein_data_dir)
@@ -399,9 +392,9 @@ visualize_kriegstein_annotated_data <- function(
 
 
       if (grepl('postSelect', sample_files[[sample]])) {
-        filename <- file.path(output_dir, 'integrated', sample, 'postSelect', 'annotation_kriegstein', paste0("Heatmap_", sample, "_", anno ,".csv"))
+        filename <- file.path(output_dir, 'integrated', sample, 'postSelect', 'annotation_kriegstein', paste0("Heatmap_", sample, "_", anno ,".png"))
       } else {
-        filename <- file.path(output_dir, 'integrated', sample, 'annotation_kriegstein', paste0("Heatmap_", sample, "_", anno ,".csv"))
+        filename <- file.path(output_dir, 'integrated', sample, 'annotation_kriegstein', paste0("Heatmap_", sample, "_", anno ,".png"))
       }
       message("plotting: ", filename)
 
