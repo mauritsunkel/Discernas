@@ -195,5 +195,5 @@ differential_expression_analysis <- function(sample_name, rds_file, output_dir) 
   }
 
   # save data for possible adjustments
-  saveRDS(integrated, file = file.path(output_dir, rds_file))
+  saveRDS(integrated, file = rds_file)
 }
