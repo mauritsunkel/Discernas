@@ -48,9 +48,10 @@ pseudotime <- function(input_files, input_names, output_dir, genes_of_interest) 
   # set input names on files
   names(input_files) <- input_names
 
-  # initialize plots to wrap
-  plots <- list()
   for (input_name in input_names) {
+    # initialize and reset plots to wrap per sample
+    plots <- list()
+
     # create sample specific directory
     output_dir <- file.path(output_dir, 'pseudotime', input_name)
     dir.create(output_dir, recursive = TRUE)
@@ -212,9 +213,6 @@ pseudotime <- function(input_files, input_names, output_dir, genes_of_interest) 
     # wrap and save plots
     pw <- patchwork::wrap_plots(plots, ncol = 2)
     ggplot2::ggsave(file = file.path(output_dir, paste0('Overview_', input_name, '.png')), width = 30, height = 20, units = "cm")
-
-    # reset plots list
-    plots <- list()
   }
 }
 
