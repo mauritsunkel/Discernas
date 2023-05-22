@@ -32,9 +32,9 @@ differential_expression_analysis <- function(sample_name, rds_file, output_dir) 
 
   integrated <- readRDS(rds_file)
   if (length(table(integrated$orig.ident)) != 1) {
-    dir.create(paste0(output_dir, 'sample_markers'))
-    dir.create(paste0(output_dir, 'conserved_markers'))
-    dir.create(paste0(output_dir, 'condition_markers'))
+    dir.create(file.path(output_dir, 'sample_markers'))
+    dir.create(file.path(output_dir, 'conserved_markers'))
+    dir.create(file.path(output_dir, 'condition_markers'))
   }
 
   ## perform sample level comparison for integration
