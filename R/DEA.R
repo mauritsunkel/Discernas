@@ -20,6 +20,12 @@
 #'   output_dir = file.path("EMC-SKlab-scRNAseq", "results", 'integrated', 'sample_name')
 #' )
 differential_expression_analysis <- function(sample_name, rds_file, output_dir) {
+  library(Seurat) # added because of error
+  # Error: package or namespace load failed for ‘Seurat’ in .doLoadActions(where, attach):
+  #   error in load action .__A__.1 for package RcppAnnoy: loadModule(module = "AnnoyAngular", what = TRUE, env = ns, loadNow = TRUE): Unable to load module "AnnoyAngular": attempt to apply non-function
+  # Error in .requirePackage(package) :
+  #   unable to find required package ‘Seurat’
+
   # create output directories
   output_dir <- file.path(output_dir, 'DEA')
   dir.create(file.path(output_dir, 'markers'), recursive = T)
