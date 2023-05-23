@@ -90,7 +90,7 @@ pseudotime <- function(input_files, input_names, output_dir, genes_of_interest) 
     cds <- match_clustering(integrated, cds, match_seurat_clustering = FALSE)
 
     # if integrated sample, plot sample identity
-    if (grepl("\\+", input_name)) {
+    if (grepl("\\-", input_name)) {
       p1 <- plot_cells.adjusted(cds,
                                 color_cells_by = "orig.ident",
                                 group_cells_by = "orig.ident",
