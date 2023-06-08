@@ -1,8 +1,6 @@
 #' import org.Hs.eg.db org.Hs.eg.db # Organism.HomoSapiens.EntrezGene.DataBase
 NULL
 
-
-
 #' Run GSEA and ORA.
 #'
 #' Run gene set enrichment and over representation analyses with clusterProfiler using fgsea package.
@@ -28,7 +26,6 @@ NULL
 #'
 #' @examplesIf FALSE
 #' cellRanger_ensembl_features <- system.file("extdata", "ensembl_genes.tsv", package = 'EMC.SKlab.scRNAseq')
-#' # cellRanger_ensembl_features <- system.file("inst", "data", "ensembl_genes.tsv", package = 'EMC.SKlab.scRNAseq')
 #'
 #' run_fgsea(
 #'   output_dir = file.path("EMC-SKlab-scRNAseq", "results"),
@@ -78,6 +75,8 @@ run_fgsea <- function(
     plot_n_category = 30, run_msigdb = FALSE,
     gsea_plot_folder = "GSEA",
     ora_plot_folder = "ORA") {
+
+  library(org.Hs.eg.db)
 
   ## set and create output directories
   output_dir <- file.path(output_dir, 'FGSEA')
@@ -342,23 +341,24 @@ run_fgsea_gsea <- function(
     gsea_results[[paste0("GSEA-", names(gene_ontology_types)[i])]] <- res_gse_go
   }
 
+  # TODO resolve error: no genes can be mapped
   # Kyoto Encyclopedia of Genes and Genomes (KEGG)
-  res_gse_kegg <- clusterProfiler::gseKEGG(
-    geneList = dea_ids_lfc,
-    organism = "hsa",
-    keyType = "kegg", # "kegg", 'ncbi-geneid', 'ncib-proteinid' and 'uniprot'
-    exponent = 1, # default: 1
-    minGSSize = min_gene_set_size_gsea, # default: 10
-    maxGSSize = max_gene_set_size_gsea, # default: 500
-    pvalueCutoff = pval_cutoff, # default: 0.05
-    pAdjustMethod = p_adjust_method,
-    eps = 0, # default: 1e-10
-    verbose = TRUE,
-    use_internal_data = FALSE, # default: FALSE
-    seed = TRUE,
-    by = "fgsea"
-  )
-  gsea_results[["GSEA-KEGG"]] <- res_gse_kegg
+  # res_gse_kegg <- clusterProfiler::gseKEGG(
+  #   geneList = dea_ids_lfc,
+  #   organism = "hsa",
+  #   keyType = "kegg", # "kegg", 'ncbi-geneid', 'ncib-proteinid' and 'uniprot'
+  #   exponent = 1, # default: 1
+  #   minGSSize = min_gene_set_size_gsea, # default: 10
+  #   maxGSSize = max_gene_set_size_gsea, # default: 500
+  #   pvalueCutoff = pval_cutoff, # default: 0.05
+  #   pAdjustMethod = p_adjust_method,
+  #   eps = 0, # default: 1e-10
+  #   verbose = TRUE,
+  #   use_internal_data = FALSE, # default: FALSE
+  #   seed = TRUE,
+  #   by = "fgsea"
+  # )
+  # gsea_results[["GSEA-KEGG"]] <- res_gse_kegg
 
   # WikiPathways
   res_gse_wp <- clusterProfiler::gseWP(
@@ -519,19 +519,20 @@ run_fgsea_ora <- function(
     ora_results[[paste0("ORA-", names(gene_ontology_types)[i], "-GOuniverse-", posneg)]] = res_enrich_go
   }
 
+  # TODO resolve error: non genes can be mapped
   # Kyoto Encyclopedia of Genes and Genomes (KEGG)
-  res_enrich_kegg <- clusterProfiler::enrichKEGG(
-    gene = deg_names,
-    organism = "hsa",
-    pvalueCutoff = pval_cutoff,
-    pAdjustMethod = p_adjust_method,
-    universe = universe,
-    minGSSize = min_gene_set_size_ora, # default: 10
-    maxGSSize = max_gene_set_size_ora, # default: 500
-    qvalueCutoff = qval_cutoff, # default: 0.2
-    use_internal_data = FALSE
-  )
-  ora_results[[paste0("ORA-KEGG-", posneg)]] = res_enrich_kegg
+  # res_enrich_kegg <- clusterProfiler::enrichKEGG(
+  #   gene = deg_names,
+  #   organism = "hsa",
+  #   pvalueCutoff = pval_cutoff,
+  #   pAdjustMethod = p_adjust_method,
+  #   universe = universe,
+  #   minGSSize = min_gene_set_size_ora, # default: 10
+  #   maxGSSize = max_gene_set_size_ora, # default: 500
+  #   qvalueCutoff = qval_cutoff, # default: 0.2
+  #   use_internal_data = FALSE
+  # )
+  # ora_results[[paste0("ORA-KEGG-", posneg)]] = res_enrich_kegg
 
   # WikiPathways
   res_enrich_wp <- clusterProfiler::enrichWP(
