@@ -100,9 +100,6 @@ samples_integration <- function(sample_files, sample_names, output_dir,
     integrated <- Seurat::PrepSCTFindMarkers(integrated, assay = "SCT")
     SeuratObject::DefaultAssay(integrated) <- "SCT"
 
-    # save Seurat object in .RDS data file
-    saveRDS(integrated, file = file.path(output_dir, paste0(sample_name, ".rds")))
-
     ### VISUALIZATION
     p1 <- Seurat::DimPlot(integrated, reduction = "umap", group.by = 'orig.ident') +
       ggplot2::labs(title = "Original sample identity") +
@@ -179,6 +176,7 @@ samples_integration <- function(sample_files, sample_names, output_dir,
       plot_DEG(data = integrated, features = features_of_interest[[feat_name]], name = feat_name, sample_order = sample_names)
     }
 
+    # save Seurat object in .RDS data file
     saveRDS(integrated, file = file.path(output_dir, paste0(sample_name, ".rds")))
 
     # if selection not yet and to be ran, return object
