@@ -295,7 +295,10 @@ visualize_kriegstein_annotated_data <- function(
   }
 
   # CombineCommonResults of corresponding data for each single sample-reference comparison
-  combined.results <- lapply(X = results.list, FUN = function(x) {
+  combined.results <- lapply(seq_along(results.list), function(i, x, n) {
+    # get name from names list
+    name <- n[[i]]
+
     # get scores from combined results
     combined <- SingleR::combineCommonResults(x)
     df <- as.data.frame(combined$scores)
@@ -310,19 +313,17 @@ visualize_kriegstein_annotated_data <- function(
         # select the highest score (value)
         df[names(df) == names][row, col]
       })
-    })
+    }, x = results.list, n = names(results.list))
     combined$max.labels <- colnames(combined$max.scores)[max.col(combined$max.scores)]
 
     # write scores for figure reference
     if (grepl('postSelect', sample_files[[sample]])) {
-      filename <- file.path(output_dir, 'integrated', sample, 'postSelect', 'annotation_kriegstein', paste0("Pearson.correlation.max_", sample, "_", anno ,".csv"))
+      filename <- file.path(output_dir, 'integrated', sample, 'postSelect', 'annotation_kriegstein', paste0("Pearson.correlation.max_", name ,".csv"))
     } else {
-      filename <- file.path(output_dir, 'integrated', sample, 'annotation_kriegstein', paste0("Pearson.correlation.max_", sample, "_", anno ,".csv"))
+      filename <- file.path(output_dir, 'integrated', sample, 'annotation_kriegstein', paste0("Pearson.correlation.max_", name ,".csv"))
     }
-    # TODO remove prints
-    print(filename)
     utils::write.csv2(combined$max.scores, file = filename)
-    print(2)
+
     ## get mean score and label of all references
     # for each unique column name select all columns
     combined$mean.scores <- sapply(unique(names(df)), function(names) {
@@ -332,14 +333,11 @@ visualize_kriegstein_annotated_data <- function(
 
     # write scores for figure reference
     if (grepl('postSelect', sample_files[[sample]])) {
-      filename <- file.path(output_dir, 'integrated', sample, 'postSelect', 'annotation_kriegstein', paste0("Pearson.correlation.mean_", sample, "_", anno, ".csv"))
+      filename <- file.path(output_dir, 'integrated', sample, 'postSelect', 'annotation_kriegstein', paste0("Pearson.correlation.mean_", name, ".csv"))
     } else {
-      filename <- file.path(output_dir, 'integrated', sample, 'annotation_kriegstein', paste0("Pearson.correlation.mean_", sample, "_", anno, ".csv"))
+      filename <- file.path(output_dir, 'integrated', sample, 'annotation_kriegstein', paste0("Pearson.correlation.mean_", name, ".csv"))
     }
-    # TODO remove prints
-    print(filename)
     utils::write.csv2(combined$mean.scores, file = filename)
-    print(2)
 
     return(combined)
   })
