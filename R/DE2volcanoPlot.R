@@ -27,9 +27,18 @@ DE2volcanoPlot <- function(DE_csv, output_filename, log2FC_threshold, top_n = 5)
   names(diffcolors) <- c("DOWN", "UP", "NO")
 
   # define up and down thresholds for which top n genes to label in plot
-  up <- data$avg_log2FC[data$p_val_adj == 0 & data$avg_log2FC > log2FC_threshold][top_n]
+  up <- data$avg_log2FC[data$p_val_adj == 0 & data$avg_log2FC > log2FC_threshold]
+  if (length(up) < top_n) {
+    up <- up[length(up)]
+  } else {
+    up[top_n]
+  }
   down <- data$avg_log2FC[data$p_val_adj == 0 & data$avg_log2FC < log2FC_threshold]
-  down <- down[length(down)-top_n+1]
+  if(length(down) < top_n) {
+    down <- down[1]
+  } else {
+    down <- down[length(down)-top_n+1]
+  }
   # label up and down regulated genes
   data$delabel <- NA
   data$delabel[data$diffexpressed != "NO" & data$p_val_adj != 0] <- data$X[data$diffexpressed != "NO" & data$p_val_adj != 0]
