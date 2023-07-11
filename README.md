@@ -4,7 +4,7 @@ Single-cell RNA sequencing workflow used at the Erasmus Medical Center, departme
 Preprint (BioRxiv) paper: https://www.biorxiv.org/content/10.1101/2022.08.25.505166v1
 Project data shared with UCSC Cell Browser: https://cells.ucsc.edu/?ds=ipsc-astrocyte-neuron
 
-Using custom fork of Seurat v4.3.0 at github.com/mauritsunkel/Seurat.
+Using custom fork of Seurat v4.3.0 at github.com/kushnerlab/Seurat.
 
 # Installation
 devtools::install_github("kushnerlab/scRNAseqR")
