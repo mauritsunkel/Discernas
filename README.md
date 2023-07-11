@@ -7,7 +7,7 @@ Project data shared with UCSC Cell Browser: https://cells.ucsc.edu/?ds=ipsc-astr
 Using custom fork of Seurat v4.3.0 at github.com/mauritsunkel/Seurat.
 
 # Installation
-devtools::install_github("mauritsunkel/EMC-SKlab-scRNAseq")
+devtools::install_github("kushnerlab/scRNAseqR")
 
 Kriegstein reference data used for annotation: https://cells.ucsc.edu/?ds=dev-brain-regions+wholebrain
 - 'Info & Download' -> 'Data Download' tab -> 'exprMatrix.tsv.gz' & 'meta.tsv'
