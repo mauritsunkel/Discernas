@@ -1,4 +1,5 @@
 #' import org.Hs.eg.db org.Hs.eg.db # Organism.HomoSapiens.EntrezGene.DataBase
+"_PACKAGE"
 NULL
 
 #' Run GSEA and ORA.
@@ -104,7 +105,7 @@ run_fgsea <- function(
   # load CellRanger features - Ensembl genes and IDs
   ensembl_genes_ids <- read.delim(file = cellRanger_ensembl_features,
                                   col.names = c("ensembl_gene_id", "ensembl_gene_name", "gene_type"))
-  # map enseml gene names to ensembl gene IDs from DEA result gene names
+  # map ensembl gene names to ensembl gene IDs from DEA result gene names
   dea_result$ensembl_id <- plyr::mapvalues(
     x = dea_result$X,
     from = ensembl_genes_ids$ensembl_gene_name,
@@ -135,7 +136,7 @@ run_fgsea <- function(
 
   ## prep ORA input
   # subset DEA result to DEG result based on log fold-change threshold
-  deg_ids <- dea_ids_lfc[dea_ids_lfc >= 1 | dea_ids_lfc <= -1]
+  deg_ids <- dea_ids_lfc[dea_ids_lfc >= lfc_threshold | dea_ids_lfc <= -lfc_threshold]
   deg_ids_positive <- names(dea_ids_lfc[dea_ids_lfc >= lfc_threshold])
   deg_ids_negative <- names(dea_ids_lfc[dea_ids_lfc <= -lfc_threshold])
   # save ORA deg subset names
