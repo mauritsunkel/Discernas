@@ -38,12 +38,11 @@
 #' 0 = no change over trajectory, higher = relatively more change over trajectory
 #'
 #' @examplesIf FALSE
-#' EMC.SKlab.scRNAseq::pseudotime(
-#'   input_files = c(file.path("path", "to", "seurat.rds")),
-#'   input_names = c('sample_name'),
-#'   output_dir = file.path("path", "to", results"),
-#'   genes_of_interest = c("GENES", "OF", "INTEREST")
-#' )
+#' # EMC.SKlab.scRNAseq::pseudotime(
+#' #  input_files = c(file.path("path", "to", "seurat.rds")),
+#' #  input_names = c("sample_name"),
+#' #  output_dir = file.path("path", "to", results"),
+#' #  genes_of_interest = c("GENES", "OF", "INTEREST"))
 pseudotime <- function(input_files, input_names, output_dir, genes_of_interest) {
   # set input names on files
   names(input_files) <- input_names
@@ -57,10 +56,10 @@ pseudotime <- function(input_files, input_names, output_dir, genes_of_interest) 
     dir.create(output_dir, recursive = TRUE)
 
     # get data
-    integrated <- readRDS(input_files[[input_name]])
+    data <- readRDS(input_files[[input_name]])
 
     # convert from Seurat to cell data set object
-    cds <- SeuratWrappers::as.cell_data_set(integrated, assay = "SCT")
+    cds <- SeuratWrappers::as.cell_data_set(data, assay = "SCT")
 
     # Monocle 3 requires to run its own clustering
     match_clustering <- function(seurat_obj, monocle_obj, match_seurat_clustering) {
@@ -87,7 +86,7 @@ pseudotime <- function(input_files, input_names, output_dir, genes_of_interest) 
         return(cds)
       }
     }
-    cds <- match_clustering(integrated, cds, match_seurat_clustering = FALSE)
+    cds <- match_clustering(data, cds, match_seurat_clustering = FALSE)
 
     # if integrated sample, plot sample identity
     if (grepl("\\-", input_name)) {
@@ -125,9 +124,13 @@ pseudotime <- function(input_files, input_names, output_dir, genes_of_interest) 
     for (partition in seq_along(table(monocle3::partitions(cds)))) {
       message("partition: ", partition)
       # create df of cell names and gene(s) of interest values
-      df <- SeuratObject::FetchData(integrated, genes_of_interest)
+      df <- SeuratObject::FetchData(data, genes_of_interest)
       # get cell name with highest summed expression for gene(s) of interest
-      cell_name <- names(which.max(apply(df[monocle3::partitions(cds) == partition, ], 1, sum)))
+      if (length(genes_of_interest) > 1) {
+        cell_name <- names(which.max(apply(df[monocle3::partitions(cds) == partition, ], 1, sum)))
+      } else if (length(genes_of_interest) == 1) {
+        cell_name <- rownames(df)[which.max(df[monocle3::partitions(cds) == partition, ])]
+      }
       # calculate pseudo-time from the cell with highest expression
       cds <- monocle3::order_cells(cds, root_cells = cell_name)
       # get cell name at furthest point to invert pseudo-time calculations
@@ -158,8 +161,8 @@ pseudotime <- function(input_files, input_names, output_dir, genes_of_interest) 
         p4 <- plot_cells.adjusted(cds,
                                   color_cells_by = "kriegstein.seurat.custom.clusters.mean",
                                   group_cells_by = "kriegstein.seurat.custom.clusters.mean",
-                                  show_trajectory_graph = FALSE,
-                                  label_cell_groups = FALSE, # if false, show legend
+                                  show_trajectory_graph = F,
+                                  label_cell_groups = T, # if false, show legend
                                   label_groups_by_cluster = TRUE,
                                   label_roots = TRUE,
                                   label_leaves = FALSE,
