@@ -6,6 +6,9 @@
 #' @param sample_name Current sample name, used to match in samples_dir.
 #' @param output_dir Package home directory, used to create output directory for results.
 #' @param run_cell_cycle_regression True/False to regress out genes to do with cell cycle, based on Tirosh et al, 2015.
+#' @param run_doublet_removal default: TRUE, to run scDblFinder and call and remove doublets, plotted in QC
+#' @param doublet_removal_rate default: NULL, automatic doublet removal detection rate, NULL for 10x data okay, otherwise base on sequencing protocol and amount of cells
+#' @param run_ambient_RNA_removal default: TRUE, to run SoupX with automatic estimation of contamination rate and correcting counts matrix
 #'
 #' @importFrom dplyr .data
 #'
@@ -24,7 +27,7 @@
 #'   individual_analysis(samples_dir, sample_name, output_dir)
 #' }
 #'
-#' @note During development notes
+#' @note Paper writing & during development notes
 #'
 #' Cell cycle regression based on: https://satijalab.org/seurat/articles/cell_cycle_vignette.html
 #'
@@ -39,32 +42,122 @@
 #' vars.to.regress = regress out variability originating from reads mapped to mitochondrial DNA
 #' return.only.var.genes = TRUE, as non-sparse matrix is returned and used in PCA
 #' set transformed data as default data assay for downstream processing
+#'
+#' Choosing cell-free droplet detection algorithm, EmptyNN based on comparison with CellRanger embedded EmptyDrops: https://www.cell.com/patterns/fulltext/S2666-3899(21)00154-9
+#' Run before removing doublets/multiplets, possibly even before base QC of reming min.cells and min.features
+#' Error, issued at: https://github.com/lkmklsmn/empty_nn/issues/4
+#'
+#' Choosing doublet detection algorithm, DoubletFinder based on benchmerk: https://www.ncbi.nlm.nih.gov/pmc/articles/PMC7897250/
+#' scDblFinder based on comparison with doubletFinder: https://f1000research.com/articles/10-979/v2
+#' run scDblFinder between fundamental QC and SCTransform: https://github.com/plger/scDblFinder/issues/86
+#' # for 10x data, you can leave scDblFinder(dbr) parameter NULL: https://bioconductor.org/packages/release/bioc/vignettes/scDblFinder/inst/doc/scDblFinder.html
+#'
+#' Choosing ambient RNA removal algorithm, some are heavily dependent on pre-clustering etc, so SoupX: https://academic.oup.com/gigascience/article/9/12/giaa151/6049831?login=true
+#' Good to run doublet removal first and supply only singlets to SoupX.
+#' 2-5-10-20% contamination rate low-usual-moderate-high
+#'
+#' order of doublet, empty, ambient RNA removal unclear: https://github.com/plger/scDblFinder/issues/93
+#' order by 10x Genomics: https://www.10xgenomics.com/analysis-guides/common-considerations-for-quality-control-filters-for-single-cell-rna-seq-data
+#'
+#' discussion point: if we were to run ambient RNA removal first, then doublet/multiplet detection could be easier and more accurate
 sample_analysis <- function(
     samples_dir, sample_name, output_dir, features_of_interest,
-    run_cell_cycle_regression = F) {
+    run_cell_cycle_regression = F,
+    run_doublet_removal = T, doublet_removal_rate = NULL,
+    run_ambient_RNA_removal = T) {
   sample_path <- file.path(output_dir, sample_name)
   if (dir.exists(sample_path)) {
     stop("Sample already exists in output directory, please choose another to avoid overwriting results...")
   }
   dir.create(sample_path, recursive = T)
-  dir.create(file.path(sample_path, 'Quality_Control'))
+  dir.create(file.path(sample_path, 'quality_control'))
   dir.create(file.path(sample_path, 'Principal_Component_Analysis'))
   dir.create(file.path(sample_path, 'DE_analysis'))
 
   # read 10X data (preprocessed by 10X Cellranger pipeline) and convert to Seurat object
-  data.data <- Seurat::Read10X(data.dir = file.path(samples_dir, sample_name, "filtered_feature_bc_matrix"), strip.suffix = TRUE)
+  data.data <- Seurat::Read10X(data.dir = file.path(samples_dir, sample_name, "filtered_feature_bc_matrix"))
   data <- Seurat::CreateSeuratObject(counts = data.data, project = sample_name, min.cells = 3, min.features = 700)
+  rm(data.data)
+
+  if (run_doublet_removal) {
+    plot_and_remove_doublets <- function(data, sample_path, sample_name, doublet_removal_rate) {
+      temp_QC_data <- data
+
+      set.seed(1)
+      sce <- scDblFinder::scDblFinder(temp_QC_data@assays$RNA$counts, clusters = TRUE, dbr = doublet_removal_rate)
+      temp_QC_data$scDblFinder.score <- sce$scDblFinder.score
+      temp_QC_data$scDblFinder.class <- sce$scDblFinder.class
+
+      temp_QC_data <- Seurat::NormalizeData(temp_QC_data)
+      temp_QC_data <- Seurat::ScaleData(temp_QC_data)
+      temp_QC_data <- Seurat::FindVariableFeatures(temp_QC_data)
+      temp_QC_data <- Seurat::RunPCA(temp_QC_data, features = SeuratObject::VariableFeatures(object = temp_QC_data), npcs = 50, verbose = FALSE)
+      temp_QC_data <- Seurat::RunUMAP(temp_QC_data, reduction = "pca", dims = 1:30)
+
+      png(file.path(sample_path, "quality_control", paste0("scDblFinder_scores_", sample_name, ".png")))
+      Seurat::FeaturePlot(temp_QC_data, features = "scDblFinder.score") +
+        ggplot2::labs(subtitle = paste0(
+          "singlets: ",
+          table(temp_QC_data$scDblFinder.class)[1],
+          " - doublets: ",
+          paste0(table(temp_QC_data$scDblFinder.class)[2],
+                 " - doublet rate: ",
+                 round(table(temp_QC_data$scDblFinder.class)[2]/table(temp_QC_data$scDblFinder.class)[1], digits = 3))))
+      dev.off()
+
+      # keep only singlets for downstream processing
+      data <- data[, temp_QC_data$scDblFinder.class == "singlet"]
+      return(data)
+    }
+    data <- plot_and_remove_doublets(data, sample_path, sample_name, doublet_removal_rate)
+  }
+
+  if (run_ambient_RNA_removal) {
+    clean_ambient_RNA <- function(data, samples_dir, sample_name) {
+      table_of_droplets = Seurat::Read10X(data.dir = file.path(samples_dir, sample_name, "raw_feature_bc_matrix"))
+      overlapping_genes <- rownames(data@assays$RNA$counts)[which(rownames(data@assays$RNA$counts) %in% rownames(table_of_droplets))]
+      table_of_droplets <- table_of_droplets[overlapping_genes,]
+      data@assays$RNA$counts <- data@assays$RNA$counts[overlapping_genes,]
+
+      sc = SoupX::SoupChannel(tod = table_of_droplets, toc = data@assays$RNA$counts) # estimateSoup()
+
+      tenx_graphclust <- read.csv(file.path(samples_dir, sample_name, "analysis", "clustering", "gene_expression_graphclust", "clusters.csv"))
+      tenx_clusters <- tenx_graphclust$Cluster[tenx_graphclust$Barcode %in% colnames(data@assays$RNA$counts)]
+      sc = SoupX::setClusters(sc, tenx_clusters)
+
+      sc = SoupX::autoEstCont(sc) # if fails, contamination rate default: 10% -> 0.1, or determine gene (sets) to estimate fraction
+
+      out = SoupX::adjustCounts(sc, roundToInt = F) # TODO roundToInt = T if downstream process needs int counts, instead of float
+      colnames(out) <- colnames(data@assays$RNA$counts)
+
+      data@assays$RNA$tenx_counts <- data@assays$RNA$counts
+      data@assays$RNA$counts <- out
+      data@misc[["SoupX_contamination_percentage"]] <- sc$fit$rhoEst * 100
+      return(data)
+    }
+    data <- clean_ambient_RNA(data, samples_dir, sample_name)
+  }
+
+  # TODO when SoupX: roundToInt=TRUE for when running adjustCounts, try if work without
+  ## run doublet detection first, then list non-doubleted cells to SoupChannel: https://github.com/constantAmateur/SoupX/issues/24
+  ### to soupChannel: https://github.com/constantAmateur/SoupX/issues/25#issuecomment-576190732
+  # Seurat::load10x -> clusters
+  # autoEstCont
+  # setClusters
+  # 2-5-10-20% contamination rate low-usual-moderate-high
+  # estimateNonExpressingCells
+
 
   ## QUALITY CONTROL
   # calculate percentage of all counts belonging to mitochondrial (^MT-) DNA, for filtering
   data <- Seurat::PercentageFeatureSet(data, pattern = "^MT-", col.name = "percent.mt")
   # Visualize quality control metrics
-  png(file.path(sample_path, "Quality_Control", paste0("QC_nFeat_nCount_percent.mt_", sample_name, ".png")))
+  png(file.path(sample_path, "quality_control", paste0("QC_nFeat_nCount_percent.mt_", sample_name, ".png")))
   plot(Seurat::VlnPlot(data, features = c("nFeature_RNA", "nCount_RNA", "percent.mt"), ncol = 3, cols = c("#85d0f5", "#2b2f70")))
   dev.off()
   plot1 <- Seurat::FeatureScatter(data, feature1 = "percent.mt", feature2 = "nCount_RNA", cols = c("#85d0f5", "#2b2f70"))
   plot2 <- Seurat::FeatureScatter(data, feature1 = "nFeature_RNA", feature2 = "nCount_RNA", cols = c("#85d0f5", "#2b2f70"))
-  png(file.path(sample_path, "Quality_Control", paste0("QC_feature-scatter_", sample_name, ".png")))
+  png(file.path(sample_path, "quality_control", paste0("QC_feature-scatter_", sample_name, ".png")))
   plot(plot1 + plot2)
   dev.off()
 
@@ -74,7 +167,7 @@ sample_analysis <- function(
   # plot variable features, label top 10
   plot1 <- Seurat::VariableFeaturePlot(data, cols = c("#85d0f5", "#2b2f70"), selection.method = 'SCT')
   plot2 <- Seurat::LabelPoints(plot = plot1, points = head(SeuratObject::VariableFeatures(data), 10), repel = TRUE)
-  png(file.path(sample_path, "Quality_Control", paste0("Feature-selection_variable-genes_", sample_name, ".png")))
+  png(file.path(sample_path, "quality_control", paste0("Feature-selection_variable-genes_", sample_name, ".png")))
   plot(plot2)
   dev.off()
 
@@ -154,7 +247,7 @@ sample_analysis <- function(
   dev.off()
 
   # cell clustering: Levine2015 - Xu & Su2015
-  choose_N_PCs <- 20 # default: 20 (out of default 50 generated with Seurat::RunPCA)
+  choose_N_PCs <- 30 # default: 30 (20 before SCTransform default, out of default 50 generated with Seurat::RunPCA)
   # construct nearest neighbor graph for clustering
   data <- Seurat::FindNeighbors(data, dims = 1:choose_N_PCs)
   # use Leiden algorithm for clustering (https://www.nature.com/articles/s41598-019-41695-z/)

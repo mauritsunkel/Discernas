@@ -1,8 +1,5 @@
 library(SoupX)
 
-# run doublet detection first, then list non-doubleted cells to SoupChannel: https://github.com/constantAmateur/SoupX/issues/24
-## 2-5-10-20% contamination rate low-usual-moderate-high
-
 sample_name <- "NS"
 samples_dir <- "C:/Users/mauri/Desktop/scRNAseqR/data/samples/sakshi NGN2 microglia"
 

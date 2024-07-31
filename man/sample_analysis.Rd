@@ -11,7 +11,8 @@ sample_analysis(
   features_of_interest,
   run_cell_cycle_regression = F,
   run_doublet_removal = T,
-  doublet_removal_rate = NULL
+  doublet_removal_rate = NULL,
+  run_ambient_RNA_removal = T
 )
 }
 \arguments{
@@ -26,6 +27,8 @@ sample_analysis(
 \item{run_doublet_removal}{default: TRUE, to run scDblFinder and call and remove doublets, plotted in QC}
 
 \item{doublet_removal_rate}{default: NULL, automatic doublet removal detection rate, NULL for 10x data okay, otherwise base on sequencing protocol and amount of cells}
+
+\item{run_ambient_RNA_removal}{default: TRUE, to run SoupX with automatic estimation of contamination rate and correcting counts matrix}
 }
 \description{
 Performs Seurat SCTv2 analysis workflow on individual samples.
@@ -57,6 +60,8 @@ run scDblFinder between fundamental QC and SCTransform: https://github.com/plger
 # for 10x data, you can leave scDblFinder(dbr) parameter NULL: https://bioconductor.org/packages/release/bioc/vignettes/scDblFinder/inst/doc/scDblFinder.html
 
 Choosing ambient RNA removal algorithm, some are heavily dependent on pre-clustering etc, so SoupX: https://academic.oup.com/gigascience/article/9/12/giaa151/6049831?login=true
+Good to run doublet removal first and supply only singlets to SoupX.
+2-5-10-20% contamination rate low-usual-moderate-high
 
 order of doublet, empty, ambient RNA removal unclear: https://github.com/plger/scDblFinder/issues/93
 order by 10x Genomics: https://www.10xgenomics.com/analysis-guides/common-considerations-for-quality-control-filters-for-single-cell-rna-seq-data
