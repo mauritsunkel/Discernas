@@ -136,12 +136,12 @@ sample_analysis <- function(
       tenx_clusters <- tenx_graphclust$Cluster[tenx_graphclust$Barcode %in% colnames(data@assays$RNA$counts)]
       sc = SoupX::setClusters(sc, tenx_clusters)
 
-      sc = SoupX::autoEstCont(sc) # if fails, contamination rate default: 10% -> 0.1, or determine gene (sets) to estimate fraction
+      sc = SoupX::autoEstCont(sc, doPlot = FALSE) # if fails, contamination rate default: 10% -> 0.1, or determine gene (sets) to estimate fraction
 
       out = SoupX::adjustCounts(sc, roundToInt = F) # TODO roundToInt = T if downstream process needs int counts, instead of float
       colnames(out) <- colnames(data@assays$RNA$counts)
 
-      data@assays$RNA$tenx_counts <- data@assays$RNA$counts
+      data@misc[["tenx_counts"]] <- data@assays$RNA$counts
       data@assays$RNA$counts <- out
       data@misc[["SoupX_contamination_percentage"]] <- sc$fit$rhoEst * 100
       return(data)
