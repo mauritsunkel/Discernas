@@ -138,7 +138,7 @@ sample_analysis <- function(
 
       sc = SoupX::autoEstCont(sc, doPlot = FALSE) # if fails, contamination rate default: 10% -> 0.1, or determine gene (sets) to estimate fraction
 
-      out = SoupX::adjustCounts(sc, roundToInt = F) # TODO roundToInt = T if downstream process needs int counts, instead of float
+      out = SoupX::adjustCounts(sc, roundToInt = FALSE) # TODO set roundToInt = T is downstream processing algortihms need integers
       colnames(out) <- colnames(data@assays$RNA$counts)
 
       data@misc[["tenx_counts"]] <- data@assays$RNA$counts
@@ -149,19 +149,11 @@ sample_analysis <- function(
     data <- clean_ambient_RNA(data, samples_dir, sample_name)
   }
 
-  # TODO when SoupX: roundToInt=TRUE for when running adjustCounts, try if work without
-  ## run doublet detection first, then list non-doubleted cells to SoupChannel: https://github.com/constantAmateur/SoupX/issues/24
-  ### to soupChannel: https://github.com/constantAmateur/SoupX/issues/25#issuecomment-576190732
-  # Seurat::load10x -> clusters
-  # autoEstCont
-  # setClusters
-  # 2-5-10-20% contamination rate low-usual-moderate-high
-  # estimateNonExpressingCells
-
 
   ## QUALITY CONTROL
   # calculate percentage of all counts belonging to mitochondrial (^MT-) DNA, for filtering
-  data <- Seurat::PercentageFeatureSet(data, pattern = "^MT-", col.name = "percent.mt")
+  mt_features <- rownames(data@assays$RNA$counts)[grep("^MT-", rownames(data@assays$RNA$counts))]
+  data <- Seurat::PercentageFeatureSet(data, features = mt_features, col.name = "percent.mt")
   # Visualize quality control metrics
   png(file.path(sample_path, "quality_control", paste0("QC_nFeat_nCount_percent.mt_", sample_name, ".png")))
   plot(Seurat::VlnPlot(data, features = c("nFeature_RNA", "nCount_RNA", "percent.mt"), ncol = 3, cols = c("#85d0f5", "#2b2f70")))
@@ -172,11 +164,11 @@ sample_analysis <- function(
   plot(plot1 + plot2)
   dev.off()
 
-  # SCTransform-v2 replaces NormalizeData + FindVariableFeatures + ScaleData & sets default assay to "SCT"
+  # SCTransform-v2 (default in Seurat V5) replaces NormalizeData + FindVariableFeatures + ScaleData & sets default assay to "SCT"
   data <- Seurat::SCTransform(data, vst.flavor = "v2", vars.to.regress = "percent.mt", return.only.var.genes = TRUE)
 
   # plot variable features, label top 10
-  plot1 <- Seurat::VariableFeaturePlot(data, cols = c("#85d0f5", "#2b2f70"), selection.method = 'SCT')
+  plot1 <- Seurat::VariableFeaturePlot(data, cols = c("#85d0f5", "#2b2f70"), selection.method = 'sctransform')
   plot2 <- Seurat::LabelPoints(plot = plot1, points = head(SeuratObject::VariableFeatures(data), 10), repel = TRUE)
   png(file.path(sample_path, "quality_control", paste0("Feature-selection_variable-genes_", sample_name, ".png")))
   plot(plot2)
