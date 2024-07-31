@@ -6,11 +6,14 @@
 #' @param n_chunks default: 25, integer, amount of data chunks, less memory needed per chunk
 #' @param kriegstein_data_dir String with Kriegstein folder path, containing meta.tsv and exprMatrix.tsv.gz.
 #' @param kriegstein_chunks_output_dir String with Kriegstein output directory for data chunks.
+#' @param kriegstein_custom_annotation .csv with Kriegstein clusterv2 reference data
 #'
 #' @export
 #'
 #' @examplesIf FALSE
-#' kriegstein_custom_annotation <- system.file("extdata", "kriegstein_custom_annotation.txt", package = 'EMC.SKlab.scRNAseq')
+#' kriegstein_custom_annotation <- system.file(
+#' "extdata",
+#' "kriegstein_custom_annotation.txt", package = 'EMC.SKlab.scRNAseq')
 #' chunk_kriegstein_data(
 #'   n_chunks = 25,
 #'   kriegstein_data_dir = "path/to/Kriegstein_data/",
@@ -424,6 +427,8 @@ visualize_kriegstein_annotated_data <- function(
 
 #' Get Kriegstein genes
 #'
+#' @param kriegstein_data_dir folder path to Kriegstein data
+#'
 #' @return Kriegstein genes character vector.
 getGenes <- function(kriegstein_data_dir) {
   genesFile <- file.path(kriegstein_data_dir, "kriegstein_genes.csv")
@@ -436,6 +441,8 @@ getGenes <- function(kriegstein_data_dir) {
 }
 
 #' Get Kriegstein meta with custom annotation mapping
+#'
+#' @param kriegstein_data_dir folder path to Kriegstein data
 #'
 #' @return Kriegstein meta features with custom clusterv2 mapping.
 getMeta <- function(kriegstein_data_dir) {

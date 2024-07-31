@@ -225,8 +225,6 @@ pseudotime <- function(input_files, input_names, output_dir, genes_of_interest) 
 #' Fix monocle3::plot_cells for coloring plot by groups in colData.
 #'
 #' @description see monocle3::plot_cells for documentation
-#'
-#' @export
 plot_cells.adjusted <- function(cds, x = 1, y = 2,
                                 reduction_method = c("UMAP", "tSNE", "PCA", "LSI", "Aligned"),
                                 color_cells_by = "cluster", group_cells_by = c("cluster", "partition"),

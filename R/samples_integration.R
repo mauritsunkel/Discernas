@@ -7,6 +7,7 @@
 #' @param sample_files character vector with paths to .rds data files to be integrated
 #' @param sample_names character vector with sample names of .rds data files
 #' @param output_dir Package home directory, used to create output directory for results.
+#' @param features_of_interest list of gene marker panels used for plotting
 #' @param ref_sample default: NULL. Otherwise, a sample within sample_names to be used as CCA reference anchor dataset.
 #' @param perform_cluster_level_selection perform marker selection based on selection panel and selection percent expressed for each cluster, then reintegrate (note: advise to use either cell or cluster based selection, not both)
 #' @param perform_cell_level_selection perform marker selection based on selection panel and selection percent expressed for each cell, then reintegrate (note: advise to use either cell or cluster based selection, not both)

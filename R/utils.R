@@ -34,7 +34,7 @@ beep <- function(n = 5) {
 #' qualitative palettes, 'colorblind' for Okabe-Ito palette. For gradients,
 #' see ?hcl.colors and notes. Default: mixed
 #' @param n integer. How many colors to return.
-#' @usage my.color.palettes()
+#' @usage generate_color_palette(type = 'mixed', n = NULL)
 #' @note Can also look at creating gradients customy with
 #' colorRampPalette(RColorBrewer::brewer.pal(n = 7, name = "PRGn"))(100)
 #' @return Color palette as character vector.
