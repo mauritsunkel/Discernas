@@ -4,7 +4,7 @@
 \alias{generate_color_palette}
 \title{My custom color palettes.}
 \usage{
-my.color.palettes()
+generate_color_palette(type = 'mixed', n = NULL)
 }
 \arguments{
 \item{type}{character. Can be 'mixed' for mixed colors based on R

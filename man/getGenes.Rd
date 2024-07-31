@@ -6,6 +6,9 @@
 \usage{
 getGenes(kriegstein_data_dir)
 }
+\arguments{
+\item{kriegstein_data_dir}{folder path to Kriegstein data}
+}
 \value{
 Kriegstein genes character vector.
 }

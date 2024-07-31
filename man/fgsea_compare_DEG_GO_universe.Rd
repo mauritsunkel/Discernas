@@ -17,6 +17,8 @@ fgsea_compare_DEG_GO_universe(
 \item{go_universe}{character vector of all GO genes}
 
 \item{ensembl_genes_ids}{translation table with ensembl IDs and gene names}
+
+\item{output_dir}{output directory for plots, string}
 }
 \description{
 For GSEA and ORA a 'universe' of genes is used. This universe can be all

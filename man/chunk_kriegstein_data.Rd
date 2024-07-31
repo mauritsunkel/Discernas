@@ -17,6 +17,8 @@ chunk_kriegstein_data(
 \item{kriegstein_data_dir}{String with Kriegstein folder path, containing meta.tsv and exprMatrix.tsv.gz.}
 
 \item{kriegstein_chunks_output_dir}{String with Kriegstein output directory for data chunks.}
+
+\item{kriegstein_custom_annotation}{.csv with Kriegstein clusterv2 reference data}
 }
 \description{
 Need to chunk data before training and annoation as to reduce memory needed
@@ -33,7 +35,9 @@ No need to run if chunked data already exists!
 }
 \examples{
 \dontshow{if (FALSE) (if (getRversion() >= "3.4") withAutoprint else force)(\{ # examplesIf}
-kriegstein_custom_annotation <- system.file("extdata", "kriegstein_custom_annotation.txt", package = 'EMC.SKlab.scRNAseq')
+kriegstein_custom_annotation <- system.file(
+"extdata",
+"kriegstein_custom_annotation.txt", package = 'EMC.SKlab.scRNAseq')
 chunk_kriegstein_data(
   n_chunks = 25,
   kriegstein_data_dir = "path/to/Kriegstein_data/",

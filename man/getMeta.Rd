@@ -6,6 +6,9 @@
 \usage{
 getMeta(kriegstein_data_dir)
 }
+\arguments{
+\item{kriegstein_data_dir}{folder path to Kriegstein data}
+}
 \value{
 Kriegstein meta features with custom clusterv2 mapping.
 }

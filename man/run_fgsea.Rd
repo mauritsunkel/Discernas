@@ -97,7 +97,9 @@ https://jtd.amegroups.com/article/view/13609/11598
 }
 \examples{
 \dontshow{if (FALSE) (if (getRversion() >= "3.4") withAutoprint else force)(\{ # examplesIf}
-cellRanger_ensembl_features <- system.file("extdata", "ensembl_genes.tsv", package = 'EMC.SKlab.scRNAseq')
+cellRanger_ensembl_features <- system.file(
+"extdata",
+"ensembl_genes.tsv", package = 'EMC.SKlab.scRNAseq')
 
 run_fgsea(
   output_dir = file.path("EMC-SKlab-scRNAseq", "results"),

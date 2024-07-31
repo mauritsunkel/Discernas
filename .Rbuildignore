@@ -3,8 +3,7 @@
 ^.git/
 ^LICENSE\.md$
 ^README\.Rmd$
-^notes/
 ^data/
 ^results/
 ^inst/temp/
-^inst/R_manual/
+^papers_notes/

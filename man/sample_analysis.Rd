@@ -22,6 +22,8 @@ sample_analysis(
 
 \item{output_dir}{Package home directory, used to create output directory for results.}
 
+\item{features_of_interest}{list of gene marker panels used for plotting}
+
 \item{run_cell_cycle_regression}{True/False to regress out genes to do with cell cycle, based on Tirosh et al, 2015.}
 
 \item{run_doublet_removal}{default: TRUE, to run scDblFinder and call and remove doublets, plotted in QC}

@@ -32,6 +32,8 @@ samples_integration(
 \item{selection_panel}{default: c(). Gene/feature marker panel for selection and reintegration}
 
 \item{selection_percent_expressed}{default: 20. Minimal percentage threshold for each marker in panel to be expressed in order to take whole cluster/cell into account}
+
+\item{features_of_interest}{list of gene marker panels used for plotting}
 }
 \description{
 Seurat sample integration by Canonical Correlation Analysis.

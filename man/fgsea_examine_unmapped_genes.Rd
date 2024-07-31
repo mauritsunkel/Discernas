@@ -17,6 +17,8 @@ fgsea_examine_unmapped_genes(
 \item{dea_ensembl_ids}{character vector with gene names from the DEA}
 
 \item{bitr_ensembl_ids}{character vector with gene names from bitr}
+
+\item{output_dir}{output directory for plots, string}
 }
 \description{
 What using bitr package for mapping genes from e.g. Ensembl to ENTREZ ids

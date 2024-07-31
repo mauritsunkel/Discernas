@@ -23,6 +23,8 @@ plot_fgsea_result(
 
 \item{dea_ids_lfc}{named character vector with DEA IDs and logfoldchanges}
 
+\item{output_dir}{folder path for output}
+
 \item{gsea_plot_folder}{output folder basename for GSEA results}
 
 \item{ora_plot_folder}{output folder basename for ORA results}
