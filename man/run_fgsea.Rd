@@ -21,8 +21,8 @@ run_fgsea(
   max_gene_set_size_ora = NA,
   plot_n_category = 30,
   run_msigdb = FALSE,
-  gsea_plot_folder = "gene_set_enrichment_analysis",
-  ora_plot_folder = "over_representation_analysis"
+  gsea_plot_folder = "GSEA",
+  ora_plot_folder = "ORA"
 )
 }
 \arguments{
@@ -58,15 +58,15 @@ run_fgsea(
 
 \item{run_msigdb}{To compare against Molecular Signatures Database genesets or not, default: FALSE}
 
-\item{gsea_plot_folder}{string with output folder for GSEA results}
+\item{gsea_plot_folder}{string with relative extra output folder for GSEA results}
 
-\item{ora_plot_folder}{string with output folder for ORA results}
+\item{ora_plot_folder}{string with relative extra output folder for ORA results}
 }
 \description{
 Setting a seed can be useful as FGSEA functions have stochasticity.
 }
 \details{
-Run gene set enrichment and over representation analyses with clusterProfiler using fgsea.
+Run gene set enrichment and over representation analyses with clusterProfiler using fgsea package.
 }
 \note{
 Notes during development
@@ -98,7 +98,6 @@ https://jtd.amegroups.com/article/view/13609/11598
 \examples{
 \dontshow{if (FALSE) (if (getRversion() >= "3.4") withAutoprint else force)(\{ # examplesIf}
 cellRanger_ensembl_features <- system.file("extdata", "ensembl_genes.tsv", package = 'EMC.SKlab.scRNAseq')
-# cellRanger_ensembl_features <- system.file("inst", "data", "ensembl_genes.tsv", package = 'EMC.SKlab.scRNAseq')
 
 run_fgsea(
   output_dir = file.path("EMC-SKlab-scRNAseq", "results"),

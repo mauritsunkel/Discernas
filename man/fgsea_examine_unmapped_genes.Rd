@@ -4,7 +4,12 @@
 \alias{fgsea_examine_unmapped_genes}
 \title{Examine which and how many genes remain unmapped}
 \usage{
-fgsea_examine_unmapped_genes(gene_names, dea_ensembl_ids, bitr_ensembl_ids)
+fgsea_examine_unmapped_genes(
+  gene_names,
+  dea_ensembl_ids,
+  bitr_ensembl_ids,
+  output_dir
+)
 }
 \arguments{
 \item{gene_names}{character vector with gene names}

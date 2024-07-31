@@ -4,7 +4,7 @@
 \alias{getGenes}
 \title{Get Kriegstein genes}
 \usage{
-getGenes()
+getGenes(kriegstein_data_dir)
 }
 \value{
 Kriegstein genes character vector.

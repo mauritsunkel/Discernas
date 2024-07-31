@@ -27,7 +27,7 @@ Perform differential expression analysis on processed and annotated Seurat objec
 differential_expression_analysis(
   sample_name = "T1",
   rds_file = file.path("EMC-SKlab-scRNAseq", "results", "T1.rds"),
-  file.path("EMC-SKlab-scRNAseq", "results")
+  output_dir = file.path("EMC-SKlab-scRNAseq", "results", 'integrated', 'sample_name')
 )
 \dontshow{\}) # examplesIf}
 }

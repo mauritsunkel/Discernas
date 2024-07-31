@@ -1,9 +1,8 @@
 results/
 notes/
+Papers & Notes/
 data/
 .git/
 .Rhistory
-.Rproj.user
-inst/temp/
-inst/R_manual/
+.Rproj.user/
 inst/temp/

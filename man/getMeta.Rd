@@ -4,7 +4,7 @@
 \alias{getMeta}
 \title{Get Kriegstein meta with custom annotation mapping}
 \usage{
-getMeta()
+getMeta(kriegstein_data_dir)
 }
 \value{
 Kriegstein meta features with custom clusterv2 mapping.

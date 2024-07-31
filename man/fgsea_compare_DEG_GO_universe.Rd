@@ -4,7 +4,12 @@
 \alias{fgsea_compare_DEG_GO_universe}
 \title{Compare all genes from the DEG analysis against the Gene Ontology database}
 \usage{
-fgsea_compare_DEG_GO_universe(deg_universe, go_universe, ensembl_genes_ids)
+fgsea_compare_DEG_GO_universe(
+  deg_universe,
+  go_universe,
+  ensembl_genes_ids,
+  output_dir
+)
 }
 \arguments{
 \item{deg_universe}{character vector of all DEG genes}

@@ -9,7 +9,7 @@ visualize_kriegstein_annotated_data(
   sample_files,
   output_dir,
   kriegstein_data_dir,
-  kriegstein_Rdata_input_dir,
+  kriegstein_annotated_input_dir,
   annotations = c("age", "structure", "custom.clusterv2"),
   annotations_to_plot = c("custom.clusterv2"),
   ref_aggr_strategy = "max"
@@ -24,7 +24,7 @@ visualize_kriegstein_annotated_data(
 
 \item{kriegstein_data_dir}{String with Kriegstein folder path, containing (custom.)meta.tsv and exprMatrix.tsv.gz.}
 
-\item{kriegstein_Rdata_input_dir}{String with Kriegstein input directory containing annotated data chunks.}
+\item{kriegstein_annotated_input_dir}{String with Kriegstein input directory containing annotated data chunks.}
 
 \item{annotations}{default: c("age", "structure", "custom.clusterv2"), annotations from meta features used for heatmap metadata.}
 
@@ -36,4 +36,20 @@ visualize_kriegstein_annotated_data(
 }
 \description{
 Perform visualizations of annotated data from Kriegstein reference data.
+}
+\examples{
+\dontshow{if (FALSE) (if (getRversion() >= "3.4") withAutoprint else force)(\{ # examplesIf}
+kriegstein_data_dir <-  "path/to/Kriegstein_data/"
+
+visualize_kriegstein_annotated_data(
+  sample_names = c("A", "B"),
+  sample_files = c(file.path("path", "to", "sampleA.rds"), file.path("path", "to", "sampleB.rds")),
+  output_dir = file.path("path", "to", "results"),
+  kriegstein_data_dir = kriegstein_data_dir,
+  kriegstein_annotated_input_dir = file.path("path", "to", "kriegstein_annotated_Rdata"),
+  annotations = c("age", "structure", "custom.clusterv2"),
+  annotations_to_plot = c("custom.clusterv2"),
+  ref_aggr_strategy = "max"
+)
+\dontshow{\}) # examplesIf}
 }

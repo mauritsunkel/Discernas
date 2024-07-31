@@ -1,14 +1,14 @@
 Package: EMC.SKlab.scRNAseq
 Type: Package
 Title: Single-cell RNA sequencing package for SKlab
-Version: 1.1.1
+Version: 1.2.0
 Author: Maurits Unkel
 Maintainer: Maurits Unkel <m.unkel@erasmusmc.nl>
 Description: Pipeline for automating scRNAseq analysis in the lab.
 License: GPL (>= 3)
 Encoding: UTF-8
 LazyData: true
-RoxygenNote: 7.2.1
+RoxygenNote: 7.3.2
 Depends:
 	R (>= 4.2)
 Imports:

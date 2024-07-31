@@ -8,7 +8,10 @@ sample_analysis(
   samples_dir,
   sample_name,
   output_dir,
-  run_cell_cycle_regression = F
+  features_of_interest,
+  run_cell_cycle_regression = F,
+  run_doublet_removal = T,
+  doublet_removal_rate = NULL
 )
 }
 \arguments{
@@ -19,12 +22,16 @@ sample_analysis(
 \item{output_dir}{Package home directory, used to create output directory for results.}
 
 \item{run_cell_cycle_regression}{True/False to regress out genes to do with cell cycle, based on Tirosh et al, 2015.}
+
+\item{run_doublet_removal}{default: TRUE, to run scDblFinder and call and remove doublets, plotted in QC}
+
+\item{doublet_removal_rate}{default: NULL, automatic doublet removal detection rate, NULL for 10x data okay, otherwise base on sequencing protocol and amount of cells}
 }
 \description{
 Performs Seurat SCTv2 analysis workflow on individual samples.
 }
 \note{
-During development notes
+Paper writing & during development notes
 
 Cell cycle regression based on: https://satijalab.org/seurat/articles/cell_cycle_vignette.html
 
@@ -39,6 +46,22 @@ the top 3000 (default) variable genes are kept for improving downstream processi
 vars.to.regress = regress out variability originating from reads mapped to mitochondrial DNA
 return.only.var.genes = TRUE, as non-sparse matrix is returned and used in PCA
 set transformed data as default data assay for downstream processing
+
+Choosing cell-free droplet detection algorithm, EmptyNN based on comparison with CellRanger embedded EmptyDrops: https://www.cell.com/patterns/fulltext/S2666-3899(21)00154-9
+Run before removing doublets/multiplets, possibly even before base QC of reming min.cells and min.features
+Error, issued at: https://github.com/lkmklsmn/empty_nn/issues/4
+
+Choosing doublet detection algorithm, DoubletFinder based on benchmerk: https://www.ncbi.nlm.nih.gov/pmc/articles/PMC7897250/
+scDblFinder based on comparison with doubletFinder: https://f1000research.com/articles/10-979/v2
+run scDblFinder between fundamental QC and SCTransform: https://github.com/plger/scDblFinder/issues/86
+# for 10x data, you can leave scDblFinder(dbr) parameter NULL: https://bioconductor.org/packages/release/bioc/vignettes/scDblFinder/inst/doc/scDblFinder.html
+
+Choosing ambient RNA removal algorithm, some are heavily dependent on pre-clustering etc, so SoupX: https://academic.oup.com/gigascience/article/9/12/giaa151/6049831?login=true
+
+order of doublet, empty, ambient RNA removal unclear: https://github.com/plger/scDblFinder/issues/93
+order by 10x Genomics: https://www.10xgenomics.com/analysis-guides/common-considerations-for-quality-control-filters-for-single-cell-rna-seq-data
+
+discussion point: if we were to run ambient RNA removal first, then doublet/multiplet detection could be easier and more accurate
 }
 \examples{
 \dontshow{if (FALSE) (if (getRversion() >= "3.4") withAutoprint else force)(\{ # examplesIf}

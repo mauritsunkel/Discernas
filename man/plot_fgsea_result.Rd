@@ -9,6 +9,7 @@ plot_fgsea_result(
   res_name,
   plot_n_category,
   dea_ids_lfc,
+  output_dir,
   gsea_plot_folder,
   ora_plot_folder
 )

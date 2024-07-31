@@ -12,7 +12,8 @@ samples_integration(
   perform_cluster_level_selection = TRUE,
   perform_cell_level_selection = FALSE,
   selection_panel = c(),
-  selection_percent_expressed = 20
+  selection_percent_expressed = 20,
+  features_of_interest = features_of_interest
 )
 }
 \arguments{

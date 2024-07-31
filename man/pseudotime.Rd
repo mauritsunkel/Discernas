@@ -49,11 +49,10 @@ multiply sum by total cell pairs, normalize by total weight of cell interactions
 }
 \examples{
 \dontshow{if (FALSE) (if (getRversion() >= "3.4") withAutoprint else force)(\{ # examplesIf}
-EMC.SKlab.scRNAseq::pseudotime(
-  input_files = c(file.path("path", "to", "seurat.rds")),
-  input_names = c('sample_name'),
-  output_dir = file.path(getwd(), "results", "test", "pseudotime"),
-  genes_of_interest = c("GENES", "OF", "INTEREST")
-)
+# EMC.SKlab.scRNAseq::pseudotime(
+#  input_files = c(file.path("path", "to", "seurat.rds")),
+#  input_names = c("sample_name"),
+#  output_dir = file.path("path", "to", results"),
+#  genes_of_interest = c("GENES", "OF", "INTEREST"))
 \dontshow{\}) # examplesIf}
 }
