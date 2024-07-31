@@ -26,7 +26,9 @@ NULL
 #' @param ora_plot_folder string with relative extra output folder for ORA results
 #'
 #' @examplesIf FALSE
-#' cellRanger_ensembl_features <- system.file("extdata", "ensembl_genes.tsv", package = 'EMC.SKlab.scRNAseq')
+#' cellRanger_ensembl_features <- system.file(
+#' "extdata",
+#' "ensembl_genes.tsv", package = 'EMC.SKlab.scRNAseq')
 #'
 #' run_fgsea(
 #'   output_dir = file.path("EMC-SKlab-scRNAseq", "results"),
@@ -248,6 +250,7 @@ date2gene <- function(gene_names) {
 #' @param gene_names character vector with gene names
 #' @param dea_ensembl_ids character vector with gene names from the DEA
 #' @param bitr_ensembl_ids character vector with gene names from bitr
+#' @param output_dir output directory for plots, string
 fgsea_examine_unmapped_genes <- function(gene_names, dea_ensembl_ids, bitr_ensembl_ids, output_dir) {
   dir.create(file.path(output_dir, "gene_mapping_bitr"))
   d <- dea_ensembl_ids
@@ -276,6 +279,7 @@ fgsea_examine_unmapped_genes <- function(gene_names, dea_ensembl_ids, bitr_ensem
 #' @param deg_universe character vector of all DEG genes
 #' @param go_universe character vector of all GO genes
 #' @param ensembl_genes_ids translation table with ensembl IDs and gene names
+#' @param output_dir output directory for plots, string
 fgsea_compare_DEG_GO_universe <- function(deg_universe, go_universe, ensembl_genes_ids, output_dir) {
   overlapping_gene_ids <- go_universe[go_universe %in% deg_universe]
   gene_ids_not_in_go <- go_universe[!go_universe %in% deg_universe]
@@ -629,6 +633,7 @@ run_fgsea_ora <- function(
 #' @param dea_ids_lfc named character vector with DEA IDs and logfoldchanges
 #' @param gsea_plot_folder output folder basename for GSEA results
 #' @param ora_plot_folder output folder basename for ORA results
+#' @param output_dir folder path for output
 plot_fgsea_result <- function(
     res, res_name, plot_n_category, dea_ids_lfc,
     output_dir, gsea_plot_folder, ora_plot_folder) {
