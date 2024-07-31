@@ -5,6 +5,7 @@
 #' @param samples_dir Root directory of samples.
 #' @param sample_name Current sample name, used to match in samples_dir.
 #' @param output_dir Package home directory, used to create output directory for results.
+#' @param features_of_interest list of gene marker panels used for plotting
 #' @param run_cell_cycle_regression True/False to regress out genes to do with cell cycle, based on Tirosh et al, 2015.
 #' @param run_doublet_removal default: TRUE, to run scDblFinder and call and remove doublets, plotted in QC
 #' @param doublet_removal_rate default: NULL, automatic doublet removal detection rate, NULL for 10x data okay, otherwise base on sequencing protocol and amount of cells
@@ -115,6 +116,16 @@ sample_analysis <- function(
   if (run_ambient_RNA_removal) {
     clean_ambient_RNA <- function(data, samples_dir, sample_name) {
       table_of_droplets = Seurat::Read10X(data.dir = file.path(samples_dir, sample_name, "raw_feature_bc_matrix"))
+
+      # add non-overlapping genes tot table_of_droplets with 0 counts to satisfy having same amount of genes
+      non_overlapping_genes <- rownames(data@assays$RNA$counts)[which(!rownames(data@assays$RNA$counts) %in% rownames(table_of_droplets))]
+      l <- list()
+      l <- t(sapply(non_overlapping_genes, function(gene) {
+        l[[gene]] <- rep(0, length(colnames(table_of_droplets)))
+      }))
+      colnames(l) <- colnames(table_of_droplets)
+      table_of_droplets <- rbind(table_of_droplets, l)
+
       overlapping_genes <- rownames(data@assays$RNA$counts)[which(rownames(data@assays$RNA$counts) %in% rownames(table_of_droplets))]
       table_of_droplets <- table_of_droplets[overlapping_genes,]
       data@assays$RNA$counts <- data@assays$RNA$counts[overlapping_genes,]
