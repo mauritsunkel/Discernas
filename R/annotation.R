@@ -295,12 +295,15 @@ visualize_kriegstein_annotated_data <- function(
   }
 
   # CombineCommonResults of corresponding data for each single sample-reference comparison
-  combined.results <- lapply(seq_along(results.list), function(i, x, n) {
+  combined.results <- lapply(seq_along(results.list), function(i) {
+
     # get name from names list
-    name <- n[[i]]
+    # name <- n[[i]]
+    name <- names(results.list)[i]
 
     # get scores from combined results
-    combined <- SingleR::combineCommonResults(x)
+    # combined <- SingleR::combineCommonResults(x)
+    combined <- SingleR::combineCommonResults(results.list[[i]])
     df <- as.data.frame(combined$scores)
 
     ## get max score and label for each highest scoring reference
@@ -313,7 +316,7 @@ visualize_kriegstein_annotated_data <- function(
         # select the highest score (value)
         df[names(df) == names][row, col]
       })
-    }, x = results.list, n = names(results.list))
+    })
     combined$max.labels <- colnames(combined$max.scores)[max.col(combined$max.scores)]
 
     # write scores for figure reference
@@ -341,7 +344,7 @@ visualize_kriegstein_annotated_data <- function(
 
     return(combined)
   })
-
+  names(combined.results) <- names(results.list)
 
   # save Kriegstein cluster labels into Seurat object --> rds
   for (sample in sample_names) {
@@ -395,9 +398,9 @@ visualize_kriegstein_annotated_data <- function(
 
 
       if (grepl('postSelect', sample_files[[sample]])) {
-        filename <- file.path(output_dir, 'integrated', sample, 'postSelect', 'annotation_kriegstein', paste0("Heatmap_", sample, "_", anno, ".png"))
+        filename <- file.path(output_dir, sample, 'postSelect', 'annotation_kriegstein', paste0("Heatmap_", sample, "_", anno, ".png"))
       } else {
-        filename <- file.path(output_dir, 'integrated', sample, 'annotation_kriegstein', paste0("Heatmap_", sample, "_", anno, ".png"))
+        filename <- file.path(output_dir, sample, 'annotation_kriegstein', paste0("Heatmap_", sample, "_", anno, ".png"))
       }
       message("plotting: ", filename)
 
