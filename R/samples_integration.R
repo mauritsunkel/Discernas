@@ -63,6 +63,7 @@ samples_integration <- function(sample_files, sample_names, output_dir,
   # initialize start time and directories
   output_dir <- file.path(output_dir, 'integrated', sample_name)
   dir.create(file.path(output_dir, 'plots'), recursive = T)
+  dir.create(file.path(output_dir, 'UMAPs'), recursive = T)
   ### END INITIALIZATION
 
 
@@ -70,14 +71,20 @@ samples_integration <- function(sample_files, sample_names, output_dir,
   # select repeatedly variable features across data sets
   features <- Seurat::SelectIntegrationFeatures(object.list = data.list, nfeatures = 3000)
   data.list <- Seurat::PrepSCTIntegration(object.list = data.list, anchor.features = features)
+  data.list <- lapply(X = data.list, FUN = RunPCA, features = features)
 
 
   # run Canonical Correlation Analysis (CCA) to find 'anchors' between data sets
-  anchors <- Seurat::FindIntegrationAnchors(object.list = data.list, normalization.method = "SCT", anchor.features = features, reference = c(ind))
+  anchors <- Seurat::FindIntegrationAnchors(
+    object.list = data.list,
+    normalization.method = "SCT",
+    anchor.features = features,
+    reference = c(ind),
+    dims = 1:30, reduction = "rpca", k.anchor = 20) # TODO check if only for rpca method or also the others
   rm(data.list)
 
   # integrate data by overlapping data spaces by integration anchors, creating 'integrated' data assay
-  integrated <- Seurat::IntegrateData(anchorset = anchors, normalization.method = "SCT")
+  integrated <- Seurat::IntegrateData(anchorset = anchors, normalization.method = "SCT", dims = 1:30)
   rm(anchors)
 
   integration_analysis <- function(integrated, selection_performed = FALSE) {
@@ -89,11 +96,10 @@ samples_integration <- function(sample_files, sample_names, output_dir,
     # run the workflow for visualization and clustering on integrated assay
     SeuratObject::DefaultAssay(integrated) <- "integrated"
     integrated <- Seurat::RunPCA(integrated, features = SeuratObject::VariableFeatures(object = integrated), npcs = 50, verbose = FALSE)
-    choose_N_PCs <- 20
+    choose_N_PCs <- 30
     integrated <- Seurat::FindNeighbors(integrated, dims = 1:choose_N_PCs)
     # could give warning: "NAs introduced by coercion" as '.' in data will be coerced to NA
     integrated <- Seurat::FindClusters(integrated, resolution = 0.5, algorithm = 1)
-    # TODO use Leiden > Louvain algorithm again (not working because of unable to call leidenalg via reticulate anymore) integrated <- Seurat::FindClusters(integrated, resolution = 0.5, algorithm = 4, method = "igraph")
     integrated <- Seurat::RunUMAP(integrated, reduction = "pca", dims = 1:choose_N_PCs)
 
     # prepare data (recorrect counts) for SCT assay DEG and visualization
@@ -104,9 +110,11 @@ samples_integration <- function(sample_files, sample_names, output_dir,
     p1 <- Seurat::DimPlot(integrated, reduction = "umap", group.by = 'orig.ident') +
       ggplot2::labs(title = "Original sample identity") +
       ggplot2::theme(plot.title = ggplot2::element_text(hjust = 0.5))
+    ggplot2::ggsave(file.path(output_dir, "UMAPs", "original-identity.png"), plot = p, width = c(12,12), height = c(12,12))
     p2 <- Seurat::DimPlot(integrated, reduction = "umap", label = TRUE, repel = TRUE) +
       ggplot2::labs(title = "Integrated") +
       ggplot2::theme(plot.title = ggplot2::element_text(hjust = 0.5))
+    ggplot2::ggsave(file.path(output_dir, "UMAPs", "integrated.png"), plot = p, width = c(12,12), height = c(12,12))
     # initiate plot_list for arranging ggplot objects in final visualization
     plot_list <- list(p1, p2)
 
@@ -115,9 +123,10 @@ samples_integration <- function(sample_files, sample_names, output_dir,
         ggplot2::labs(title = sample) +
         ggplot2::theme(plot.title = ggplot2::element_text(hjust = 0.5))
       plot_list[[length(plot_list)+1]] <- p
+      ggplot2::ggsave(file.path(output_dir, "UMAPs", paste0(sample, ".png")), plot = p, width = c(12,12), height = c(12,12))
     }
     # create arranged visualization
-    p <- do.call("grid.arrange", c(plot_list, ncol=2))
+    p <- do.call(gridExtra::grid.arrange, c(plot_list, ncol=2))
     ggplot2::ggsave(file.path(output_dir, paste0("UMAPs_", sample_name, ".png")), plot = p, width = c(12,12), height = c(12,12))
     dev.off()
 
