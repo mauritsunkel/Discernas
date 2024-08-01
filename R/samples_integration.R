@@ -111,24 +111,31 @@ samples_integration <- function(sample_files, sample_names, output_dir,
     p1 <- Seurat::DimPlot(integrated, reduction = "umap", group.by = 'orig.ident') +
       ggplot2::labs(title = "Original sample identity") +
       ggplot2::theme(plot.title = ggplot2::element_text(hjust = 0.5))
-    ggplot2::ggsave(file.path(output_dir, "UMAPs", "original-identity.png"), plot = p, width = c(12,12), height = c(12,12))
+    p1 <- p1 + ggplot2::xlim(min(integrated@reductions$umap@cell.embeddings[,1]),max(integrated@reductions$umap@cell.embeddings[,1]))
+    p1 <- p1 + ggplot2::ylim(min(integrated@reductions$umap@cell.embeddings[,2]),max(integrated@reductions$umap@cell.embeddings[,2]))
+    ggplot2::ggsave(file.path(output_dir, "UMAPs", "original-identity.png"), plot = p1, width = c(12,12), height = c(12,12))
     p2 <- Seurat::DimPlot(integrated, reduction = "umap", label = TRUE, repel = TRUE) +
       ggplot2::labs(title = "Integrated") +
       ggplot2::theme(plot.title = ggplot2::element_text(hjust = 0.5))
-    ggplot2::ggsave(file.path(output_dir, "UMAPs", "integrated.png"), plot = p, width = c(12,12), height = c(12,12))
+    p2 <- p2 + ggplot2::xlim(min(integrated@reductions$umap@cell.embeddings[,1]),max(integrated@reductions$umap@cell.embeddings[,1]))
+    p2 <- p2 + ggplot2::ylim(min(integrated@reductions$umap@cell.embeddings[,2]),max(integrated@reductions$umap@cell.embeddings[,2]))
+    ggplot2::ggsave(file.path(output_dir, "UMAPs", "integrated.png"), plot = p2, width = c(12,12), height = c(12,12))
     # initiate plot_list for arranging ggplot objects in final visualization
     plot_list <- list(p1, p2)
 
     for (sample in sample_names) {
-      p <- Seurat::DimPlot(integrated, reduction = "umap", label = TRUE, repel = TRUE, cells = names(integrated$orig.ident[integrated$orig.ident == sample])) +
+      p3 <- Seurat::DimPlot(integrated, reduction = "umap", label = TRUE, repel = TRUE, cells = names(integrated$orig.ident[integrated$orig.ident == sample])) +
         ggplot2::labs(title = sample) +
         ggplot2::theme(plot.title = ggplot2::element_text(hjust = 0.5))
-      plot_list[[length(plot_list)+1]] <- p
-      ggplot2::ggsave(file.path(output_dir, "UMAPs", paste0(sample, ".png")), plot = p, width = c(12,12), height = c(12,12))
+      p3 <- p3 + ggplot2::xlim(min(integrated@reductions$umap@cell.embeddings[,1]),max(integrated@reductions$umap@cell.embeddings[,1]))
+      p3 <- p3 + ggplot2::ylim(min(integrated@reductions$umap@cell.embeddings[,2]),max(integrated@reductions$umap@cell.embeddings[,2]))
+
+      plot_list[[length(plot_list)+1]] <- p3
+      ggplot2::ggsave(file.path(output_dir, "UMAPs", paste0(sample, ".png")), plot = p3, width = c(12,12), height = c(12,12))
     }
     # create arranged visualization
-    p <- do.call(gridExtra::grid.arrange, c(plot_list, ncol=2))
-    ggplot2::ggsave(file.path(output_dir, paste0("UMAPs_", sample_name, ".png")), plot = p, width = c(12,12), height = c(12,12))
+    p4 <- do.call(gridExtra::grid.arrange, c(plot_list, ncol=2))
+    ggplot2::ggsave(file.path(output_dir, paste0("UMAPs_", sample_name, ".png")), plot = p4, width = c(12,12), height = c(12,12))
     dev.off()
 
     # define expression visualization function
@@ -178,8 +185,15 @@ samples_integration <- function(sample_files, sample_names, output_dir,
       levels(SeuratObject::Idents(data)) <- c(0:(length(levels(SeuratObject::Idents(data)))-1))
       Seurat::DefaultAssay(data) <- "SCT"
 
-      p <- Seurat::DoHeatmap(data, features = features) + Seurat::NoLegend()
-      ggplot2::ggsave(file = file.path(output_dir, 'plots', name, 'heatmap.png'), width = 30, height = 20, units = "cm")
+
+      tryCatch({
+        p <- Seurat::DoHeatmap(data, features = features) + Seurat::NoLegend()
+        ggplot2::ggsave(file = file.path(output_dir, 'plots', name, 'heatmap.png'), width = 30, height = 20, units = "cm")
+      },
+      error=function(e) {
+        message(features, ' features were not found for DoHeatmap')
+      })
+
     }
 
     for (feat_name in names(features_of_interest)) {
