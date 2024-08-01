@@ -165,6 +165,7 @@ sample_analysis <- function(
   dev.off()
 
   # SCTransform-v2 (default in Seurat V5) replaces NormalizeData + FindVariableFeatures + ScaleData & sets default assay to "SCT"
+  options(future.globals.maxSize = 8000 * 1024^2)
   data <- Seurat::SCTransform(data, vst.flavor = "v2", vars.to.regress = "percent.mt", return.only.var.genes = TRUE)
 
   # plot variable features, label top 10
