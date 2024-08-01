@@ -1,13 +1,17 @@
 
-reticulate::use_python("C:/Users/mauri/AppData/Local/Programs/Python/Python311")
+# reticulate::use_python("C:/Users/mauri/AppData/Local/Programs/Python/Python311")
 
-# seurat_file <- "C:/Users/mauri/Desktop/scRNAseqR/results/sakshi_3/integrated/NSM-NS-NC-M/NSM-NS-NC-M.rds"
-# anndata_outfile <- "C:/Users/mauri/Desktop/scRNAseqR/results/sakshi_3/integrated/NSM-NS-NC-M/MapMyCells_AIBS.h5ad"
+seurat_file <- "C:/Users/mauri/Desktop/scRNAseqR/results/sakshi_4/NSM/NSM.rds"
 
-seurat_file <- "K:/Maurits/Drive/Kushnerlab/Projects/scRNAseq/results/Pipe_29-06 cell_level_selection/BL_C.rds"
-anndata_outfile <- "K:/Maurits/Drive/Kushnerlab/Projects/scRNAseq/results/Pipe_29-06 cell_level_selection/BL_A+BL_C_MapMyCells_AIBS.h5ad"
+
+
+
+
+
 
 data <- readRDS(seurat_file)
+if ("integrated" %in% names(data@assays)) Seurat::DefaultAssay(data) <- "integrated"
+
 ensemblIDs_geneSymbols <- read.csv(
   file = "C:/Users/mauri/Desktop/scRNAseqR/inst/extdata/ensembl_genes.tsv",
   header = F,
@@ -29,18 +33,23 @@ ad <- anndata::AnnData(
   var = data.frame(type = colnames(datat), row.names = colnames(datat))
 )
 
+dir.create(file.path(dirname(seurat_file), "annotation_MapMyCells"), recursive = T)
+anndata_outfile <- file.path(dirname(seurat_file), "annotation_MapMyCells", sub(".rds", ".h5ad", basename(seurat_file)))
 anndata::write_h5ad(
   anndata = ad,
   filename = anndata_outfile,
   compression = "gzip")
 
 # RUN MapMyCells: https://knowledge.brain-map.org/mapmycells/process/
-## Hierarchical Mapping
 ## Human Whole Brain
+## Hierarchical Mapping
+### unpack downloaded results.zip to: dirname(anndata_outfile)
 
 # read MapMyCells result and save to Seurat object (.rds)
+mmc_files <- list.files(dirname(anndata_outfile), full.names = T)
+mmc_csv <- mmc_files[grepl(".csv", mmc_files)]
 mmc <- read.csv(
-  file = "K:/Maurits/Drive/Kushnerlab/Projects/scRNAseq/results/Pipe_29-06 cell_level_selection/BL_C_MapMyCells_AIBS_10xWholeHumanBrain(CCN202210140)_HierarchicalMapping_UTC_1721819541296.csv",
+  file = mmc_csv,
   skip = 4)
 mmc[mmc == "Splatter"] <- "Neuron"
 data$mapmycells_supercluster <- mmc$supercluster_name
@@ -49,12 +58,24 @@ data$mapmycells_subcluster <- mmc$subcluster_name
 data$mapmycells_supercluster_bootstrapping_probability <- mmc$supercluster_bootstrapping_probability
 data$mapmycells_cluster_bootstrapping_probability <- mmc$cluster_bootstrapping_probability
 data$mapmycells_subcluster_bootstrapping_probability <- mmc$subcluster_bootstrapping_probability
+
+write.csv2(table(data$mapmycells_supercluster), file = file.path(dirname(seurat_file), "annotation_MapMyCells", paste0("UMAP_supercluster_table.csv")))
+write.csv2(table(data$mapmycells_cluster), file = file.path(dirname(seurat_file), "annotation_MapMyCells", paste0("UMAP_cluster_table.csv")))
+write.csv2(table(data$mapmycells_subcluster), file = file.path(dirname(seurat_file), "annotation_MapMyCells", paste0("UMAP_subcluster_table.csv")))
+
+p <- Seurat::DimPlot(data, reduction = "umap", group.by = "mapmycells_supercluster", pt.size = .75)
+ggplot2::ggsave(file = file.path(dirname(seurat_file), "annotation_MapMyCells", paste0("UMAP_supercluster.png")), width = 30, height = 20, units = "cm")
+p <- Seurat::DimPlot(data, reduction = "umap", group.by = "mapmycells_supercluster", label = T) + Seurat::NoLegend()
+ggplot2::ggsave(file = file.path(dirname(seurat_file), "annotation_MapMyCells", paste0("UMAP_supercluster_noLegend.png")), width = 30, height = 20, units = "cm")
+
+p <- Seurat::DimPlot(data, reduction = "umap", group.by = "mapmycells_cluster", pt.size = .75)
+ggplot2::ggsave(file = file.path(dirname(seurat_file), "annotation_MapMyCells", paste0("UMAP_cluster.png")), width = 30, height = 20, units = "cm")
+p <- Seurat::DimPlot(data, reduction = "umap", group.by = "mapmycells_cluster", label = T) + Seurat::NoLegend()
+ggplot2::ggsave(file = file.path(dirname(seurat_file), "annotation_MapMyCells", paste0("UMAP_cluster_noLegend.png")), width = 30, height = 20, units = "cm")
+
+p <- Seurat::DimPlot(data, reduction = "umap", group.by = "mapmycells_subcluster", pt.size = .75)
+ggplot2::ggsave(file = file.path(dirname(seurat_file), "annotation_MapMyCells", paste0("UMAP_subcluster.png")), width = 30, height = 20, units = "cm")
+p <- Seurat::DimPlot(data, reduction = "umap", group.by = "mapmycells_subcluster", label = T) + Seurat::NoLegend()
+ggplot2::ggsave(file = file.path(dirname(seurat_file), "annotation_MapMyCells", paste0("UMAP_subcluster_noLegend.png")), width = 30, height = 20, units = "cm")
+
 saveRDS(data, file = seurat_file)
-
-# manually export figure
-Seurat::DefaultAssay(data) <- "integrated"
-Seurat::DimPlot(data, reduction = "umap", group.by = "mapmycells_supercluster", pt.size = .75)
-Seurat::DimPlot(data, reduction = "umap", group.by = "mapmycells_supercluster", label = T) + Seurat::NoLegend()
-
-table(data$mapmycells_supercluster)
-# table(mmc$supercluster_bootstrapping_probability > 0.6)
