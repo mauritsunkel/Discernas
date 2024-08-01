@@ -257,9 +257,9 @@ visualize_kriegstein_annotated_data <- function(
   names(sample_files) <- sample_names
   for (sample in sample_names) {
     if (grepl('postSelect', sample_files[[sample]])) {
-      dir.create(file.path(output_dir, 'integrated', sample, 'postSelect', 'annotation_kriegstein'), recursive = T)
+      dir.create(file.path(output_dir, sample, 'postSelect', 'annotation_kriegstein'), recursive = T)
     } else {
-      dir.create(file.path(output_dir, 'integrated', sample, 'annotation_kriegstein'), recursive = T)
+      dir.create(file.path(output_dir, sample, 'annotation_kriegstein'), recursive = T)
     }
   }
 
@@ -324,9 +324,9 @@ visualize_kriegstein_annotated_data <- function(
 
     # write scores for figure reference
     if (grepl('postSelect', sample_files[[sample]])) {
-      filename <- file.path(output_dir, 'integrated', sample, 'postSelect', 'annotation_kriegstein', paste0("Pearson.correlation.max_", name ,".csv"))
+      filename <- file.path(output_dir, sample, 'postSelect', 'annotation_kriegstein', paste0("Pearson.correlation.max_", name ,".csv"))
     } else {
-      filename <- file.path(output_dir, 'integrated', sample, 'annotation_kriegstein', paste0("Pearson.correlation.max_", name ,".csv"))
+      filename <- file.path(output_dir, sample, 'annotation_kriegstein', paste0("Pearson.correlation.max_", name ,".csv"))
     }
     utils::write.csv2(combined$max.scores, file = filename)
 
@@ -339,9 +339,9 @@ visualize_kriegstein_annotated_data <- function(
 
     # write scores for figure reference
     if (grepl('postSelect', sample_files[[sample]])) {
-      filename <- file.path(output_dir, 'integrated', sample, 'postSelect', 'annotation_kriegstein', paste0("Pearson.correlation.mean_", name, ".csv"))
+      filename <- file.path(output_dir, sample, 'postSelect', 'annotation_kriegstein', paste0("Pearson.correlation.mean_", name, ".csv"))
     } else {
-      filename <- file.path(output_dir, 'integrated', sample, 'annotation_kriegstein', paste0("Pearson.correlation.mean_", name, ".csv"))
+      filename <- file.path(output_dir, sample, 'annotation_kriegstein', paste0("Pearson.correlation.mean_", name, ".csv"))
     }
     utils::write.csv2(combined$mean.scores, file = filename)
 
