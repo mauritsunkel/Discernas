@@ -62,7 +62,7 @@ samples_integration <- function(sample_files, sample_names, output_dir,
   for (i in seq_along(1:length(data.list))) if (levels(data.list[[i]]$orig.ident) == ref_sample) ind <- i
 
   # initialize start time and directories
-  output_dir <- file.path(output_dir, 'integrated', sample_name)
+  output_dir <- file.path(output_dir, sample_name)
   dir.create(file.path(output_dir, 'plots'), recursive = T)
   dir.create(file.path(output_dir, 'UMAPs'), recursive = T)
   ### END INITIALIZATION
