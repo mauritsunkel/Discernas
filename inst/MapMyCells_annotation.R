@@ -1,11 +1,9 @@
 
 # reticulate::use_python("C:/Users/mauri/AppData/Local/Programs/Python/Python311")
 
-seurat_file <- "C:/Users/mauri/Desktop/scRNAseqR/results/sakshi_4/NSM/NSM.rds"
-
-
-
-
+### USER INPUT ###
+seurat_file <- "C:/Users/mauri/Desktop/scRNAseqR/results/sakshi_4/NSM-NS-NC-M/NSM-NS-NC-M.rds"
+##################
 
 
 
