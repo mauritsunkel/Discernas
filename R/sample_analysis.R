@@ -95,8 +95,7 @@ sample_analysis <- function(
       temp_QC_data <- Seurat::RunPCA(temp_QC_data, features = SeuratObject::VariableFeatures(object = temp_QC_data), npcs = 50, verbose = FALSE)
       temp_QC_data <- Seurat::RunUMAP(temp_QC_data, reduction = "pca", dims = 1:30)
 
-      png(file.path(sample_path, "quality_control", paste0("scDblFinder_scores_", sample_name, ".png")))
-      Seurat::FeaturePlot(temp_QC_data, features = "scDblFinder.score") +
+      p <- Seurat::FeaturePlot(temp_QC_data, features = "scDblFinder.score") +
         ggplot2::labs(subtitle = paste0(
           "singlets: ",
           table(temp_QC_data$scDblFinder.class)[1],
@@ -104,7 +103,7 @@ sample_analysis <- function(
           paste0(table(temp_QC_data$scDblFinder.class)[2],
                  " - doublet rate: ",
                  round(table(temp_QC_data$scDblFinder.class)[2]/table(temp_QC_data$scDblFinder.class)[1], digits = 3))))
-      dev.off()
+      ggplot2::ggsave(file=file.path(sample_path, "quality_control", paste0("scDblFinder_scores_", sample_name, ".png")), width = 30, height = 20, units = "cm")
 
       # keep only singlets for downstream processing
       data <- data[, temp_QC_data$scDblFinder.class == "singlet"]
@@ -130,15 +129,18 @@ sample_analysis <- function(
       table_of_droplets <- table_of_droplets[overlapping_genes,]
       data@assays$RNA$counts <- data@assays$RNA$counts[overlapping_genes,]
 
-      sc = SoupX::SoupChannel(tod = table_of_droplets, toc = data@assays$RNA$counts) # estimateSoup()
+      sc <- SoupX::SoupChannel(tod = table_of_droplets, toc = data@assays$RNA$counts) # estimateSoup()
 
       tenx_graphclust <- read.csv(file.path(samples_dir, sample_name, "analysis", "clustering", "gene_expression_graphclust", "clusters.csv"))
       tenx_clusters <- tenx_graphclust$Cluster[tenx_graphclust$Barcode %in% colnames(data@assays$RNA$counts)]
-      sc = SoupX::setClusters(sc, tenx_clusters)
+      sc <- SoupX::setClusters(sc, tenx_clusters)
 
-      sc = SoupX::autoEstCont(sc, doPlot = FALSE) # if fails, contamination rate default: 10% -> 0.1, or determine gene (sets) to estimate fraction
+      png(filename = file.path(sample_path, "quality_control", paste0("SoupX_contamination_", sample_name, ".png")))
+      sc <- SoupX::autoEstCont(sc, doPlot = TRUE) # if fails, contamination rate default: 10% -> 0.1, or determine gene (sets) to estimate fraction
+      dev.off()
 
-      out = SoupX::adjustCounts(sc, roundToInt = FALSE) # TODO set roundToInt = T is downstream processing algortihms need integers
+
+      out <- SoupX::adjustCounts(sc, roundToInt = FALSE) # TODO set roundToInt = T is downstream processing algortihms need integers
       colnames(out) <- colnames(data@assays$RNA$counts)
 
       data@misc[["tenx_counts"]] <- data@assays$RNA$counts
