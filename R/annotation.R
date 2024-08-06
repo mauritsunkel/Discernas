@@ -278,7 +278,7 @@ visualize_kriegstein_annotated_data <- function(
   for (sample in sample_names) {
     for (anno in annotations) {
       # list all files in kriegstein_annotated_input_dir based on sample and annotation
-      files <- list.files(path = kriegstein_annotated_input_dir, pattern = paste0(stringr::str_replace(sample, " \\+ ", " .* "), ".*", anno), full.names=T)
+      files <- list.files(path = kriegstein_annotated_input_dir, pattern = paste0(stringr::str_replace(sample, " \\+ ", " .* "), ".iter.*", anno), full.names=T)
 
       # if '+' not in sample (name), then
       if (!grepl("+", sample, fixed = T)) {
