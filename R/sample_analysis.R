@@ -131,7 +131,9 @@ sample_analysis <- function(
 
       sc <- SoupX::SoupChannel(tod = table_of_droplets, toc = data@assays$RNA$counts) # estimateSoup()
 
-      tenx_graphclust <- read.csv(file.path(samples_dir, sample_name, "analysis", "clustering", "gene_expression_graphclust", "clusters.csv"))
+      graphclust_dir <- file.path(samples_dir, sample_name, "analysis", "clustering")
+      graphclust_dir <- list.files(graphclust_dir, full.names = T)[grep(pattern = "graphclust$", list.files(graphclust_dir))]
+      tenx_graphclust <- read.csv(file.path(graphclust_dir, "clusters.csv"))
       tenx_clusters <- tenx_graphclust$Cluster[tenx_graphclust$Barcode %in% colnames(data@assays$RNA$counts)]
       sc <- SoupX::setClusters(sc, tenx_clusters)
 
