@@ -52,7 +52,7 @@ pseudotime <- function(input_files, input_names, output_dir, genes_of_interest) 
     plots <- list()
 
     # create sample specific directory
-    output_dir <- file.path(output_dir, input_names, 'pseudotime')
+    output_dir <- file.path(output_dir, input_name, 'pseudotime')
     dir.create(output_dir, recursive = TRUE)
 
     # get data
