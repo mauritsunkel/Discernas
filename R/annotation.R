@@ -303,6 +303,7 @@ visualize_kriegstein_annotated_data <- function(
     # get name from names list
     # name <- n[[i]]
     name <- names(results.list)[i]
+    sample <- strsplit(name, " ")[[1]][1]
 
     # get scores from combined results
     # combined <- SingleR::combineCommonResults(x)
