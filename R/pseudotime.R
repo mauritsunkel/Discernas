@@ -6,7 +6,7 @@
 #' @param input_files Character vector with paths to Seurat .rds files.
 #' @param input_names Character vector with sample names of input files.
 #' @param output_dir String containing output directory.
-#' @param genes_of_interest Character vector with gene name(s) of interest, used to select pseudotime trajectory starting point.
+#' @param pseudotime_root_markers List with character vectors with gene name(s) of interest, used to select pseudotime trajectory starting point.
 #'
 #' @export
 #'
@@ -42,8 +42,16 @@
 #' #  input_files = c(file.path("path", "to", "seurat.rds")),
 #' #  input_names = c("sample_name"),
 #' #  output_dir = file.path("path", "to", results"),
-#' #  genes_of_interest = c("GENES", "OF", "INTEREST"))
-pseudotime <- function(input_files, input_names, output_dir, genes_of_interest) {
+#' #  pseudotime_root_markers = list(c("GENES", "OF", "INTEREST")))
+pseudotime <- function(input_files, input_names, output_dir, pseudotime_root_markers = NULL) {
+  if (is.null(pseudotime_root_markers)) {
+    pseudotime_root_markers <- list(
+      "Microglia" = c("AIF1"),
+      "Astrocyte" = c("S100B"),
+      "Neuron"    = c("RBFOX3"),
+      "other" = c("MKI67")
+    )
+  }
   # set input names on files
   names(input_files) <- input_names
 
@@ -124,6 +132,33 @@ pseudotime <- function(input_files, input_names, output_dir, genes_of_interest) 
 
     for (partition in seq_along(table(monocle3::partitions(cds)))) {
       message("partition: ", partition)
+
+      # get partition celltype
+      partition_cells <- colnames(cds[, monocle3::partitions(cds) == 1])
+      if ("mapmycells_supercluster" %in% colnames(cds@colData)) {
+        partition_celltype <- names(which.max(table(cds@colData$mapmycells_supercluster[colnames(cds) %in% partition_cells])))
+      } else if ("kriegstein.seurat.custom.clusters.mean" %in% colnames(cds@colData)) {
+        partition_celltype <- names(which.max(table(cds@colData$kriegstein.seurat.custom.clusters.mean[colnames(cds) %in% partition_cells])))
+      } else {
+        partition_celltype <- "other"
+      }
+
+      if (partition_celltype %in% names(pseudotime_root_markers)) {
+        genes_of_interest <- pseudotime_root_markers[[partition_celltype]]
+      } else if (TRUE) {
+        kriegstein_labels <- tolower(unique(levels(cds@colData$kriegstein.seurat.custom.clusters.mean)))
+        for (label in kriegstein_labels) {
+          if (grepl(tolower(partition_celltype), label)) {
+            genes_of_interest <- pseudotime_root_markers[[partition_celltype]]
+            break
+          }
+        }
+      } else {
+        ## technical default, non-biologically relevant: pick gene with most expressino for this partition,
+        genes_of_interest <- names(which.max(Matrix::rowSums(cds@assays@data$counts[colnames(cds) %in% partition_cells])))
+      }
+
+
       # create df of cell names and gene(s) of interest values
       df <- SeuratObject::FetchData(data, genes_of_interest)
       # get cell name with highest summed expression for gene(s) of interest
@@ -159,46 +194,86 @@ pseudotime <- function(input_files, input_names, output_dir, genes_of_interest) 
         plots[[length(plots)+1]] <- p3
 
         # plot reference clusters UMAP
-        p4 <- plot_cells.adjusted(cds,
-                                  color_cells_by = "kriegstein.seurat.custom.clusters.mean",
-                                  group_cells_by = "kriegstein.seurat.custom.clusters.mean",
-                                  show_trajectory_graph = F,
-                                  label_cell_groups = T, # if false, show legend
-                                  label_groups_by_cluster = TRUE,
-                                  label_roots = TRUE,
-                                  label_leaves = FALSE,
-                                  label_branch_points = FALSE,
-                                  group_label_size = 3,
-                                  graph_label_size = 5,
-                                  cell_size = 1,
-                                  trajectory_graph_segment_size = 2)
-        p4 <- p4 + ggplot2::guides(color = ggplot2::guide_legend(title = "", ncol=2, override.aes = list(size = 4)))
-        p4 <- p4 + ggplot2::labs(title="Kriegstein clusters UMAP")
-        ggplot2::ggsave(file = file.path(output_dir, 'kriegstein_clusters_UMAP.png'), width = 30, height = 20, units = "cm")
-        plots[[length(plots)+1]] <- p4
+        if ("kriegstein.seurat.custom.clusters.mean" %in% names(cds@colData)) {
+          p4 <- plot_cells.adjusted(cds,
+                                    color_cells_by = "kriegstein.seurat.custom.clusters.mean",
+                                    group_cells_by = "kriegstein.seurat.custom.clusters.mean",
+                                    show_trajectory_graph = F,
+                                    label_cell_groups = T, # if false, show legend
+                                    label_groups_by_cluster = TRUE,
+                                    label_roots = TRUE,
+                                    label_leaves = FALSE,
+                                    label_branch_points = FALSE,
+                                    group_label_size = 3,
+                                    graph_label_size = 5,
+                                    cell_size = 1,
+                                    trajectory_graph_segment_size = 2)
+          p4 <- p4 + ggplot2::guides(color = ggplot2::guide_legend(title = "", ncol=2, override.aes = list(size = 4)))
+          p4 <- p4 + ggplot2::labs(title="Kriegstein clusters UMAP")
+          ggplot2::ggsave(file = file.path(output_dir, 'kriegstein_clusters_UMAP.png'), width = 30, height = 20, units = "cm")
+          plots[[length(plots)+1]] <- p4
 
-        # plot reference data trajectory
-        p5 <- plot_cells.adjusted(cds,
-                                  color_cells_by = "kriegstein.seurat.custom.clusters.mean",
-                                  group_cells_by = "kriegstein.seurat.custom.clusters.mean",
-                                  show_trajectory_graph = TRUE,
-                                  label_cell_groups = FALSE, # if false, show legend
-                                  label_groups_by_cluster = TRUE,
-                                  label_roots = TRUE,
-                                  label_leaves = FALSE,
-                                  label_branch_points = FALSE,
-                                  group_label_size = 3,
-                                  graph_label_size = 5,
-                                  cell_size = 1,
-                                  trajectory_graph_segment_size = 2)
-        p5 <- p5 + ggplot2::guides(color = ggplot2::guide_legend(title = "", ncol=2, override.aes = list(size = 4)))
-        p5 <- p5 + ggplot2::labs(title="Kriegstein clusters + trajectory")
-        ggplot2::ggsave(file = file.path(output_dir, 'kriegstein_clusters_trajectory.png'), width = 30, height = 20, units = "cm")
-        plots[[length(plots)+1]] <- p5
+          # plot reference data trajectory
+          p5 <- plot_cells.adjusted(cds,
+                                    color_cells_by = "kriegstein.seurat.custom.clusters.mean",
+                                    group_cells_by = "kriegstein.seurat.custom.clusters.mean",
+                                    show_trajectory_graph = TRUE,
+                                    label_cell_groups = FALSE, # if false, show legend
+                                    label_groups_by_cluster = TRUE,
+                                    label_roots = TRUE,
+                                    label_leaves = FALSE,
+                                    label_branch_points = FALSE,
+                                    group_label_size = 3,
+                                    graph_label_size = 5,
+                                    cell_size = 1,
+                                    trajectory_graph_segment_size = 2)
+          p5 <- p5 + ggplot2::guides(color = ggplot2::guide_legend(title = "", ncol=2, override.aes = list(size = 4)))
+          p5 <- p5 + ggplot2::labs(title="Kriegstein clusters + trajectory")
+          ggplot2::ggsave(file = file.path(output_dir, 'kriegstein_clusters_trajectory.png'), width = 30, height = 20, units = "cm")
+          plots[[length(plots)+1]] <- p5
+        }
+        if ("mapmycells_supercluster" %in% names(cds@colData)) {
+          p6 <- plot_cells.adjusted(cds,
+                                    color_cells_by = "mapmycells_supercluster",
+                                    group_cells_by = "mapmycells_supercluster",
+                                    show_trajectory_graph = F,
+                                    label_cell_groups = T, # if false, show legend
+                                    label_groups_by_cluster = TRUE,
+                                    label_roots = TRUE,
+                                    label_leaves = FALSE,
+                                    label_branch_points = FALSE,
+                                    group_label_size = 3,
+                                    graph_label_size = 5,
+                                    cell_size = 1,
+                                    trajectory_graph_segment_size = 2)
+          p6 <- p6 + ggplot2::guides(color = ggplot2::guide_legend(title = "", ncol=2, override.aes = list(size = 4)))
+          p6 <- p6 + ggplot2::labs(title="MapMyCells clusters UMAP")
+          ggplot2::ggsave(file = file.path(output_dir, 'mapmycells_clusters_UMAP.png'), width = 30, height = 20, units = "cm")
+          plots[[length(plots)+1]] <- p6
+
+          # plot reference data trajectory
+          p7 <- plot_cells.adjusted(cds,
+                                    color_cells_by = "mapmycells_supercluster",
+                                    group_cells_by = "mapmycells_supercluster",
+                                    show_trajectory_graph = TRUE,
+                                    label_cell_groups = FALSE, # if false, show legend
+                                    label_groups_by_cluster = TRUE,
+                                    label_roots = TRUE,
+                                    label_leaves = FALSE,
+                                    label_branch_points = FALSE,
+                                    group_label_size = 3,
+                                    graph_label_size = 5,
+                                    cell_size = 1,
+                                    trajectory_graph_segment_size = 2)
+          p7 <- p7 + ggplot2::guides(color = ggplot2::guide_legend(title = "", ncol=2, override.aes = list(size = 4)))
+          p7 <- p7 + ggplot2::labs(title="MapMyCells clusters + trajectory")
+          ggplot2::ggsave(file = file.path(output_dir, 'mapmycells_clusters_trajectory.png'), width = 30, height = 20, units = "cm")
+          plots[[length(plots)+1]] <- p7
+        }
       }
 
       # plot pseudotime and trajectory per Monocle3 partition
-      p6 <- plot_cells.adjusted(cds,
+      p8 <- plot_cells.adjusted(cds,
                                  color_cells_by = "pseudotime",
                                  group_cells_by = "cluster",
                                  label_cell_groups = TRUE,
@@ -209,9 +284,9 @@ pseudotime <- function(input_files, input_names, output_dir, genes_of_interest) 
                                  graph_label_size = 5,
                                  cell_size = 1,
                                  trajectory_graph_segment_size = 2)
-      p6 <- p6 + ggplot2::labs(title=paste0("Pseudotime + trajectory: partition ", partition))
+      p8 <- p8 + ggplot2::labs(title=paste0("Pseudotime + trajectory: partition ", partition))
       ggplot2::ggsave(file = file.path(output_dir, paste0('pseudotime_trajectory_partition_', partition, '.png')), width = 30, height = 20, units = "cm")
-      plots[[length(plots)+1]] <- p6
+      plots[[length(plots)+1]] <- p8
     }
 
     # wrap and save plots

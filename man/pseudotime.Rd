@@ -4,7 +4,12 @@
 \alias{pseudotime}
 \title{Run Monocle3 from Seurat object.}
 \usage{
-pseudotime(input_files, input_names, output_dir, genes_of_interest)
+pseudotime(
+  input_files,
+  input_names,
+  output_dir,
+  pseudotime_root_markers = NULL
+)
 }
 \arguments{
 \item{input_files}{Character vector with paths to Seurat .rds files.}
@@ -13,7 +18,7 @@ pseudotime(input_files, input_names, output_dir, genes_of_interest)
 
 \item{output_dir}{String containing output directory.}
 
-\item{genes_of_interest}{Character vector with gene name(s) of interest, used to select pseudotime trajectory starting point.}
+\item{pseudotime_root_markers}{List with character vectors with gene name(s) of interest, used to select pseudotime trajectory starting point.}
 }
 \description{
 Run monocle3 from Seurat object, performing its own clustering, partitioning
@@ -53,6 +58,6 @@ multiply sum by total cell pairs, normalize by total weight of cell interactions
 #  input_files = c(file.path("path", "to", "seurat.rds")),
 #  input_names = c("sample_name"),
 #  output_dir = file.path("path", "to", results"),
-#  genes_of_interest = c("GENES", "OF", "INTEREST"))
+#  pseudotime_root_markers = list(c("GENES", "OF", "INTEREST")))
 \dontshow{\}) # examplesIf}
 }
