@@ -2,7 +2,7 @@
 
 export("%>%")
 export(DE2volcanoPlot)
-export(annotate_with_kriegstein_data)
+export(annotate_visualize_with_kriegstein_data)
 export(chunk_kriegstein_data)
 export(differential_expression_analysis)
 export(pseudotime)

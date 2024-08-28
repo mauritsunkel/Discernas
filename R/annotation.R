@@ -125,17 +125,20 @@ chunk_kriegstein_data <- function(n_chunks, kriegstein_data_dir, kriegstein_chun
 #'
 #' @param sample_names Character vector with sample names.
 #' @param sample_files Character vector with sample .rds files to be annotated.
+#' @param output_dir String with output directory for results.
 #' @param kriegstein_data_dir String with Kriegstein folder path, containing (custom.)meta.tsv and exprMatrix.tsv.gz.
 #' @param kriegstein_chunks_input_dir String with Kriegstein input directory for data chunks.
 #' @param kriegstein_annotated_output_dir String with Kriegstein output directory for annotated data chunks.
 #' @param annotations default: c("age", "structure", "custom.clusterv2"), see (custom.)meta.tsv for selectable features.
+#' @param annotations_to_plot default: c("custom.clusterv2"), annotations from meta features used for individual heatmaps.
+#' @param ref_aggr_strategy default: "max", choose one of "max" or "mean".
 #'
 #' @export
 #'
 #' @examplesIf FALSE
 #' kriegstein_data_dir <-  "path/to/Kriegstein_data/"
 #'
-#' annotate_with_kriegstein_data(
+#' annotate_visualize_with_kriegstein_data(
 #'   sample_names = c("sample_a", "sample_b"),
 #'   sample_files = c("path/to/sample_a.rds", "path/to/sample_b.rds"),
 #'   kriegstein_data_dir = kriegstein_data_dir,
@@ -147,12 +150,14 @@ chunk_kriegstein_data <- function(n_chunks, kriegstein_data_dir, kriegstein_chun
 #' @note
 #' Run EMC.SKlab.scRNAseq::chunk_kriegstein_data() to have chunked reference data before annotating!
 #' No need to run if chunked data already exists!
-annotate_with_kriegstein_data <- function(
-    sample_names, sample_files,
+annotate_visualize_with_kriegstein_data <- function(
+    sample_names, sample_files, output_dir,
     kriegstein_data_dir,
     kriegstein_chunks_input_dir,
     kriegstein_annotated_output_dir,
-    annotations = c("age", "structure", "custom.clusterv2")) {
+    annotations = c("age", "structure", "custom.clusterv2"),
+    annotations_to_plot = c("custom.clusterv2"),
+    ref_aggr_strategy = "max") {
 
   dir.create(kriegstein_annotated_output_dir)
 
@@ -211,6 +216,14 @@ annotate_with_kriegstein_data <- function(
     message("Iteration", i ,"runtime was", Sys.time()-start_iter_time, "minutes - memory in use:", as.data.frame(gc())$'(Mb)'[2])
     message('point 1 mem ', utils::memory.size(), ' ', utils::memory.size(max=TRUE))
   }
+
+  # visualize UMAPs and heatmap after annotation
+  visualize_kriegstein_annotated_data(
+    sample_names = sample_names, sample_files = sample_files, output_dir = output_dir,
+    kriegstein_data_dir, kriegstein_annotated_input_dir = kriegstein_annotated_output_dir,
+    annotations = annotations,
+    annotations_to_plot = annotations_to_plot,
+    ref_aggr_strategy = ref_aggr_strategy)
 }
 
 #' Perform visualizations of annotated data from Kriegstein reference data.
