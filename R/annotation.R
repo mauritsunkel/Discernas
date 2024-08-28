@@ -371,6 +371,15 @@ visualize_kriegstein_annotated_data <- function(
 
   # custom visualizations per sample-reference comparison for each annotation
   for (sample in sample_names) {
+    # first plot umaps of Kriegstein annotated data
+    p <- Seurat::DimPlot(data.list[[sample]], reduction = "umap", group.by = "kriegstein.seurat.custom.clusters.mean", pt.size = .75)
+    p + ggplot2::labs(title = "Kriegstein annotated clusters")
+    ggplot2::ggsave(file = file.path(output_dir, sample, "annotation_kriegstein", paste0("UMAP_", sample, ".png")), width = 30, height = 20, units = "cm")
+    p <- Seurat::DimPlot(data.list[[sample]], reduction = "umap", group.by = "kriegstein.seurat.custom.clusters.mean", label = T) + Seurat::NoLegend()
+    p + ggplot2::labs(title = "Kriegstein annotated clusters")
+    ggplot2::ggsave(file = file.path(output_dir, sample, "annotation_kriegstein", paste0("UMAP_noLegend_", sample, ".png")), width = 30, height = 20, units = "cm")
+
+    # then prepare data for plotting Kriegstein annotation heatmap
     annotation_col <- data.frame(row.names = levels(data.list[[sample]]$seurat_clusters))
     annotation_colors <- list()
 
@@ -399,8 +408,6 @@ visualize_kriegstein_annotated_data <- function(
     annotation_col <- annotation_col[, c("fetal.brain.celltype", "fetal.brain.structure", "fetal.brain.age")]
 
     for (anno in annotations_to_plot) {
-
-
       if (grepl('postSelect', sample_files[[sample]])) {
         filename <- file.path(output_dir, sample, 'postSelect', 'annotation_kriegstein', paste0("Heatmap_", sample, "_", anno, ".png"))
       } else {
