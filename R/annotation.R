@@ -378,9 +378,21 @@ visualize_kriegstein_annotated_data <- function(
     # overwrite copied metadata to an aggregation of Kriegstein.Seurat custom cluster labels
     levels(data.list[[sample]]$kriegstein.seurat.custom.clusters.mean) <- paste0(combined.results[[paste(sample, "custom.clusterv2")]]$mean.labels, ".", levels(data.list[[sample]]$kriegstein.seurat.custom.clusters.mean))
 
+    # plot composition
+    composition_df <- data.list[[sample]]@meta.data[,c("orig.ident", "kriegstein.seurat.custom.clusters.mean")]
+    p <- ggplot2::ggplot(composition_df, ggplot2::aes(x = orig.ident, fill = kriegstein.seurat.custom.clusters.mean)) +
+      ggplot2::geom_bar(color = "white") +
+      ggplot2::theme_light() +
+      ggplot2::guides(fill = ggplot2::guide_legend(title = "Kriegstein.Seurat clusters")) +
+      ggplot2::labs(x = "", y = "# cells")
+    # p + ggplot2::scale_fill_manual()
+    ggplot2::ggsave(plot = p, file = file.path(output_dir, sample, 'annotation_kriegstein', 'samples_composition.png'), width = 30, height = 20, units = "cm")
+
     # overwrite rds file with new misc annotation
     saveRDS(data.list[[sample]], file = sample_files[[sample]])
   }
+
+
 
   # custom visualizations per sample-reference comparison for each annotation
   for (sample in sample_names) {

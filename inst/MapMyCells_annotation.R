@@ -2,7 +2,7 @@
 # reticulate::use_python("C:/Users/mauri/AppData/Local/Programs/Python/Python311")
 
 ### USER INPUT ###
-seurat_file <- "C:/Users/mauri/Desktop/scRNAseqR/results/sakshi_4/NSM-NS-NC-M/NSM-NS-NC-M.rds"
+seurat_file <- "C:/SynologyDrive/Projects/scRNAseqR/results/sakshi_4/NSM-NS-NC-M/NSM-NS-NC-M.rds"
 ##################
 
 
@@ -75,5 +75,15 @@ p <- Seurat::DimPlot(data, reduction = "umap", group.by = "mapmycells_subcluster
 ggplot2::ggsave(file = file.path(dirname(seurat_file), "annotation_MapMyCells", paste0("UMAP_subcluster.png")), width = 30, height = 20, units = "cm")
 p <- Seurat::DimPlot(data, reduction = "umap", group.by = "mapmycells_subcluster", label = T) + Seurat::NoLegend()
 ggplot2::ggsave(file = file.path(dirname(seurat_file), "annotation_MapMyCells", paste0("UMAP_subcluster_noLegend.png")), width = 30, height = 20, units = "cm")
+
+# plot composition
+composition_df <- data@meta.data[,c("orig.ident", "mapmycells_supercluster")]
+p <- ggplot2::ggplot(composition_df, ggplot2::aes(x = orig.ident, fill = mapmycells_supercluster)) +
+  ggplot2::geom_bar(color = "white") +
+  ggplot2::theme_light() +
+  ggplot2::guides(fill = ggplot2::guide_legend(title = "MapMyCells supercluster")) +
+  ggplot2::labs(x = "", y = "# cells")
+# p + ggplot2::scale_fill_manual()
+ggplot2::ggsave(plot = p, file = file.path(dirname(seurat_file), "annotation_MapMyCells", 'samples_composition.png'), width = 30, height = 20, units = "cm")
 
 saveRDS(data, file = seurat_file)
