@@ -82,7 +82,7 @@ composition_df <- composition_df %>%
   dplyr::arrange(orig.ident, mapmycells_supercluster) %>%
   dplyr::group_by(orig.ident) %>%
   dplyr::mutate(csum = cumsum(Freq))
-xlsx::write.xlsx(composition_df, file = file.path(dirname(seurat_file), "annotation_MapMyCells", 'samples_composition.xlsx'))
+openxlsx::write.xlsx(composition_df, file = file.path(dirname(seurat_file), "annotation_MapMyCells", 'samples_composition.xlsx'))
 composition_df$mapmycells_supercluster <- factor(composition_df$mapmycells_supercluster, levels = rev(levels(composition_df$mapmycells_supercluster)))
 # remove labels with less than 10 cells
 composition_df$Freq[composition_df$Freq < 10] <- NA
@@ -97,3 +97,6 @@ p <- ggplot2::ggplot(composition_df, ggplot2::aes(x = orig.ident, y = Freq, fill
 ggplot2::ggsave(plot = p, file = file.path(dirname(seurat_file), "annotation_MapMyCells", 'samples_composition.png'), width = 30, height = 20, units = "cm")
 
 saveRDS(data, file = seurat_file)
+
+print(composition_df, n = 56)
+as.data.frame(composition_df)

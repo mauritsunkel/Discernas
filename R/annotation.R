@@ -384,7 +384,7 @@ visualize_kriegstein_annotated_data <- function(
       dplyr::arrange(orig.ident, kriegstein.seurat.custom.clusters.mean) %>%
       dplyr::group_by(orig.ident) %>%
       dplyr::mutate(csum = cumsum(Freq))
-    xlsx::write.xlsx(composition_df, file = file.path(output_dir, sample, 'annotation_kriegstein', 'samples_composition.xlsx'))
+    openxlsx::write.xlsx(composition_df, file = file.path(output_dir, sample, 'annotation_kriegstein', 'samples_composition.xlsx'))
     composition_df$kriegstein.seurat.custom.clusters.mean <- factor(composition_df$kriegstein.seurat.custom.clusters.mean, levels = rev(levels(composition_df$kriegstein.seurat.custom.clusters.mean)))
     # remove labels with less than 10 cells
     composition_df$Freq[composition_df$Freq < 10] <- NA
