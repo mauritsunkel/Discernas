@@ -82,6 +82,7 @@ composition_df <- composition_df %>%
   dplyr::arrange(orig.ident, mapmycells_supercluster) %>%
   dplyr::group_by(orig.ident) %>%
   dplyr::mutate(csum = cumsum(Freq))
+xlsx::write.xlsx(composition_df, file = file.path(dirname(seurat_file), "annotation_MapMyCells", 'samples_composition.xlsx'))
 composition_df$mapmycells_supercluster <- factor(composition_df$mapmycells_supercluster, levels = rev(levels(composition_df$mapmycells_supercluster)))
 # remove labels with less than 10 cells
 composition_df$Freq[composition_df$Freq < 10] <- NA
