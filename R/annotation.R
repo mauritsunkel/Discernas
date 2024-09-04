@@ -380,11 +380,22 @@ visualize_kriegstein_annotated_data <- function(
 
     # plot composition
     composition_df <- data.list[[sample]]@meta.data[,c("orig.ident", "kriegstein.seurat.custom.clusters.mean")]
-    p <- ggplot2::ggplot(composition_df, ggplot2::aes(x = orig.ident, fill = kriegstein.seurat.custom.clusters.mean)) +
-      ggplot2::geom_bar(color = "white") +
-      ggplot2::theme_light() +
-      ggplot2::guides(fill = ggplot2::guide_legend(title = "Kriegstein.Seurat clusters")) +
-      ggplot2::labs(x = "", y = "# cells")
+    composition_df <- composition_df %>%
+      dplyr::arrange(orig.ident, kriegstein.seurat.custom.clusters.mean) %>%
+      dplyr::group_by(orig.ident) %>%
+      dplyr::mutate(csum = cumsum(Freq))
+    composition_df$kriegstein.seurat.custom.clusters.mean <- factor(composition_df$kriegstein.seurat.custom.clusters.mean, levels = rev(levels(composition_df$kriegstein.seurat.custom.clusters.mean)))
+    # remove labels with less than 10 cells
+    composition_df$Freq[composition_df$Freq < 10] <- NA
+    p <- ggplot2::ggplot(composition_df, ggplot2::aes(x = orig.ident, y = Freq, fill = kriegstein.seurat.custom.clusters.mean)) +
+      ggplot2::geom_bar(stat = "identity", color = "black") +
+      # ggrepel::geom_text_repel(ggplot2::aes(x = orig.ident, y = csum, label=csum), color="white", size=3, max.overlaps = Inf) +
+      ggplot2::geom_text(ggplot2::aes(x = orig.ident, y = csum, label=Freq), nudge_y = -75, color="white", size=3) + #
+      # ggplot2::geom_text() +
+      ggplot2::guides(fill = ggplot2::guide_legend(title = "Kriegstein.Seurat cluster")) +
+      ggplot2::labs(x = "", y = "# cells") +
+      ggplot2::theme_minimal()
+    p
     # p + ggplot2::scale_fill_manual()
     ggplot2::ggsave(plot = p, file = file.path(output_dir, sample, 'annotation_kriegstein', 'samples_composition.png'), width = 30, height = 20, units = "cm")
 

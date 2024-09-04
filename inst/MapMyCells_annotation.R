@@ -77,13 +77,22 @@ p <- Seurat::DimPlot(data, reduction = "umap", group.by = "mapmycells_subcluster
 ggplot2::ggsave(file = file.path(dirname(seurat_file), "annotation_MapMyCells", paste0("UMAP_subcluster_noLegend.png")), width = 30, height = 20, units = "cm")
 
 # plot composition
-composition_df <- data@meta.data[,c("orig.ident", "mapmycells_supercluster")]
-p <- ggplot2::ggplot(composition_df, ggplot2::aes(x = orig.ident, fill = mapmycells_supercluster)) +
-  ggplot2::geom_bar(color = "white") +
-  ggplot2::theme_light() +
+composition_df <- as.data.frame(table(data@meta.data[,c("orig.ident", "mapmycells_supercluster")]))
+composition_df <- composition_df %>%
+  dplyr::arrange(orig.ident, mapmycells_supercluster) %>%
+  dplyr::group_by(orig.ident) %>%
+  dplyr::mutate(csum = cumsum(Freq))
+composition_df$mapmycells_supercluster <- factor(composition_df$mapmycells_supercluster, levels = rev(levels(composition_df$mapmycells_supercluster)))
+# remove labels with less than 10 cells
+composition_df$Freq[composition_df$Freq < 10] <- NA
+p <- ggplot2::ggplot(composition_df, ggplot2::aes(x = orig.ident, y = Freq, fill = mapmycells_supercluster)) +
+  ggplot2::geom_bar(stat = "identity", color = "black") +
+  # ggrepel::geom_text_repel(ggplot2::aes(x = orig.ident, y = csum, label=csum), color="white", size=3, max.overlaps = Inf) +
+  ggplot2::geom_text(ggplot2::aes(x = orig.ident, y = csum, label=Freq), nudge_y = -75, color="white", size=3) + #
+  # ggplot2::geom_text() +
   ggplot2::guides(fill = ggplot2::guide_legend(title = "MapMyCells supercluster")) +
-  ggplot2::labs(x = "", y = "# cells")
-# p + ggplot2::scale_fill_manual()
+  ggplot2::labs(x = "", y = "# cells") +
+  ggplot2::theme_minimal()
 ggplot2::ggsave(plot = p, file = file.path(dirname(seurat_file), "annotation_MapMyCells", 'samples_composition.png'), width = 30, height = 20, units = "cm")
 
 saveRDS(data, file = seurat_file)
