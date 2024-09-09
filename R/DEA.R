@@ -5,6 +5,7 @@
 #' @param sample_name sample name, string
 #' @param rds_file character string file path to .rds file of processed Seurat object
 #' @param output_dir output directory for plots, string
+#' @param sample_celltype_DEA list of sample_celltype comparisons, as exampled
 #'
 #' @export
 #'
@@ -13,187 +14,115 @@
 #' Seurat:::WilcoxDETest
 #' Seurat::Foldchange.default
 #'
+#' For benchmarking DE methods see: Junttilla et al 2022 (summarizes both Zimmerman et al 2021/2022 and Squair et al 2021!)
+#' If you have replicate samples: pseudobulk (ROTS with sum > mean) > mixed models (best: MAST_RE) > naive models > latent variable models
+#' If no replicate samples: use Seurat default Wilcoxon rank-sum test (with Presto installed for speed) on SCT normalized assay (@data slot)
+#' -  set: recorrect_umi = FALSE, when running on a subset
+#' AUROC suggests that p-values are generally in order for all methods, however large amount of false positives for naive/latent variable models.
+#' Don't use ComBat for batch normalization for DE. If taking into account batch effects for DE use as a latent variable.
+#' Squair et al 2021: "the central principle underlying valid DE analysis is the ability of statistical methods to account for the intrinsic variability of biological replicates".
+#'
 #' @examplesIf FALSE
 #' differential_expression_analysis(
 #'   sample_name = "T1",
 #'   rds_file = file.path("EMC-SKlab-scRNAseq", "results", "T1.rds"),
 #'   output_dir = file.path("EMC-SKlab-scRNAseq", "results", 'integrated', 'sample_name')
 #' )
-differential_expression_analysis <- function(sample_name, rds_file, output_dir) {
+#'
+#' sample_celltype_DEA <- list(
+#' c("SampleA_CelltypeA", "SampleB_CelltypeA"),
+#' c("SampleA_CelltypeB", "SampleB_CelltypeB"))
+differential_expression_analysis <- function(
+    sample_name, rds_file, output_dir,
+    sample_celltype_DEA = NULL) {
   library(Seurat) # added because of error
   # Error: package or namespace load failed for ‘Seurat’ in .doLoadActions(where, attach):
   #   error in load action .__A__.1 for package RcppAnnoy: loadModule(module = "AnnoyAngular", what = TRUE, env = ns, loadNow = TRUE): Unable to load module "AnnoyAngular": attempt to apply non-function
   # Error in .requirePackage(package) :
   #   unable to find required package ‘Seurat’
 
-  # create output directories
+  ## create output directories
   output_dir <- file.path(output_dir, 'DEA')
-  dir.create(file.path(output_dir, 'markers'), recursive = T)
-
+  ## read data
   integrated <- readRDS(rds_file)
-  if (length(table(integrated$orig.ident)) != 1) {
-    dir.create(file.path(output_dir, 'sample_markers'))
-    dir.create(file.path(output_dir, 'conserved_markers'))
-    dir.create(file.path(output_dir, 'condition_markers'))
+
+  if (!length(unique(integrated$orig.ident)) > 1) {
+    message("Need multiple samples in Seurat object to perform sample-level DEA")
+  } else {
+    # plot scatters with correlation for AggregatedExpression of unique sample pairs
+    aggregate_data <- Seurat::AggregateExpression(integrated, group.by = "orig.ident", assays = "SCT", return.seurat = TRUE)
+    # get unique sample-pairs
+    sample_combinations <- combn(names(aggregate_data$orig.ident), 2, simplify = F)
+    scatter_plots <- patchwork::wrap_plots(lapply(sample_combinations, function(x) {
+      Seurat::CellScatter(aggregate_data, x[1], x[2])
+    }))
+    ggplot2::ggsave(plot = scatter_plots, file = file.path(output_dir, 'pseudobulk_scatter_plots.png'), width = 30, height = 20, units = "cm")
   }
 
-  ## perform sample level comparison for integration
-  # check if all samples for comparison have more then 3 cells
-  if (!any(table(integrated$orig.ident) < 3)) {
-    # check if multiple samples
-    if (length(table(integrated$orig.ident)) != 1) {
-      # set idents to compare cells at sample level instead of cluster level
-      SeuratObject::Idents(integrated) <- integrated$orig.ident
-
-      # create sample marker dataframes to count n cells used in comparisons
-      sample_markers_columns <- c(paste0("n_cells_", names(table(integrated$orig.ident))[1]),
-                                  paste0("n_cells_", names(table(integrated$orig.ident))[2]))
-      sample_markers_df <- data.frame(matrix(nrow = 0, ncol = length(sample_markers_columns)))
-      colnames(sample_markers_df) <- sample_markers_columns
-      sample_markers_df[nrow(sample_markers_df) + 1,] = c(table(integrated$orig.ident)[1],
-                                                          table(integrated$orig.ident)[2])
-      # write n cells for comparison to CSV files
-      write.csv2(sample_markers_df, file = file.path(output_dir, 'sample_markers', 'n_cells_for_comparison_m.csv'), row.names = FALSE)
-
-      # get sample markers (note: p_val_adj based on Bonferroni correction using ALL genes)
-      sample_markers <- Seurat::FindMarkers(integrated, assay = "SCT", ident.1 = names(table(integrated$orig.ident))[1], only.pos = FALSE, verbose = T,
-                                    logfc.threshold = 0, min.pct = 0)
-
-      # set pct variable based on BL_C orig.identity index
-      pct <- if(names(table(integrated$orig.ident))[1] == "BL_C") "pct.1" else "pct.2"
-
-      # filters rows (genes) if they are >0.05 for both p_val and non-zero p_val with Bonferroni correction
-      sample_markers <- sample_markers[!(sample_markers$p_val_adj > 0.05 & sample_markers$nz_p_val_adj > 0.05),]
-      # order by avg_log2FC
-      sample_markers_pval_adj <- sample_markers %>% dplyr::arrange(dplyr::desc(avg_log2FC)) # DEPRECATED: filter(pct > 0.1)
-
-      write.csv2(sample_markers_pval_adj, file = file.path(output_dir, 'sample_markers', paste0('pct1=', names(table(integrated$orig.ident))[1], "-pct2=", names(table(integrated$orig.ident))[2], " - (nz-)p-val st 0.05.csv")), row.names = TRUE)
-
-      # add sample markers and n cells count as miscellaneous data to Seurat object
-      SeuratObject::Misc(object = integrated, slot = paste0("DEG.sample_markers")) <- sample_markers
-      SeuratObject::Misc(object = integrated, slot = paste0("DEG.sample_markers_n")) <- sample_markers_df
-    }
-  }
-
-  # set idents back to cluster level for downstream comparisons
-  SeuratObject::Idents(integrated) <- integrated$seurat_clusters
-
-  # markers
-  markers_columns <- c('cluster_ID', 'n_cells_cluster', 'n_all_other_cells')
-  markers_df <- data.frame(matrix(nrow = 0, ncol = length(markers_columns)))
-  colnames(markers_df) <- markers_columns
-  # conserved markers
-  conserved_markers_columns <- c('cluster_ID',
-                                 paste0('n_cells_cluster_identity_', names(table(integrated$orig.ident))[1]),
-                                 paste0('n_cells_cluster_identity_', names(table(integrated$orig.ident))[2]),
-                                 paste0('n_all_other_cells_identity_', names(table(integrated$orig.ident))[1]),
-                                 paste0('n_all_other_cells_identity_', names(table(integrated$orig.ident))[2]))
-  conserved_markers_df <- data.frame(matrix(nrow = 0, ncol = length(conserved_markers_columns)))
-  colnames(conserved_markers_df) <- conserved_markers_columns
-  # condition markers
-  condition_markers_columns <- c('cluster_id',
-                                 paste0('n_cells_', names(table(integrated$orig.ident))[1]),
-                                 paste0('n_cells_', names(table(integrated$orig.ident))[2]))
-  condition_markers_df <- data.frame(matrix(nrow = 0, ncol = length(condition_markers_columns)))
-  colnames(condition_markers_df) <- condition_markers_columns
-
-  # get cluster IDs to loop over
-  cluster_ids <- levels(integrated$seurat_clusters)
-  for (i in cluster_ids) {
-    message('Cluster ID:', i)
-
-    # add amount of cells used for markers comparison to df
-    markers_df[nrow(markers_df) + 1,] = c(i,
-                                          table(integrated$seurat_clusters)[i],
-                                          sum(table(integrated$seurat_clusters)[-as.integer(i)]))
-    # write n cells for comparison to CSV files
-    write.csv2(markers_df, file = file.path(output_dir, 'markers', 'n_cells_for_comparison_m.csv'), row.names = FALSE)
-    # check more than 2 cells in ident (cluster) before comparison
-    if (table(integrated$seurat_clusters)[i] < 3) {
-      message("For markers, skipping ident (cluster) ", i, " comparison because < 3 cells")
-    } else {
-      # create markers for integrated data for each cluster vs all other clusters
-      markers <- Seurat::FindMarkers(integrated, assay = "SCT", ident.1 = i, only.pos = FALSE, verbose = T)
-      # filters rows (genes) if they are >0.05 for both p_val and non-zero p_val with Bonferroni correction
-      markers <- markers[!(markers$p_val_adj > 0.05 & markers$nz_p_val_adj > 0.05),]
-
-      write.csv2(markers, file = file.path(output_dir, 'markers', paste0('all_cluster', i, '_m.csv')))
-
-      # add as miscellaneous data to Seurat object
-      SeuratObject::Misc(object = integrated, slot = paste0("DEG.markers")) <- markers
-      SeuratObject::Misc(object = integrated, slot = paste0("DEG.markers_n")) <- markers_df
-      message("wrote markers")
-    }
-
-    # check if multiple samples
-    if (length(table(integrated$orig.ident)) != 1) {
-      # add amount of cells used for conserved_markers comparison to df
-      df <- data.frame('orig.ident' = integrated$orig.ident, 'seurat_clusters' = integrated$seurat_clusters)
-      # condition 1 & match cluster
-      cm_val1 <- nrow(df %>% dplyr::filter(orig.ident == names(table(integrated$orig.ident))[1] & seurat_clusters == i))
-      # condition 2 & match cluster
-      cm_val2 <- nrow(df %>% dplyr::filter(orig.ident == names(table(integrated$orig.ident))[2] & seurat_clusters == i))
-      # condition 1 & no match cluster
-      cm_val3 <- nrow(df %>% dplyr::filter(orig.ident == names(table(integrated$orig.ident))[1] & seurat_clusters != i))
-      # condition 2 & no match cluster
-      cm_val4 <- nrow(df %>% dplyr::filter(orig.ident == names(table(integrated$orig.ident))[2] & seurat_clusters != i))
-      conserved_markers_df[nrow(conserved_markers_df) + 1,] = c(i, cm_val1, cm_val2, cm_val3, cm_val4)
-      # write n cells for comparison to CSV files
-      write.csv2(conserved_markers_df, file = file.path(output_dir, 'conserved_markers', 'n_cells_for_comparison_cm.csv'), row.names = FALSE)
-      # check more than 2 cells in ident (cluster) for each group before comparison
-      if (any(c(cm_val1, cm_val2, cm_val3, cm_val4) < 3)) {
-        message("For conserved markers, skipping ident (cluster) ", i, " comparison because < 3 cells")
+  ## sample(s)-sample(s) & sample(s)-celltype(s)-level DE
+  if (is.null(sample_celltype_DEA)) {
+    message("To perform sample(s)-sample(s) and sample(s)-celltype(s) DE comparisons, provide sample_celltype_DEA (named) list with comparisons, see workflow for instructions")
+  } else {
+    for (meta_name in names(sample_celltype_DEA)) {
+      message(meta_name)
+      DE_output_dir <- file.path(output_dir, meta_name)
+      dir.create(DE_output_dir, recursive = TRUE)
+      if (meta_name == "orig.ident") {
+        SeuratObject::Idents(integrated) <- integrated$orig.ident
       } else {
-        # create markers conserved between groups (conditions) for integrated data for each cluster vs all other clusters
-        conserved_markers <- Seurat::FindConservedMarkers(integrated, assay = "SCT", ident.1 = i, only.pos = FALSE,
-                                                  grouping.var = "orig.ident", verbose = T)
-
-
-        # filters rows (genes) for both compared samples if they are >0.05 for both p_val and non-zero p_val with Bonferroni correction
-        conserved_markers <- conserved_markers[!(conserved_markers[, paste0(names(table(integrated$orig.ident))[1], "_p_val_adj")] > 0.05 & conserved_markers[, paste0(names(table(integrated$orig.ident))[1], "_nz_p_val_adj")] > 0.05),]
-        conserved_markers <- conserved_markers[!(conserved_markers[, paste0(names(table(integrated$orig.ident))[2], "_p_val_adj")] > 0.05 & conserved_markers[, paste0(names(table(integrated$orig.ident))[2], "_nz_p_val_adj")] > 0.05),]
-
-        write.csv2(conserved_markers, file = file.path(output_dir, 'conserved_markers', paste0('all_cluster', i, '_cm.csv')))
-
-        # add as miscellaneous data to Seurat object
-        SeuratObject::Misc(object = integrated, slot = paste0("DEG.conserved_markers")) <- conserved_markers
-        SeuratObject::Misc(object = integrated, slot = paste0("DEG.conserved_markers_n")) <- conserved_markers_df
-        message("wrote conserved markers")
+        idents <- paste(integrated$orig.ident, integrated@meta.data[, meta_name], sep = "_")
+        SeuratObject::Idents(integrated) <- idents
       }
 
-      # create condition markers for integrated data within each cluster between each condition
-      subset <- subset(integrated, seurat_clusters == i)
-      # change cluster identity to original identity to find markers between conditions
-      SeuratObject::Idents(subset) <- subset$orig.ident
-      # check if subset contains cells for at least 2 conditions/samples for comparison
-      if (length(names(table(subset$orig.ident))) == 1) {
-        message('In cluster ', i, ' only cells for condition/sample ',
-                names(table(subset$orig.ident)), ' were found, cannot create condition markers for this cluster.')
-        next
-      }
-      # add amount of cells used for condition_markers comparison to df
-      condition_markers_df[nrow(condition_markers_df) + 1,] = c(i, table(subset$orig.ident)[1], table(subset$orig.ident)[2])
-      # write n cells for comparison to CSV files
-      write.csv2(condition_markers_df, file = file.path(output_dir, 'condition_markers', 'n_cells_for_comparison.csv'), row.names = FALSE)
-      # check more than 2 cells in subset ident (cluster) before comparison
-      if (any(c(table(subset$orig.ident)[1], table(subset$orig.ident)[2]) < 3)) {
-        message("For condition markers, skipping ident (cluster) ", i, " comparison because < 3 cells")
-      } else {
-        # create condition_markers for subset data for within each cluster to compare conditions
-        condition_markers <- Seurat::FindMarkers(subset, assay = "SCT", recorrect_umi = FALSE, ident.1 = "BL_C", verbose = T, only.pos = FALSE)
-        # filters rows (genes) if they are >0.05 for both p_val and non-zero p_val with Bonferroni correction
-        condition_markers <- condition_markers[!(condition_markers$p_val_adj > 0.05 & condition_markers$nz_p_val_adj > 0.05),]
+      for (i in seq_along(sample_celltype_DEA[[meta_name]])) {
+        comp_name <- names(sample_celltype_DEA[[meta_name]])[i] # "name" or name
+        ref_ident <- sample_celltype_DEA[[meta_name]][[i]]$ref
+        vs_ident <- sample_celltype_DEA[[meta_name]][[i]]$vs
 
-        write.csv2(condition_markers, file = file.path(output_dir, 'condition_markers', paste0('all_cluster', i, '.csv')))
-
-        # add as miscellaneous data to Seurat object
-        SeuratObject::Misc(object = integrated, slot = paste0("DEG.condition_markers")) <- condition_markers
-        SeuratObject::Misc(object = integrated, slot = paste0("DEG.condition_markers_n")) <- condition_markers_df
-        message("wrote condition markers")
+        message("DE: ", ref_ident, " vs ", vs_ident)
+        DE_EnhancedVolcano(integrated, ref_ident, vs_ident, DE_output_dir, comp_name)
       }
     }
   }
+}
 
-  # save data for possible adjustments
-  saveRDS(integrated, file = rds_file)
+#' Perform DE with Seurat FindMarkers() and plot EnhancedVolcano
+#'
+#' @param seurat_object integrated Seurat object. Containing ref_ident and vs_ident in Idents(seurat_object)
+#' @param ref_ident reference sample name, pct.1 in Seurat DE result
+#' @param vs_ident versus sample name, pct.2 in Seurat DE result
+#' @param directory to save plot in, filename is based on reference and versus sample
+#' @param comp_name used to handle filenaming and EnhancedVolcano plot title
+DE_EnhancedVolcano <- function(seurat_object, ref_ident, vs_ident, DE_output_dir, comp_name) {
+  DE_res <- Seurat::FindMarkers(
+    seurat_object,
+    assay = "SCT",
+    ident.1 = ref_ident,
+    ident.2 = vs_ident,
+    only.pos = FALSE,
+    verbose = TRUE,
+    logfc.threshold = 0,
+    min.pct = 0)
+
+  ## sort by average log2 fold-change
+  DE_res <- DE_res %>% dplyr::arrange(dplyr::desc(avg_log2FC))
+  ## filter by p-val-adj (Bonferroni corrected)
+  DE_res_adj <- DE_res[DE_res$p_val_adj < 0.05,]
+  ## write raw and p-val-adj filtered sample-level DE
+  if (comp_name == "name") {
+    filename <- file.path(DE_output_dir, paste0("1=", ref_ident, "_vs_2=", vs_ident, ".xlsx"))
+  } else {
+    split_name <- strsplit(comp_name, "_vs_")
+    ref_ident_name <- split_name[[1]][1]
+    vs_ident_name <- split_name[[1]][2]
+    filename <- file.path(DE_output_dir, paste0("1=", ref_ident_name, "_vs_2=", vs_ident_name, ".xlsx"))
+  }
+  openxlsx::write.xlsx(x = DE_res, file = filename, row.names = TRUE)
+  openxlsx::write.xlsx(x = DE_res_adj, file = sub(".xlsx$", "_adj.xlsx", filename), row.names = TRUE)
+
+  ## plot EnhancedVolcano per sample DE
+  plotEnhancedVolcano(
+    seurat_object, DE_res, ref_ident, vs_ident,
+    filedir = DE_output_dir, comp_name
+  )
 }

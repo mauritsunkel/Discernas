@@ -18,6 +18,14 @@ Changed following functions in mauritsunkel/EMC-SKlab-seurat:
 Seurat::FindMarkers.default
 Seurat:::WilcoxDETest
 Seurat::Foldchange.default
+
+For benchmarking DE methods see: Junttilla et al 2022 (summarizes both Zimmerman et al 2021/2022 and Squair et al 2021!)
+If you have replicate samples: pseudobulk (ROTS with sum > mean) > mixed models (best: MAST_RE) > naive models > latent variable models
+If no replicate samples: use Seurat default Wilcoxon rank-sum test (with Presto installed for speed) on SCT normalized assay (@data slot)
+-  set: recorrect_umi = FALSE, when running on a subset
+AUROC suggests that p-values are generally in order for all methods, however large amount of false positives for naive/latent variable models.
+Don't use ComBat for batch normalization for DE. If taking into account batch effects for DE use as a latent variable.
+Squair et al 2021: "the central principle underlying valid DE analysis is the ability of statistical methods to account for the intrinsic variability of biological replicates".
 }
 \details{
 Perform differential expression analysis on processed and annotated Seurat object.
