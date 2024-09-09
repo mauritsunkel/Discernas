@@ -19,7 +19,7 @@ plotEnhancedVolcano <- function(
     stop("Either ", ref_ident, " or ", vs_ident, " not in Idents(seurat_object")
   }
 
-  if (comp_name == "name") { # is.null(comp_name || comp_name == ""
+  if (comp_name == "name") {
     title <- paste0(ref_ident, " vs ", vs_ident)
   } else {
     title <- sub("_vs_", " vs ", comp_name)

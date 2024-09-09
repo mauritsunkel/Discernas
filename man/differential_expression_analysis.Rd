@@ -4,7 +4,13 @@
 \alias{differential_expression_analysis}
 \title{Run DEA on processed Seurat object}
 \usage{
-differential_expression_analysis(sample_name, rds_file, output_dir)
+differential_expression_analysis(
+  sample_name,
+  rds_file,
+  output_dir,
+  sample_celltype_DEA = NULL,
+  features_of_interest = NULL
+)
 }
 \arguments{
 \item{sample_name}{sample name, string}
@@ -12,6 +18,10 @@ differential_expression_analysis(sample_name, rds_file, output_dir)
 \item{rds_file}{character string file path to .rds file of processed Seurat object}
 
 \item{output_dir}{output directory for plots, string}
+
+\item{sample_celltype_DEA}{list of sample_celltype comparisons, as exampled}
+
+\item{features_of_interest}{marker features to plot as violins and dots per DE comparison}
 }
 \description{
 Changed following functions in mauritsunkel/EMC-SKlab-seurat:
@@ -37,5 +47,9 @@ differential_expression_analysis(
   rds_file = file.path("EMC-SKlab-scRNAseq", "results", "T1.rds"),
   output_dir = file.path("EMC-SKlab-scRNAseq", "results", 'integrated', 'sample_name')
 )
+
+sample_celltype_DEA <- list(
+c("SampleA_CelltypeA", "SampleB_CelltypeA"),
+c("SampleA_CelltypeB", "SampleB_CelltypeB"))
 \dontshow{\}) # examplesIf}
 }

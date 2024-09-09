@@ -6,6 +6,7 @@
 #' @param rds_file character string file path to .rds file of processed Seurat object
 #' @param output_dir output directory for plots, string
 #' @param sample_celltype_DEA list of sample_celltype comparisons, as exampled
+#' @param features_of_interest marker features to plot as violins and dots per DE comparison
 #'
 #' @export
 #'
@@ -34,7 +35,8 @@
 #' c("SampleA_CelltypeB", "SampleB_CelltypeB"))
 differential_expression_analysis <- function(
     sample_name, rds_file, output_dir,
-    sample_celltype_DEA = NULL) {
+    sample_celltype_DEA = NULL,
+    features_of_interest = NULL) {
   library(Seurat) # added because of error
   # Error: package or namespace load failed for ‘Seurat’ in .doLoadActions(where, attach):
   #   error in load action .__A__.1 for package RcppAnnoy: loadModule(module = "AnnoyAngular", what = TRUE, env = ns, loadNow = TRUE): Unable to load module "AnnoyAngular": attempt to apply non-function
@@ -65,8 +67,6 @@ differential_expression_analysis <- function(
   } else {
     for (meta_name in names(sample_celltype_DEA)) {
       message(meta_name)
-      DE_output_dir <- file.path(output_dir, meta_name)
-      dir.create(DE_output_dir, recursive = TRUE)
       if (meta_name == "orig.ident") {
         SeuratObject::Idents(integrated) <- integrated$orig.ident
       } else {
@@ -75,14 +75,53 @@ differential_expression_analysis <- function(
       }
 
       for (i in seq_along(sample_celltype_DEA[[meta_name]])) {
-        comp_name <- names(sample_celltype_DEA[[meta_name]])[i] # "name" or name
         ref_ident <- sample_celltype_DEA[[meta_name]][[i]]$ref
         vs_ident <- sample_celltype_DEA[[meta_name]][[i]]$vs
 
+        comp_name <- names(sample_celltype_DEA[[meta_name]])[i]
+        if (comp_name == "name") {
+          comp_name <- paste0(ref_ident, "_vs_", vs_ident)
+        }
+        meta_dirname <- switch(
+          meta_name,
+          "kriegstein.seurat.custom.clusters.mean" = "Kriegstein.Seurat",
+          "orig.ident" = "Sample-level",
+          "mapmycells_supercluster" = "MapMyCells"
+        )
+        DE_output_dir <- file.path(output_dir, meta_dirname, comp_name)
+        dir.create(DE_output_dir, recursive = TRUE)
+
         message("DE: ", ref_ident, " vs ", vs_ident)
         DE_EnhancedVolcano(integrated, ref_ident, vs_ident, DE_output_dir, comp_name)
+        if (!is.null(features_of_interest)) {
+          DE_MarkerExpression(integrated, features_of_interest, idents = c(ref_ident, vs_ident), DE_output_dir)
+        }
       }
     }
+  }
+}
+
+#' Plot marker features as violins and dots per DE comparison
+#'
+#' @param seurat_object SO with integrated samples
+#' @param features_of_interest List with named vectors with features (genes)
+#' @param idents for which DE idents to plot
+#' @param output_dir output directory for plots, string
+DE_MarkerExpression <- function(seurat_object, features_of_interest, idents, output_dir) {
+  output_dir_split <- strsplit(output_dir, "/")[[1]]
+  output_filename <- paste0(output_dir_split[[length(output_dir_split)]])
+
+  for (feat_name in (names(features_of_interest))) {
+    message("DE Violin & DotPLot: ", feat_name)
+    output_dir_path <- file.path(output_dir, "markers", feat_name)
+    dir.create(output_dir_path, recursive = TRUE)
+
+    features <- features_of_interest[[feat_name]]
+
+    Seurat::VlnPlot(seurat_object, features, idents = idents, assay = "SCT", same.y.lims = T)
+    ggplot2::ggsave(file.path(output_dir_path, paste0(output_filename, "_ViolinPlot.png")), width = 30, height = 20, units = "cm")
+    Seurat::DotPlot(seurat_object, features, idents = idents, assay = "SCT")
+    ggplot2::ggsave(file.path(output_dir_path, paste0(output_filename, "_DotPlot.png")), width = 30, height = 20, units = "cm")
   }
 }
 
