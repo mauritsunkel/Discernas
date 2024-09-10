@@ -20,23 +20,30 @@ plotEnhancedVolcano <- function(
   }
 
   if (comp_name == "name") {
-    title <- paste0(ref_ident, " vs ", vs_ident)
+    title <- paste0(vs_ident, " vs ", ref_ident)
   } else {
-    title <- sub("_vs_", " vs ", comp_name)
+    title_split <- strsplit(comp_name, "_vs_")
+    title <- paste0(title_split[2], " vs ", title_split[1])
   }
-  ## to plot avg_log2FC in more intuitive sense of left for ident.1 and right for ident.2
-  seurat_DE$avg_log2FC <- seurat_DE$avg_log2FC * -1
 
-  ## set plot point size to represent relative difference in amount of cells
   rescale <- function(val, from, to) {
     from + to * ((val - min(val)) / (max(val) - min(val)))
   }
   pseudocount <- 0.00001
-  pct_ratio <- abs(log((seurat_DE$pct.1 + pseudocount)/(seurat_DE$pct.2 + pseudocount)))
-  point_size <- rescale(pct_ratio, from = 1, to = 5)
+  n_cells.1 <- DE_res$pct.1 * n_cells_ref + pseudocount
+  n_cells.2 <- DE_res$pct.2 * n_cells_vs + pseudocount
+  # Calculate absolute differences
+  absolute_diff <- abs(n_cells.1 - n_cells.2)
+  # Calculate relative differences
+  relative_diff <- absolute_diff / pmax(abs(n_cells.1), abs(n_cells.2))
+  # Calculate the combined metric
+  combined_diff <- absolute_diff * (1 - relative_diff)
+  ## set plot point size to represent relative difference in amount of cells
+  point_size <- rescale(combined_diff, from = 1, to = 5)
+  point_alpha <- rescale(relative_diff, from = .25, to = 1)
 
-  n_cells_1 <- sum(SeuratObject::Idents(seurat_object) %in% ref_ident)
-  n_cells_2 <- sum(SeuratObject::Idents(seurat_object) %in% vs_ident)
+  n_cells_ref <- sum(SeuratObject::Idents(seurat_object) %in% ref_ident)
+  n_cells_vs <- sum(SeuratObject::Idents(seurat_object) %in% vs_ident)
   x_axis_min <- floor(min(seurat_DE$avg_log2FC))
   x_axis_max <- ceiling(max(seurat_DE$avg_log2FC))
   p <- EnhancedVolcano::EnhancedVolcano(
@@ -50,9 +57,10 @@ plotEnhancedVolcano <- function(
     drawConnectors = TRUE,
     arrowheads = FALSE,
     widthConnectors = 0.25,
-    pCutoff = 1e-05,
+    pCutoff = 0.005,
     FCcutoff = 1,
-    pointSize = point_size, # DEVNOTE: colAlpha can also be a vector
+    pointSize = point_size,
+    colAlpha = point_alpha,
     labSize = 4,
     borderWidth = 1.5,
     legendPosition = "right",
@@ -63,11 +71,11 @@ plotEnhancedVolcano <- function(
     xlab = expression(log[2]~FC),
     ylab = bquote(~-log[10] ~ italic(P)),
     title = title,
-    subtitle = paste0(n_cells_1, " vs ", n_cells_2),
+    subtitle = paste0(n_cells_ref, " vs ", n_cells_vs),
     caption = paste0("N genes: ", nrow(seurat_DE))
   ) + ggplot2::coord_cartesian(xlim=c(x_axis_min, x_axis_max)) +
     ggplot2::scale_x_continuous(
-      breaks=seq(x_axis_max, x_axis_min, -1))
+      breaks=seq(x_axis_min, x_axis_max, 1))
 
   filename <- file.path(filedir, paste0(sub(" vs ", "_vs_", title), '_EVP.png'))
   ggplot2::ggsave(plot = p, file = filename, width = 30, height = 20, units = "cm")
