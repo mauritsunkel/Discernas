@@ -7,22 +7,25 @@
 plotEnhancedVolcano(
   seurat_object,
   seurat_DE,
-  ref_sample,
-  vs_sample,
+  ref_ident,
+  vs_ident,
   filedir,
+  comp_name,
   genes_to_label = NULL
 )
 }
 \arguments{
-\item{seurat_object}{integrated Seurat object. Containing ref_sample and vs_sample in Idents(seurat_object)}
+\item{seurat_object}{integrated Seurat object. Containing ref_ident and vs_ident in Idents(seurat_object)}
 
 \item{seurat_DE}{Seurat DE result, from a FindMarkers() function}
 
-\item{ref_sample}{reference sample name, pct.1 in Seurat DE result}
+\item{ref_ident}{reference sample name, pct.1 in Seurat DE result}
 
-\item{vs_sample}{versus sample name, pct.2 in Seurat DE result}
+\item{vs_ident}{versus sample name, pct.2 in Seurat DE result}
 
 \item{filedir}{directory to save plot in, filename is based on reference and versus sample}
+
+\item{comp_name}{used to handle filenaming and EnhancedVolcano plot title}
 
 \item{genes_to_label}{default: NULL, if gene vector given, only those are labeled}
 }

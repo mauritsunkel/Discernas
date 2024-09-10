@@ -67,7 +67,7 @@ plotEnhancedVolcano <- function(
     caption = paste0("N genes: ", nrow(seurat_DE))
   ) + ggplot2::coord_cartesian(xlim=c(x_axis_min, x_axis_max)) +
     ggplot2::scale_x_continuous(
-      breaks=seq(x_axis_min, x_axis_max, 1))
+      breaks=seq(x_axis_max, x_axis_min, -1))
 
   filename <- file.path(filedir, paste0(sub(" vs ", "_vs_", title), '_EVP.png'))
   ggplot2::ggsave(plot = p, file = filename, width = 30, height = 20, units = "cm")
