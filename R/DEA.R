@@ -48,18 +48,18 @@ differential_expression_analysis <- function(
   ## read data
   integrated <- readRDS(rds_file)
 
-  if (!length(unique(integrated$orig.ident)) > 1) {
-    message("Need multiple samples in Seurat object to perform sample-level DEA")
-  } else {
-    # plot scatters with correlation for AggregatedExpression of unique sample pairs
-    aggregate_data <- Seurat::AggregateExpression(integrated, group.by = "orig.ident", assays = "SCT", return.seurat = TRUE)
-    # get unique sample-pairs
-    sample_combinations <- combn(names(aggregate_data$orig.ident), 2, simplify = F)
-    scatter_plots <- patchwork::wrap_plots(lapply(sample_combinations, function(x) {
-      Seurat::CellScatter(aggregate_data, x[1], x[2])
-    }))
-    ggplot2::ggsave(plot = scatter_plots, file = file.path(output_dir, 'pseudobulk_scatter_plots.png'), width = 30, height = 20, units = "cm")
-  }
+  # if (!length(unique(integrated$orig.ident)) > 1) {
+  #   message("Need multiple samples in Seurat object to perform sample-level DEA")
+  # } else {
+  #   # plot scatters with correlation for AggregatedExpression of unique sample pairs
+  #   aggregate_data <- Seurat::AggregateExpression(integrated, group.by = "orig.ident", assays = "SCT", return.seurat = TRUE)
+  #   # get unique sample-pairs
+  #   sample_combinations <- combn(names(aggregate_data$orig.ident), 2, simplify = F)
+  #   scatter_plots <- patchwork::wrap_plots(lapply(sample_combinations, function(x) {
+  #     Seurat::CellScatter(aggregate_data, x[1], x[2])
+  #   }))
+  #   ggplot2::ggsave(plot = scatter_plots, file = file.path(output_dir, 'pseudobulk_scatter_plots.png'), width = 30, height = 20, units = "cm")
+  # }
 
   ## sample(s)-sample(s) & sample(s)-celltype(s)-level DE
   if (is.null(sample_celltype_DEA)) {
@@ -93,9 +93,9 @@ differential_expression_analysis <- function(
 
         message("DE: ", ref_ident, " vs ", vs_ident)
         DE_EnhancedVolcano(integrated, ref_ident, vs_ident, DE_output_dir, comp_name)
-        if (!is.null(features_of_interest)) {
-          DE_MarkerExpression(integrated, features_of_interest, idents = c(ref_ident, vs_ident), DE_output_dir)
-        }
+        # if (!is.null(features_of_interest)) {
+        #   DE_MarkerExpression(integrated, features_of_interest, idents = c(ref_ident, vs_ident), DE_output_dir)
+        # }
       }
     }
   }
