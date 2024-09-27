@@ -8,7 +8,6 @@
 #' @param sample_names character vector with sample names of .rds data files
 #' @param output_dir Package home directory, used to create output directory for results.
 #' @param features_of_interest list of gene marker panels used for plotting
-#' @param ref_sample default: NULL. Otherwise, a sample within sample_names to be used as CCA reference anchor dataset.
 #' @param perform_cluster_level_selection perform marker selection based on selection panel and selection percent expressed for each cluster, then reintegrate (note: advise to use either cell or cluster based selection, not both)
 #' @param perform_cell_level_selection perform marker selection based on selection panel and selection percent expressed for each cell, then reintegrate (note: advise to use either cell or cluster based selection, not both)
 #' @param selection_panel default: c(). Gene/feature marker panel for selection and reintegration
@@ -29,15 +28,29 @@
 #'                     selection_panel = selection_panel)
 #'
 #' @note During development notes
-#' Explored different selectionp panels
+#' Explored different selection panels
 #' - Neurons: c("MAP2", "DCX", "NEUROG2") # RBFOX3 <-> DCX
 #' - Astrocytes: c("VIM", "S100B", "SOX9") # SOX9 <-> FABP7
 #'
 #' Calling leidenalg via reticulate to run Leiden algorithm instead of Louvain
 #' algorithm with Seurat::FindClusters() used to work, now it has stopped
 #' working. Still trying to find the cause of this, issued on their Github.
+#'
+#' Seurat integration notes
+#' RPCA > CCA when: "a substantial fraction of the cells in one dataset have no matching type in the other" and/or "datasets originate from the same platform (i.e. multiple lanes of 10x genomics)"
+#'  the major difference with Seurat V4 is that in Seurat v5, we perform the integration in low-dimensional space. What that means is that prior to performing any integration - we run a PCA on the full dataset (V5: IntegrateLayers() vs V4: IntegrateData(), no more 'integrated' assay)
+#' Using harmony::RunHarmony instead of Seurat::IntegrateLayers to have more parameter control.
+#' Harmony is fast, memory efficient, removes batch effects, scalable, and ranks among the top in many different type of benchmarking studies
+#' - only for the most complex use cases, consider scVI/scANVI/Scanorama/scGen (all Python based)
+#' - https://www.nature.com/articles/s41592-021-01336-8
+#' - https://www.ncbi.nlm.nih.gov/pmc/articles/PMC6964114/
+#' - https://www.ncbi.nlm.nih.gov/pmc/articles/PMC8053088/
+#' - https://www.nature.com/articles/s41467-023-41855-w
+#' - https://genomebiology.biomedcentral.com/articles/10.1186/s13059-019-1850-9#Sec9
+#' IntegrateLayers(normalization.method = "SCT") replaces: SelectIntegrationFeatures, PrepSCTIntegration, FindIntegrationAnchors, IntegrateData
+#' - For IntegrateLayers, specifically using method = SeuratWrappers::FastMNNIntegration, got error  - following issue: https://github.com/satijalab/seurat/issues/8631
+#' - For IntegrateLayers, specifically using method = SeuratWrappers::scVIIntegration, need reticulate/conda setup for scVI
 samples_integration <- function(sample_files, sample_names, output_dir,
-                                ref_sample = NULL,
                                 perform_cluster_level_selection = TRUE,
                                 perform_cell_level_selection = FALSE,
                                 selection_panel = c(),
@@ -56,10 +69,6 @@ samples_integration <- function(sample_files, sample_names, output_dir,
 
   # set sample name for integration
   sample_name <- paste(sample_names, collapse = "-")
-  # set reference sample for integration
-  ref_sample <- if (is.null(ref_sample)) stringr::str_split(sample_name, "-")[[1]][1] else ref_sample
-  # set ref sample index
-  for (i in seq_along(1:length(data.list))) if (levels(data.list[[i]]$orig.ident) == ref_sample) ind <- i
 
   # initialize start time and directories
   output_dir <- file.path(output_dir, sample_name)
@@ -70,180 +79,230 @@ samples_integration <- function(sample_files, sample_names, output_dir,
 
 
   # select repeatedly variable features across data sets
-  features <- Seurat::SelectIntegrationFeatures(object.list = data.list, nfeatures = 3000)
-  data.list <- Seurat::PrepSCTIntegration(object.list = data.list, anchor.features = features)
-  data.list <- lapply(X = data.list, FUN = RunPCA, features = features)
+  data.features <- Seurat::SelectIntegrationFeatures(object.list = data.list, nfeatures = 3000)
+  ## DEVNOTE: deprecated, used with Seurat::FindIntegrationAnchors and Seurat::IntegrateData
+  ## data.list <- Seurat::PrepSCTIntegration(object.list = data.list, anchor.features = data.features)
 
+  ## DEVNOTE: using base::merge instead of SeuratObject::merge.Seurat as the latter lost cells
+  data.merged <- base::merge(data.list[[1]], data.list[2:length(data.list)])
+  Seurat::VariableFeatures(data.merged) <- data.features
 
-  # run Canonical Correlation Analysis (CCA) to find 'anchors' between data sets
-  anchors <- Seurat::FindIntegrationAnchors(
-    object.list = data.list,
-    normalization.method = "SCT",
-    anchor.features = features,
-    reference = c(ind),
-    dims = 1:30, reduction = "rpca", k.anchor = 20) # TODO check if only for rpca method or also the others
-  rm(data.list)
+  data.merged <- Seurat::RunPCA(object = data.merged, assay = "SCT", features = data.features, npcs = 50)
 
+  integrated <- harmony::RunHarmony(
+    object = data.merged,
+    group.by.vars = "orig.ident",
+    assay.use = "SCT",
+    reduction.use = "pca",
+    dims.use = 1:50,
+    plot_convergence = FALSE,
+    epsilon.cluster=-Inf,
+    epsilon.harmony=-Inf)
+
+  ## DEVNOTE: deprecated, used with Seurat::PrepSCTIntegration and Seurat::IntegrateData
+  # data.merged <- lapply(X = data.merged, FUN = Seurat::RunPCA, features = data.features)
+  ## run Canonical Correlation Analysis (CCA) to find 'anchors' between data sets
+  # anchors <- Seurat::FindIntegrationAnchors(
+  #   object.list = data.merged,
+  #   normalization.method = "SCT",
+  #   anchor.features = data.features,
+  #   dims = 1:30, reduction = "cca", k.anchor = 20)
+  ## DEVNOTE: deprecated, used with Seurat::PrepSCTIntegration and Seurat::FindIntegrationAnchors
   # integrate data by overlapping data spaces by integration anchors, creating 'integrated' data assay
-  integrated <- Seurat::IntegrateData(anchorset = anchors, normalization.method = "SCT", dims = 1:30)
-  rm(anchors)
+  # integrated <- Seurat::IntegrateData(anchorset = anchors, normalization.method = "SCT", dims = 1:30)
+  # rm(anchors)
 
-  integration_analysis <- function(integrated, selection_performed = FALSE) {
-    if (selection_performed) {
-      output_dir <- file.path(output_dir, 'postSelect')
-      dir.create(file.path(output_dir, 'plots'), recursive = T)
+  # TODO check flow - pass additional func parameters
+  # run integrated analysis
+   integration_analysis(integrated)
+}
+
+
+
+#' Analysis of integrated samples
+#'
+#' @param integrated Integrated Seurat object
+#'
+#' @return
+#' @export
+integration_analysis <- function(integrated) {
+  # run the workflow for visualization and clustering
+  integrated <- Seurat::FindNeighbors(integrated, assay = "SCT", reduction = "harmony", dims = 1:50)
+  # could give warning: "NAs introduced by coercion" as '.' in data will be coerced to NA
+  integrated <- Seurat::FindClusters(integrated, resolution = 0.8, algorithm = 1)
+  integrated <- Seurat::RunUMAP(integrated, assay = "SCT", reduction = "harmony", dims = 1:50)
+  # prepare data (recorrect counts) for SCT assay DEG: https://satijalab.org/seurat/articles/integration_introduction
+  ## Seurat recommends to use recorrected counts for visualization: https://github.com/satijalab/seurat/issues/6675
+  integrated <- Seurat::PrepSCTFindMarkers(integrated, assay = "SCT")
+
+  ### VISUALIZATION
+  p1 <- Seurat::DimPlot(integrated, reduction = "umap", group.by = 'orig.ident') +
+    ggplot2::labs(title = "Original sample identity") +
+    ggplot2::theme(plot.title = ggplot2::element_text(hjust = 0.5))
+  p1 <- p1 + ggplot2::xlim(min(integrated@reductions$umap@cell.embeddings[,1]),max(integrated@reductions$umap@cell.embeddings[,1]))
+  p1 <- p1 + ggplot2::ylim(min(integrated@reductions$umap@cell.embeddings[,2]),max(integrated@reductions$umap@cell.embeddings[,2]))
+  ggplot2::ggsave(file.path(output_dir, "UMAPs", "original-identity.png"), plot = p1, width = c(12,12), height = c(12,12))
+  p2 <- Seurat::DimPlot(integrated, reduction = "umap", label = TRUE, repel = TRUE) +
+    ggplot2::labs(title = "Integrated") +
+    ggplot2::theme(plot.title = ggplot2::element_text(hjust = 0.5))
+  p2 <- p2 + ggplot2::xlim(min(integrated@reductions$umap@cell.embeddings[,1]),max(integrated@reductions$umap@cell.embeddings[,1]))
+  p2 <- p2 + ggplot2::ylim(min(integrated@reductions$umap@cell.embeddings[,2]),max(integrated@reductions$umap@cell.embeddings[,2]))
+  ggplot2::ggsave(file.path(output_dir, "UMAPs", "integrated.png"), plot = p2, width = c(12,12), height = c(12,12))
+  # initiate plot_list for arranging ggplot objects in final visualization
+  plot_list <- list(p1, p2)
+
+  for (sample in sample_names) {
+    p3 <- Seurat::DimPlot(integrated, reduction = "umap", label = TRUE, repel = TRUE, cells = names(integrated$orig.ident[integrated$orig.ident == sample])) +
+      ggplot2::labs(title = sample) +
+      ggplot2::theme(plot.title = ggplot2::element_text(hjust = 0.5))
+    p3 <- p3 + ggplot2::xlim(min(integrated@reductions$umap@cell.embeddings[,1]),max(integrated@reductions$umap@cell.embeddings[,1]))
+    p3 <- p3 + ggplot2::ylim(min(integrated@reductions$umap@cell.embeddings[,2]),max(integrated@reductions$umap@cell.embeddings[,2]))
+
+    plot_list[[length(plot_list)+1]] <- p3
+    ggplot2::ggsave(file.path(output_dir, "UMAPs", paste0(sample, ".png")), plot = p3, width = c(12,12), height = c(12,12))
+  }
+  # create arranged visualization
+  p4 <- do.call(gridExtra::grid.arrange, c(plot_list, ncol=2))
+  ggplot2::ggsave(file.path(output_dir, paste0("UMAPs_", sample_name, ".png")), plot = p4, width = c(12,12), height = c(12,12))
+  dev.off()
+
+  # define expression visualization function
+  plot_DEG <- function(data, data.features, name, sample_order = NULL) {
+    dir.create(file.path(output_dir, 'plots' , name, 'feature'), recursive = T)
+    dir.create(file.path(output_dir, 'plots', name, 'feature_split'))
+
+    # set plot sample order
+    if(!is.null(sample_order)) {
+      data$orig.ident <- factor(data$orig.ident, levels = sample_order)
     }
 
-    # run the workflow for visualization and clustering on integrated assay
-    SeuratObject::DefaultAssay(integrated) <- "integrated"
-    integrated <- Seurat::RunPCA(integrated, features = SeuratObject::VariableFeatures(object = integrated), npcs = 50, verbose = FALSE)
-    choose_N_PCs <- 30
-    integrated <- Seurat::FindNeighbors(integrated, dims = 1:choose_N_PCs)
-    # could give warning: "NAs introduced by coercion" as '.' in data will be coerced to NA
-    integrated <- Seurat::FindClusters(integrated, resolution = 0.5, algorithm = 1)
-    integrated <- Seurat::RunUMAP(integrated, reduction = "pca", dims = 1:choose_N_PCs)
-
-    # prepare data (recorrect counts) for SCT assay DEG and visualization
-    integrated <- Seurat::PrepSCTFindMarkers(integrated, assay = "SCT")
-    SeuratObject::DefaultAssay(integrated) <- "SCT"
-
-    ### VISUALIZATION
-    p1 <- Seurat::DimPlot(integrated, reduction = "umap", group.by = 'orig.ident') +
-      ggplot2::labs(title = "Original sample identity") +
-      ggplot2::theme(plot.title = ggplot2::element_text(hjust = 0.5))
-    p1 <- p1 + ggplot2::xlim(min(integrated@reductions$umap@cell.embeddings[,1]),max(integrated@reductions$umap@cell.embeddings[,1]))
-    p1 <- p1 + ggplot2::ylim(min(integrated@reductions$umap@cell.embeddings[,2]),max(integrated@reductions$umap@cell.embeddings[,2]))
-    ggplot2::ggsave(file.path(output_dir, "UMAPs", "original-identity.png"), plot = p1, width = c(12,12), height = c(12,12))
-    p2 <- Seurat::DimPlot(integrated, reduction = "umap", label = TRUE, repel = TRUE) +
-      ggplot2::labs(title = "Integrated") +
-      ggplot2::theme(plot.title = ggplot2::element_text(hjust = 0.5))
-    p2 <- p2 + ggplot2::xlim(min(integrated@reductions$umap@cell.embeddings[,1]),max(integrated@reductions$umap@cell.embeddings[,1]))
-    p2 <- p2 + ggplot2::ylim(min(integrated@reductions$umap@cell.embeddings[,2]),max(integrated@reductions$umap@cell.embeddings[,2]))
-    ggplot2::ggsave(file.path(output_dir, "UMAPs", "integrated.png"), plot = p2, width = c(12,12), height = c(12,12))
-    # initiate plot_list for arranging ggplot objects in final visualization
-    plot_list <- list(p1, p2)
-
-    for (sample in sample_names) {
-      p3 <- Seurat::DimPlot(integrated, reduction = "umap", label = TRUE, repel = TRUE, cells = names(integrated$orig.ident[integrated$orig.ident == sample])) +
-        ggplot2::labs(title = sample) +
-        ggplot2::theme(plot.title = ggplot2::element_text(hjust = 0.5))
-      p3 <- p3 + ggplot2::xlim(min(integrated@reductions$umap@cell.embeddings[,1]),max(integrated@reductions$umap@cell.embeddings[,1]))
-      p3 <- p3 + ggplot2::ylim(min(integrated@reductions$umap@cell.embeddings[,2]),max(integrated@reductions$umap@cell.embeddings[,2]))
-
-      plot_list[[length(plot_list)+1]] <- p3
-      ggplot2::ggsave(file.path(output_dir, "UMAPs", paste0(sample, ".png")), plot = p3, width = c(12,12), height = c(12,12))
-    }
-    # create arranged visualization
-    p4 <- do.call(gridExtra::grid.arrange, c(plot_list, ncol=2))
-    ggplot2::ggsave(file.path(output_dir, paste0("UMAPs_", sample_name, ".png")), plot = p4, width = c(12,12), height = c(12,12))
-    dev.off()
-
-    # define expression visualization function
-    plot_DEG <- function(data, features, name, sample_order = NULL) {
-      dir.create(file.path(output_dir, 'plots' , name, 'feature'), recursive = T)
-      dir.create(file.path(output_dir, 'plots', name, 'feature_split'))
-
-      # set plot sample order
-      if(!is.null(sample_order)) {
-        data$orig.ident <- factor(data$orig.ident, levels = sample_order)
-      }
-
-      # plot feature expression, if available in Seurat
-      for (i in seq_along(features)) {
-        tryCatch({
-          p <- Seurat::FeaturePlot(data, features = features[i])
-          ggplot2::ggsave(file = file.path(output_dir, 'plots', name , 'feature', paste0(features[i], ".png")), width = 30, height = 20, units = "cm")
-
-          p <- Seurat::FeaturePlot(data, features = features[i], split.by = "orig.ident", by.col = FALSE, order = TRUE, cols = c("grey", "red"))
-          ggplot2::ggsave(file = file.path(output_dir, 'plots', name , 'feature_split', paste0(features[i], ".png")), width = 30, height = 20, units = "cm")
-        },
-        error=function(e) {
-          message(features[i], ' plot is skipped, as feature was not found with FetchData')
-        })
-      }
-
-      # expression plots
-      p <- Seurat::VlnPlot(data, features = features, split.by = "orig.ident") + Seurat::RestoreLegend()
-      ggplot2::ggsave(file = file.path(output_dir, 'plots', name, 'violin-split.png'), width = 30, height = 20, units = "cm")
-      p <- Seurat::FeaturePlot(data, features = features, order = TRUE)
-      ggplot2::ggsave(file = file.path(output_dir, 'plots', name, 'features.png'), width = 30, height = 20, units = "cm")
-      p <- Seurat::VlnPlot(data, features = features)
-      ggplot2::ggsave(file = file.path(output_dir, 'plots', name, 'violins.png'), width = 30, height = 20, units = "cm")
-      p <- Seurat::RidgePlot(data, features = features, ncol = 3)
-      ggplot2::ggsave(file = file.path(output_dir, 'plots', name, 'ridges.png'), width = 30, height = 20, units = "cm")
-
-      # dotplot with custom labels
-      cell.num <- table(data$seurat_clusters)
-      cluster.labels = paste("Cluster", names(cell.num), paste0("(", round(cell.num/sum(cell.num), 2)*100, "%, n = ", cell.num, ")"))
-      levels(SeuratObject::Idents(data)) <- cluster.labels
-      p <- Seurat::DotPlot(data, features = features) + Seurat::RotatedAxis() + Seurat::WhiteBackground()
-      ggplot2::ggsave(file = file.path(output_dir, 'plots', name, 'dots.png'), width = 30, height = 20, units = "cm")
-
-      p <- Seurat::DotPlot(data, features = features, split.by = "orig.ident", cols="RdYlGn") + Seurat::RotatedAxis() + Seurat::WhiteBackground()
-      ggplot2::ggsave(file = file.path(output_dir, 'plots', name, 'dots-split.png'), width = 30, height = 20, units = "cm")
-
-      levels(SeuratObject::Idents(data)) <- c(0:(length(levels(SeuratObject::Idents(data)))-1))
-      Seurat::DefaultAssay(data) <- "SCT"
-
-
+    # plot feature expression, if available in Seurat
+    for (i in seq_along(data.features)) {
       tryCatch({
-        p <- Seurat::DoHeatmap(data, features = features) + Seurat::NoLegend()
-        ggplot2::ggsave(file = file.path(output_dir, 'plots', name, 'heatmap.png'), width = 30, height = 20, units = "cm")
+        p <- Seurat::FeaturePlot(data, features = data.features[i])
+        ggplot2::ggsave(file = file.path(output_dir, 'plots', name , 'feature', paste0(data.features[i], ".png")), width = 30, height = 20, units = "cm")
+
+        p <- Seurat::FeaturePlot(data, features = data.features[i], split.by = "orig.ident", by.col = FALSE, order = TRUE, cols = c("grey", "red"))
+        ggplot2::ggsave(file = file.path(output_dir, 'plots', name , 'feature_split', paste0(data.features[i], ".png")), width = 30, height = 20, units = "cm")
       },
       error=function(e) {
-        message(features, ' features were not found for DoHeatmap')
+        message(data.features[i], ' plot is skipped, as feature was not found with FetchData')
       })
-
     }
 
-    for (feat_name in names(features_of_interest)) {
-      plot_DEG(data = integrated, features = features_of_interest[[feat_name]], name = feat_name, sample_order = sample_names)
-    }
+    # expression plots
+    p <- Seurat::VlnPlot(data, features = data.features, split.by = "orig.ident") + Seurat::RestoreLegend()
+    ggplot2::ggsave(file = file.path(output_dir, 'plots', name, 'violin-split.png'), width = 30, height = 20, units = "cm")
+    p <- Seurat::FeaturePlot(data, features = data.features, order = TRUE)
+    ggplot2::ggsave(file = file.path(output_dir, 'plots', name, 'features.png'), width = 30, height = 20, units = "cm")
+    p <- Seurat::VlnPlot(data, features = data.features)
+    ggplot2::ggsave(file = file.path(output_dir, 'plots', name, 'violins.png'), width = 30, height = 20, units = "cm")
+    p <- Seurat::RidgePlot(data, features = data.features, ncol = 3)
+    ggplot2::ggsave(file = file.path(output_dir, 'plots', name, 'ridges.png'), width = 30, height = 20, units = "cm")
 
-    # save Seurat object in .RDS data file
-    saveRDS(integrated, file = file.path(output_dir, paste0(sample_name, ".rds")))
+    # dotplot with custom labels
+    cell.num <- table(data$seurat_clusters)
+    cluster.labels = paste("Cluster", names(cell.num), paste0("(", round(cell.num/sum(cell.num), 2)*100, "%, n = ", cell.num, ")"))
+    levels(SeuratObject::Idents(data)) <- cluster.labels
+    p <- Seurat::DotPlot(data, features = data.features) + Seurat::RotatedAxis() + Seurat::WhiteBackground()
+    ggplot2::ggsave(file = file.path(output_dir, 'plots', name, 'dots.png'), width = 30, height = 20, units = "cm")
 
-    # if selection not yet and to be ran, return object
-    if (!selection_performed && perform_cluster_level_selection || perform_cell_level_selection) {
-      return(integrated)
-    }
+    p <- Seurat::DotPlot(data, features = data.features, split.by = "orig.ident", cols="RdYlGn") + Seurat::RotatedAxis() + Seurat::WhiteBackground()
+    ggplot2::ggsave(file = file.path(output_dir, 'plots', name, 'dots-split.png'), width = 30, height = 20, units = "cm")
+
+    levels(SeuratObject::Idents(data)) <- c(0:(length(levels(SeuratObject::Idents(data)))-1))
+    Seurat::DefaultAssay(data) <- "SCT"
+
+
+    tryCatch({
+      p <- Seurat::DoHeatmap(data, features = data.features) + Seurat::NoLegend()
+      ggplot2::ggsave(file = file.path(output_dir, 'plots', name, 'heatmap.png'), width = 30, height = 20, units = "cm")
+    },
+    error=function(e) {
+      message(data.features, ' features were not found for DoHeatmap')
+    })
+
   }
 
-  # run integrated analysis
-  integrated <- integration_analysis(integrated, selection_performed = FALSE)
+  for (feat_name in names(features_of_interest)) {
+    plot_DEG(data = integrated, data.features = features_of_interest[[feat_name]], name = feat_name, sample_order = sample_names)
+  }
 
-  # run marker selection & rerun integration analysis
-  if (perform_cluster_level_selection || perform_cell_level_selection) {
-    if (perform_cluster_level_selection && perform_cell_level_selection) {
-      message("WARNING: be advised to rather use cell or cluster based selection, not both simultaneously")
-    }
-    message("start performing marker selection and then rerun integration on selected data")
+  # save Seurat object in .RDS data file
+  saveRDS(integrated, file = file.path(output_dir, paste0(sample_name, ".rds")))
+}
 
-    if (perform_cell_level_selection) {
-      assay_data <- SeuratObject::GetAssayData(integrated, slot = "data", assay = "SCT")
-      # select each cell that has expresses each gene from selection_panel
-      cellsToSelect <- sapply(as.data.frame(assay_data[selection_panel, ] > 0), sum) == length(selection_panel)
-      # perform cell selection
-      integrated <- integrated[, cellsToSelect]
-    }
-    if (perform_cluster_level_selection) {
-      # create dotplot to extract percent expressed information
-      p <- Seurat::DotPlot(integrated, features = selection_panel)
-      # get cluster names where percent expressed is above %threshold for each gene of selection_panel
-      cluster_selection <- names(which(table(p$data[p$data$pct.exp > selection_percent_expressed,]$id) == length(selection_panel)))
-      # if no clusters selected, set selection to NULL
-      if (length(cluster_selection) == 0) {
-        cluster_selection <- NULL
-      }
-      # perform cluster selection
-      integrated <- subset(integrated, idents = cluster_selection)
-    }
 
-    # remove empty clusters from original seurat_clusters
-    integrated$seurat_clusters <- factor(integrated$seurat_clusters)
+
+
+
+
+
+
+
+
+# TODO keep Seurat V4 integration first, later maybe V5 SCT + Harmony
+# TODO create samples_integration() --> selection_subset(integrated_so, cell-level, cluster-expression, annotation-based) --> reintegration_analysis(selection_subset)
+# TODO change output_dir in workflow, e.g. Sakshi/ Saskshi/selection_.../
+## TODO MapMyCells selection
+## TODO cluster-expression with percent expressed = 30 and marker panels
+### neurons: c("MAP2", "DCX", "NEUROG2")
+### astrocytes: c("VIM", "S100B", "SOX9")
+### microglia new: c("AIF1", "GPR34", "CSF1R")
+### microglia old: c("ITGAM", "CX3CR1", "P2RY12")
+## TODO cell-level selection: marker panels, include cell if simply expressed in each marker of panel
+
+
+
+# TODO make into it's own selection_reintegration() function
+# run marker selection & rerun integration analysis
+# TODO roxygen skeleton
+selection_reintegration <- function(so, selection_markers = NULL, percent_expressed = NULL, reference_annotations = NULL) {
+  Seurat::DefaultAssay(so) <- "SCT"
+
+  if (is.null(reference_annotations) && is.null(percent_expressed) && is.null(reference_annotations)) {
+    stop("To perform selection and reintegration, pass in the parameters")
+  } else if (!is.null(reference_annotations)) {
+    if (length(unique(names(reference_annotations))) != 1) stop("Pass a single reference")
+    message("Selecting specified annotation from reference as idents")
+    # set idents to reference name
+    Seurat::Idents(so) <- so@meta.data[, names(reference_annotations)]
+    # select idents by annotation (must be in reference)
+    Seurat::DefaultAssay(so) <- "RNA"
+    so <- subset(so, idents = reference_annotations[[names(reference_annotations)]])
+  } else if (!is.null(percent_expressed) && !is.null(selection_markers)) {
+    message("Selecting clusters based on markers and percent expressed")
+    # create dotplot to extract percent expressed information
+    p <- Seurat::DotPlot(so, features = selection_markers)
+    # get cluster names where percent expressed is above %threshold for each gene of selection_markers
+    cluster_selection <- names(which(table(p$data[p$data$pct.exp > percent_expressed,]$id) == length(unique(p$data$features.plot))))
+    # if no clusters selected, set selection to NULL
+    if (length(cluster_selection) == 0) cluster_selection <- NULL
+    # perform cluster selection
+    Seurat::DefaultAssay(so) <- "RNA"
+    so <- subset(so, idents = cluster_selection)
     # add selection panel and type as metadata
-    integrated@misc$selection_panel <- selection_panel
-    # rerun integration_analysis post selection
-    integration_analysis(integrated, selection_performed = TRUE)
+    so@misc$selection_markers <- selection_markers
+  } else if (!is.null(selection_markers)) {
+    message("Selecting cells based on expressing all markers")
+    layer_data <- SeuratObject::LayerData(so)
+    # select each cell that has expresses each gene from selection_markers
+    cellsToSelect <- sapply(as.data.frame(layer_data[selection_markers, ] > 0), sum) == length(rownames(layer_data[selection_markers, ]))
+    # perform cell selection
+    Seurat::DefaultAssay(so) <- "RNA"
+    so <- so[, cellsToSelect]
+    # add selection panel and type as metadata
+    so@misc$selection_markers <- selection_markers
   }
+  # remove empty clusters from original seurat_clusters
+  so$seurat_clusters <- factor(so$seurat_clusters)
+
+
+
+
+
+
+  # TODO properly perform reintegration after subsetting (QC/filter/reintegrate) # see Github
+  # rerun integration_analysis post selection
+  integration_analysis(so)
 }
