@@ -4,10 +4,18 @@
 \alias{integration_analysis}
 \title{Analysis of integrated samples}
 \usage{
-integration_analysis(integrated)
+integration_analysis(
+  integrated,
+  output_dir,
+  sample_names,
+  sample_name,
+  features_of_interest
+)
 }
 \arguments{
 \item{integrated}{Integrated Seurat object}
+
+\item{output_dir}{Package home directory, used to create output directory for results.}
 }
 \description{
 Analysis of integrated samples

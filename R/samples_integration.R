@@ -114,7 +114,7 @@ samples_integration <- function(sample_files, sample_names, output_dir,
 
   # TODO check flow - pass additional func parameters
   # run integrated analysis
-   integration_analysis(integrated)
+   integration_analysis(integrated, output_dir, sample_names, sample_name, features_of_interest)
 }
 
 
@@ -122,10 +122,10 @@ samples_integration <- function(sample_files, sample_names, output_dir,
 #' Analysis of integrated samples
 #'
 #' @param integrated Integrated Seurat object
+#' @param output_dir Package home directory, used to create output directory for results.
 #'
-#' @return
 #' @export
-integration_analysis <- function(integrated) {
+integration_analysis <- function(integrated, output_dir, sample_names, sample_name, features_of_interest) {
   # run the workflow for visualization and clustering
   integrated <- Seurat::FindNeighbors(integrated, assay = "SCT", reduction = "harmony", dims = 1:50)
   # could give warning: "NAs introduced by coercion" as '.' in data will be coerced to NA
@@ -167,7 +167,7 @@ integration_analysis <- function(integrated) {
   dev.off()
 
   # define expression visualization function
-  plot_DEG <- function(data, data.features, name, sample_order = NULL) {
+  plot_DEG <- function(data, data.features, name, sample_order = NULL, output_dir) {
     dir.create(file.path(output_dir, 'plots' , name, 'feature'), recursive = T)
     dir.create(file.path(output_dir, 'plots', name, 'feature_split'))
 
@@ -225,12 +225,15 @@ integration_analysis <- function(integrated) {
   }
 
   for (feat_name in names(features_of_interest)) {
-    plot_DEG(data = integrated, data.features = features_of_interest[[feat_name]], name = feat_name, sample_order = sample_names)
+    plot_DEG(data = integrated, data.features = features_of_interest[[feat_name]], name = feat_name, sample_order = sample_names, output_dir = output_dir)
   }
 
   # save Seurat object in .RDS data file
   saveRDS(integrated, file = file.path(output_dir, paste0(sample_name, ".rds")))
 }
+
+
+
 
 
 
