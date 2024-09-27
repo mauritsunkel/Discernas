@@ -30,6 +30,8 @@
 #'
 #' @note Paper writing & during development notes
 #'
+#' This SCT->Harmony workflow is inspired by: https://github.com/immunogenomics/harmony/issues/41
+#'
 #' Cell cycle regression based on: https://satijalab.org/seurat/articles/cell_cycle_vignette.html
 #'
 #' SCTransform-v2 replaces NormalizeData + FindVariableFeatures + ScaleData & sets default assay to SCT
@@ -77,11 +79,11 @@ sample_analysis <- function(
 
   # read 10X data (preprocessed by 10X Cellranger pipeline) and convert to Seurat object
   data.data <- Seurat::Read10X(data.dir = file.path(samples_dir, sample_name, "filtered_feature_bc_matrix"))
-  data <- Seurat::CreateSeuratObject(counts = data.data, project = sample_name, min.cells = 3, min.features = 700)
+  data <- Seurat::CreateSeuratObject(counts = data.data, project = sample_name, min.cells = 3, min.features = 200)
   rm(data.data)
 
   if (run_doublet_removal) {
-    plot_and_remove_doublets <- function(data, sample_path, sample_name, doublet_removal_rate) {
+    plot_and_remove_doublets <- function(data, sample_path, sample_name, doublet_removal_rate = NULL) {
       temp_QC_data <- data
 
       set.seed(1)
@@ -153,10 +155,9 @@ sample_analysis <- function(
     data <- clean_ambient_RNA(data, samples_dir, sample_name)
   }
 
-
   ## QUALITY CONTROL
   # calculate percentage of all counts belonging to mitochondrial (^MT-) DNA, for filtering
-  mt_features <- rownames(data@assays$RNA$counts)[grep("^MT-", rownames(data@assays$RNA$counts))]
+  mt_features <- grep("^MT-", rownames(data@assays$RNA), value = TRUE)
   data <- Seurat::PercentageFeatureSet(data, features = mt_features, col.name = "percent.mt")
   # Visualize quality control metrics
   png(file.path(sample_path, "quality_control", paste0("QC_nFeat_nCount_percent.mt_", sample_name, ".png")))
@@ -168,9 +169,12 @@ sample_analysis <- function(
   plot(plot1 + plot2)
   dev.off()
 
-  # SCTransform-v2 (default in Seurat V5) replaces NormalizeData + FindVariableFeatures + ScaleData & sets default assay to "SCT"
+  ## SCTransform-v2 (default in Seurat V5) replaces NormalizeData + FindVariableFeatures + ScaleData
+  ### return.only.var.genes = FALSE: https://github.com/satijalab/seurat/issues/4896
+  ## default assay set to "SCT"
   options(future.globals.maxSize = 8000 * 1024^2)
-  data <- Seurat::SCTransform(data, vst.flavor = "v2", vars.to.regress = "percent.mt", return.only.var.genes = TRUE)
+  data <- Seurat::SCTransform(data, vst.flavor = "v2", vars.to.regress = "percent.mt", method = "glmGamPoi", return.only.var.genes = FALSE)
+
 
   # plot variable features, label top 10
   plot1 <- Seurat::VariableFeaturePlot(data, cols = c("#85d0f5", "#2b2f70"), selection.method = 'sctransform')
@@ -179,6 +183,7 @@ sample_analysis <- function(
   plot(plot2)
   dev.off()
 
+  # TODO check: https://github.com/satijalab/seurat/discussions/4259
   if (run_cell_cycle_regression) {
     dir.create('Cell_Cycle/')
 
@@ -255,14 +260,13 @@ sample_analysis <- function(
   dev.off()
 
   # cell clustering: Levine2015 - Xu & Su2015
-  choose_N_PCs <- 30 # default: 30 (20 before SCTransform default, out of default 50 generated with Seurat::RunPCA)
   # construct nearest neighbor graph for clustering
-  data <- Seurat::FindNeighbors(data, dims = 1:choose_N_PCs)
+  data <- Seurat::FindNeighbors(data, dims = 1:30)
   # use Leiden algorithm for clustering (https://www.nature.com/articles/s41598-019-41695-z/)
   ## method = "igraph" (for large datasets when using Leiden algorithm)
-  data <- Seurat::FindClusters(data, resolution = 0.5, algorithm = 1)
+  data <- Seurat::FindClusters(data, resolution = 0.8, algorithm = 1)
   # visualize clustering with Uniform Manifold Projection Approximation (UMAP) as non-linear dimension reduction
-  data <- Seurat::RunUMAP(data, reduction = "pca", dims = 1:choose_N_PCs)
+  data <- Seurat::RunUMAP(data, reduction = "pca", dims = 1:30)
   png(file.path(sample_path, paste0("UMAP_unsupervised_", sample_name, ".png")))
   plot(Seurat::DimPlot(data, reduction = "umap", label = TRUE))
   dev.off()
