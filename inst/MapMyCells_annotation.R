@@ -1,23 +1,30 @@
+library(dplyr)
 
 # reticulate::use_python("C:/Users/mauri/AppData/Local/Programs/Python/Python311")
 
 ### USER INPUT ###
-seurat_file <- "C:/SynologyDrive/Projects/scRNAseqR/results/sakshi_4/NSM-NS-NC-M/NSM-NS-NC-M.rds"
+seurat_file <- "C:/Users/mauri/Desktop/harmony.rds"
 ##################
 
+# MapMyCells (Allen Institute for Brain Science): https://knowledge.brain-map.org/mapmycells/process/
+## Human Whole Brain: CNN202210140 (Siletti et al 2023)
+## Hierarchical Mapping algorithm used
+### each cell type cluster characterized by mean gene expression profile,
+### and cell starts at root node, then gets bootstrapped 100x by 90% of pre-calculated marker genes of child nodes
+### (supracluster, cluster, subcluster) and this gets repeated until it reaches a final node (cluster) (slower, more information, more robust)
 
 
 data <- readRDS(seurat_file)
 if ("integrated" %in% names(data@assays)) Seurat::DefaultAssay(data) <- "integrated"
 
 ensemblIDs_geneSymbols <- read.csv(
-  file = "C:/Users/mauri/Desktop/scRNAseqR/inst/extdata/ensembl_genes.tsv",
+  file = "C:/SynologyDrive/Projects/scRNAseqR/inst/extdata/ensembl_genes.tsv",
   header = F,
   sep = "\t")
 colnames(ensemblIDs_geneSymbols) <- c("ENSEMBL_ID", "GENE_SYMBOL", "GENE_TYPE")
 
 # anndata: rows are cells, columns are genes (Ensembl IDs), data expected to be raw counts
-datat <- Matrix::t(data@assays$RNA$counts)
+datat <- Matrix::t(data@assays$SCT$counts)
 colnames(datat) <- plyr::mapvalues(
   x = colnames(datat),
   from = ensemblIDs_geneSymbols$GENE_SYMBOL,
