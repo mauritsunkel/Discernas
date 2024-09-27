@@ -38,6 +38,8 @@ Performs Seurat SCTv2 analysis workflow on individual samples.
 \note{
 Paper writing & during development notes
 
+This SCT->Harmony workflow is inspired by: https://github.com/immunogenomics/harmony/issues/41
+
 Cell cycle regression based on: https://satijalab.org/seurat/articles/cell_cycle_vignette.html
 
 SCTransform-v2 replaces NormalizeData + FindVariableFeatures + ScaleData & sets default assay to SCT

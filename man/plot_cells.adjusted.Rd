@@ -27,7 +27,7 @@ plot_cells.adjusted(
   cell_size = 0.35,
   cell_stroke = I(cell_size/2),
   alpha = 1,
-  min_expr = 0.1,
+  min_expr = 1e-04,
   rasterize = FALSE,
   scale_to_range = FALSE,
   label_principal_points = FALSE

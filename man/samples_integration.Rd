@@ -8,7 +8,6 @@ samples_integration(
   sample_files,
   sample_names,
   output_dir,
-  ref_sample = NULL,
   perform_cluster_level_selection = TRUE,
   perform_cell_level_selection = FALSE,
   selection_panel = c(),
@@ -22,8 +21,6 @@ samples_integration(
 \item{sample_names}{character vector with sample names of .rds data files}
 
 \item{output_dir}{Package home directory, used to create output directory for results.}
-
-\item{ref_sample}{default: NULL. Otherwise, a sample within sample_names to be used as CCA reference anchor dataset.}
 
 \item{perform_cluster_level_selection}{perform marker selection based on selection panel and selection percent expressed for each cluster, then reintegrate (note: advise to use either cell or cluster based selection, not both)}
 
@@ -40,13 +37,28 @@ Seurat sample integration by Canonical Correlation Analysis.
 }
 \note{
 During development notes
-Explored different selectionp panels
+Explored different selection panels
 - Neurons: c("MAP2", "DCX", "NEUROG2") # RBFOX3 <-> DCX
 - Astrocytes: c("VIM", "S100B", "SOX9") # SOX9 <-> FABP7
 
 Calling leidenalg via reticulate to run Leiden algorithm instead of Louvain
 algorithm with Seurat::FindClusters() used to work, now it has stopped
 working. Still trying to find the cause of this, issued on their Github.
+
+Seurat integration notes
+RPCA > CCA when: "a substantial fraction of the cells in one dataset have no matching type in the other" and/or "datasets originate from the same platform (i.e. multiple lanes of 10x genomics)"
+ the major difference with Seurat V4 is that in Seurat v5, we perform the integration in low-dimensional space. What that means is that prior to performing any integration - we run a PCA on the full dataset (V5: IntegrateLayers() vs V4: IntegrateData(), no more 'integrated' assay)
+Using harmony::RunHarmony instead of Seurat::IntegrateLayers to have more parameter control.
+Harmony is fast, memory efficient, removes batch effects, scalable, and ranks among the top in many different type of benchmarking studies
+- only for the most complex use cases, consider scVI/scANVI/Scanorama/scGen (all Python based)
+- https://www.nature.com/articles/s41592-021-01336-8
+- https://www.ncbi.nlm.nih.gov/pmc/articles/PMC6964114/
+- https://www.ncbi.nlm.nih.gov/pmc/articles/PMC8053088/
+- https://www.nature.com/articles/s41467-023-41855-w
+- https://genomebiology.biomedcentral.com/articles/10.1186/s13059-019-1850-9#Sec9
+IntegrateLayers(normalization.method = "SCT") replaces: SelectIntegrationFeatures, PrepSCTIntegration, FindIntegrationAnchors, IntegrateData
+- For IntegrateLayers, specifically using method = SeuratWrappers::FastMNNIntegration, got error  - following issue: https://github.com/satijalab/seurat/issues/8631
+- For IntegrateLayers, specifically using method = SeuratWrappers::scVIIntegration, need reticulate/conda setup for scVI
 }
 \examples{
 \dontshow{if (FALSE) (if (getRversion() >= "3.4") withAutoprint else force)(\{ # examplesIf}
