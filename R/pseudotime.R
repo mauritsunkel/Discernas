@@ -128,13 +128,13 @@ pseudotime <- function(input_files, input_names, output_dir, pseudotime_root_mar
     plots[[length(plots)+1]] <- p2
 
     # learn principal graph
-    cds <- monocle3::learn_graph(cds, use_partition = TRUE)
+    cds <- monocle3::learn_graph(cds)
 
     for (partition in seq_along(table(monocle3::partitions(cds)))) {
       message("partition: ", partition)
 
       # get partition celltype
-      partition_cells <- colnames(cds[, monocle3::partitions(cds) == 1])
+      partition_cells <- colnames(cds[, monocle3::partitions(cds) == partition])
       if ("mapmycells_supercluster" %in% colnames(cds@colData)) {
         partition_celltype <- names(which.max(table(cds@colData$mapmycells_supercluster[colnames(cds) %in% partition_cells])))
       } else if ("kriegstein.seurat.custom.clusters.mean" %in% colnames(cds@colData)) {
@@ -146,10 +146,9 @@ pseudotime <- function(input_files, input_names, output_dir, pseudotime_root_mar
       if (partition_celltype %in% names(pseudotime_root_markers)) {
         genes_of_interest <- pseudotime_root_markers[[partition_celltype]]
       } else if (TRUE) {
-        kriegstein_labels <- tolower(unique(levels(cds@colData$kriegstein.seurat.custom.clusters.mean)))
-        for (label in kriegstein_labels) {
-          if (grepl(tolower(partition_celltype), label)) {
-            genes_of_interest <- pseudotime_root_markers[[partition_celltype]]
+        for (r_label in names(pseudotime_root_markers)) {
+          if (grepl(tolower(r_label), partition_celltype)) {
+            genes_of_interest <- pseudotime_root_markers[[r_label]]
             break
           }
         }
@@ -158,11 +157,12 @@ pseudotime <- function(input_files, input_names, output_dir, pseudotime_root_mar
         genes_of_interest <- names(which.max(Matrix::rowSums(cds@assays@data$counts[colnames(cds) %in% partition_cells])))
       }
 
-
+      # TODO check if need
+      Seurat::DefaultAssay(data) <- "SCT"
       # create df of cell names and gene(s) of interest values
       df <- SeuratObject::FetchData(data, genes_of_interest)
       # get cell name with highest summed expression for gene(s) of interest
-      if (length(genes_of_interest) > 1) {
+      if (length(genes_of_interest %in% rownames(data)) > 1) {
         cell_name <- names(which.max(apply(df[monocle3::partitions(cds) == partition, ], 1, sum)))
       } else if (length(genes_of_interest) == 1) {
         cell_name <- rownames(df)[which.max(df[monocle3::partitions(cds) == partition, ])]
@@ -295,7 +295,6 @@ pseudotime <- function(input_files, input_names, output_dir, pseudotime_root_mar
   }
 }
 
-
 #' Run adjusted monocle3::plot_cells.
 #'
 #' Fix monocle3::plot_cells for coloring plot by groups in colData.
@@ -310,7 +309,7 @@ plot_cells.adjusted <- function(cds, x = 1, y = 2,
                                 label_groups_by_cluster = TRUE, group_label_size = 2, labels_per_group = 1,
                                 label_branch_points = TRUE, label_roots = TRUE, label_leaves = TRUE,
                                 graph_label_size = 2, cell_size = 0.35, cell_stroke = I(cell_size/2),
-                                alpha = 1, min_expr = 0.1, rasterize = FALSE, scale_to_range = FALSE,
+                                alpha = 1, min_expr = 0.0001, rasterize = FALSE, scale_to_range = FALSE,
                                 label_principal_points = FALSE)
 {
   reduction_method <- match.arg(reduction_method)
@@ -346,8 +345,8 @@ plot_cells.adjusted <- function(cds, x = 1, y = 2,
   # group_cells_by = match.arg(group_cells_by)
   ### MY INJECTED CODE
   if (!is.null(group_cells_by)) {
-    assertthat::assert_that(group_cells_by %in% c("cluster", "partition") | group_cells_by %in%
-                              names(SummarizedExperiment::colData(cds)), msg = paste("group_cells_by must be one of",
+    assertthat::assert_that(any(group_cells_by %in% c("cluster", "partition") | group_cells_by %in%
+                              names(SummarizedExperiment::colData(cds))), msg = paste("group_cells_by must be one of",
                                                                "'cluster', 'partition', or a column in the colData table."))}
 
 
@@ -384,14 +383,14 @@ plot_cells.adjusted <- function(cds, x = 1, y = 2,
   colnames(data_df) <- c("data_dim_1", "data_dim_2")
   data_df$input_name <- row.names(data_df)
   data_df <- as.data.frame(cbind(data_df, SummarizedExperiment::colData(cds)))
-  if (group_cells_by == "cluster") {
+  if ("cluster" %in% group_cells_by) {
     data_df$cell_group <- tryCatch({
       clusters(cds, reduction_method = reduction_method)[data_df$input_name]
     }, error = function(e) {
       NULL
     })
   }
-  else if (group_cells_by == "partition") {
+  else if ("partition" %in% group_cells_by) {
     data_df$cell_group <- tryCatch({
       monocle3::partitions(cds, reduction_method = reduction_method)[data_df$input_name]
     }, error = function(e) {
@@ -454,9 +453,14 @@ plot_cells.adjusted <- function(cds, x = 1, y = 2,
     else {
       markers = genes
     }
-    markers_rowData <- rowData(cds)[(rowData(cds)$gene_short_name %in%
-                                       markers) | (row.names(rowData(cds)) %in% markers),
-                                    , drop = FALSE]
+    ## ORIGINAL CODE
+    # markers_rowData <- rowData(cds)[(rowData(cds)$gene_short_name %in%
+    #                                    markers) | (row.names(rowData(cds)) %in% markers),
+    #                                 , drop = FALSE]
+    ## NEW CODE
+    markers_rowData <- SummarizedExperiment::rowData(cds)[row.names(SummarizedExperiment::rowData(cds)) %in% markers,]
+
+
     markers_rowData <- as.data.frame(markers_rowData)
     if (nrow(markers_rowData) == 0) {
       stop("None of the provided genes were found in the cds")
@@ -504,9 +508,11 @@ plot_cells.adjusted <- function(cds, x = 1, y = 2,
                                               as.character(markers_exprs$feature_label))
         markers_exprs$feature_label <- factor(markers_exprs$feature_label,
                                               levels = markers)
-        if (norm_method == "size_only")
+        if ("size_only" %in% norm_method) {
           expression_legend_label = "Expression"
-        else expression_legend_label = "log10(Expression)"
+        } else {
+          expression_legend_label = "log10(Expression)"
+        }
       }
       if (scale_to_range) {
         markers_exprs = dplyr::group_by(markers_exprs,
@@ -569,13 +575,23 @@ plot_cells.adjusted <- function(cds, x = 1, y = 2,
     }
   }
   if (!is.null(markers_exprs) && nrow(markers_exprs) > 0) {
+    print(9)
     data_df <- merge(data_df, markers_exprs, by.x = "input_name",
                      by.y = "cell_id")
+
+    print(data_df$value)
+    print(plot(data_df$value))
+    print(hist(data_df$value))
+
+
+    # TODO check NA because of min.expr
     data_df$value <- with(data_df, ifelse(value >= min_expr,
                                           value, NA))
+    print(head(data_df))
     ya_sub <- data_df[!is.na(data_df$value), ]
     na_sub <- data_df[is.na(data_df$value), ]
     if (norm_method == "size_only") {
+      print(10)
       g <- ggplot2::ggplot(data = data_df, ggplot2::aes(x = data_dim_1,
                                       y = data_dim_2)) + plotting_func(ggplot2::aes(data_dim_1,
                                                                            data_dim_2), size = I(cell_size), stroke = I(cell_stroke),
@@ -588,6 +604,7 @@ plot_cells.adjusted <- function(cds, x = 1, y = 2,
         ggplot2::facet_wrap(~feature_label)
     }
     else {
+      print(11)
       g <- ggplot2::ggplot(data = data_df, ggplot2::aes(x = data_dim_1,
                                       y = data_dim_2)) + plotting_func(ggplot2::aes(data_dim_1,
                                                                            data_dim_2), size = I(cell_size), stroke = I(cell_stroke),
@@ -597,7 +614,7 @@ plot_cells.adjusted <- function(cds, x = 1, y = 2,
                       data = ya_sub[order(ya_sub$value), ], alpha = alpha) +
         viridis::scale_color_viridis(option = "viridis",
                                      name = expression_legend_label, na.value = NA,
-                                     end = 0.8, alpha = alpha) + guides(alpha = FALSE) +
+                                     end = 0.8, alpha = alpha) + ggplot2::guides(alpha = FALSE) +
         ggplot2::facet_wrap(~feature_label)
     }
   }
