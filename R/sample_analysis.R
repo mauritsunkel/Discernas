@@ -68,6 +68,8 @@ sample_analysis <- function(
     run_cell_cycle_regression = F,
     run_doublet_removal = T, doublet_removal_rate = NULL,
     run_ambient_RNA_removal = T) {
+  set.seed(42)
+
   sample_path <- file.path(output_dir, sample_name)
   if (dir.exists(sample_path)) {
     stop("Sample already exists in output directory, please choose another to avoid overwriting results...")

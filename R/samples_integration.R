@@ -56,6 +56,7 @@ samples_integration <- function(sample_files, sample_names, output_dir,
                                 selection_panel = c(),
                                 selection_percent_expressed = 20,
                                 features_of_interest = features_of_interest) {
+  set.seed(42)
   library(Seurat) # added because of error
   # Error: package or namespace load failed for ‘Seurat’ in .doLoadActions(where, attach):
   #   error in load action .__A__.1 for package RcppAnnoy: loadModule(module = "AnnoyAngular", what = TRUE, env = ns, loadNow = TRUE): Unable to load module "AnnoyAngular": attempt to apply non-function
