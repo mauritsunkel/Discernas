@@ -113,9 +113,8 @@ samples_integration <- function(sample_files, sample_names, output_dir,
   # integrated <- Seurat::IntegrateData(anchorset = anchors, normalization.method = "SCT", dims = 1:30)
   # rm(anchors)
 
-  # TODO check flow - pass additional func parameters
   # run integrated analysis
-   integration_analysis(integrated, output_dir, sample_names, sample_name, features_of_interest)
+  integration_analysis(integrated, output_dir, sample_names, sample_name, features_of_interest)
 }
 
 
@@ -245,7 +244,6 @@ integration_analysis <- function(integrated, output_dir, sample_names, sample_na
 
 
 
-# TODO keep Seurat V4 integration first, later maybe V5 SCT + Harmony
 # TODO create samples_integration() --> selection_subset(integrated_so, cell-level, cluster-expression, annotation-based) --> reintegration_analysis(selection_subset)
 # TODO change output_dir in workflow, e.g. Sakshi/ Saskshi/selection_.../
 ## TODO MapMyCells selection
@@ -309,4 +307,7 @@ selection_reintegration <- function(so, selection_markers = NULL, percent_expres
   # TODO properly perform reintegration after subsetting (QC/filter/reintegrate) # see Github
   # rerun integration_analysis post selection
   integration_analysis(so)
+
+  # run integrated analysis
+  integration_analysis(so,     output_dir, sample_names, sample_name, features_of_interest)
 }

@@ -81,14 +81,13 @@ sample_analysis <- function(
 
   # read 10X data (preprocessed by 10X Cellranger pipeline) and convert to Seurat object
   data.data <- Seurat::Read10X(data.dir = file.path(samples_dir, sample_name, "filtered_feature_bc_matrix"))
-  data <- Seurat::CreateSeuratObject(counts = data.data, project = sample_name, min.cells = 3, min.features = 200)
+  data <- Seurat::CreateSeuratObject(counts = data.data, project = sample_name, min.cells = 3, min.features = 700)
   rm(data.data)
 
   if (run_doublet_removal) {
     plot_and_remove_doublets <- function(data, sample_path, sample_name, doublet_removal_rate = NULL) {
       temp_QC_data <- data
 
-      set.seed(1)
       sce <- scDblFinder::scDblFinder(temp_QC_data@assays$RNA$counts, clusters = TRUE, dbr = doublet_removal_rate)
       temp_QC_data$scDblFinder.score <- sce$scDblFinder.score
       temp_QC_data$scDblFinder.class <- sce$scDblFinder.class
