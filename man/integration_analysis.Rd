@@ -16,6 +16,12 @@ integration_analysis(
 \item{integrated}{Integrated Seurat object}
 
 \item{output_dir}{Package home directory, used to create output directory for results.}
+
+\item{sample_names}{names of samples}
+
+\item{sample_name}{name of integrated sample, combined of samples_names}
+
+\item{features_of_interest}{gene of interest}
 }
 \description{
 Analysis of integrated samples

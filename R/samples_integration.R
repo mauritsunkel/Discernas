@@ -92,9 +92,22 @@ samples_integration <- function(sample_files, sample_names, output_dir,
 
   data.merged <- Seurat::RunPCA(object = data.merged, assay = "SCT", features = data.features, npcs = 50)
 
+  data.merged <- run_integration(so = data.merged, integration_method = integration_method)
+
+  # run integrated analysis
+  integration_analysis(integrated, output_dir, sample_names, sample_name, features_of_interest)
+}
+
+#' Run sample layers integration
+#'
+#' @param so seurat object with layers to be integrated
+#' @param integration_method default: "RPCA", one of c("RPCA", "CCA", "harmony") "harmony", harmony is run from harmony::RunHarmony(), other are Seurat::IntegrateLayers()
+#'
+#' @return so
+run_integration <- function(so, integration_method) {
   if (integration_method == "harmony") {
-    integrated <- harmony::RunHarmony(
-      object = data.merged,
+    integrated_so <- harmony::RunHarmony(
+      object = so,
       group.by.vars = "orig.ident",
       assay.use = "SCT",
       reduction.use = "pca",
@@ -105,8 +118,8 @@ samples_integration <- function(sample_files, sample_names, output_dir,
       epsilon.harmony=-Inf,
       verbose = TRUE)
   } else if (integration_method == "RPCA") {
-    integrated <- Seurat::IntegrateLayers(
-      object = data.merged,
+    integrated_so <- Seurat::IntegrateLayers(
+      object = so,
       method = Seurat::RPCAIntegration,
       normalization.method = "SCT",
       orig.reduction = "pca",
@@ -114,8 +127,8 @@ samples_integration <- function(sample_files, sample_names, output_dir,
       dims = 1:50,
       verbose = TRUE)
   } else if (integration_method == "CCA") {
-    integrated <- Seurat::IntegrateLayers(
-      object = data.merged,
+    integrated_so <- Seurat::IntegrateLayers(
+      object = so,
       method = Seurat::CCAIntegration,
       normalization.method = "SCT",
       orig.reduction = "pca",
@@ -123,28 +136,27 @@ samples_integration <- function(sample_files, sample_names, output_dir,
       dims = 1:50,
       verbose = TRUE)
   }
-
-  # run integrated analysis
-  integration_analysis(integrated, output_dir, sample_names, sample_name, features_of_interest)
+  return(integrated_so)
 }
-
-
 
 #' Analysis of integrated samples
 #'
 #' @param integrated Integrated Seurat object
 #' @param output_dir Package home directory, used to create output directory for results.
+#' @param sample_names names of samples
+#' @param sample_name name of integrated sample, combined of samples_names
+#' @param features_of_interest gene of interest
 #'
 #' @export
 integration_analysis <- function(integrated, output_dir, sample_names, sample_name, features_of_interest) {
+  # prepare data (recorrect counts) for SCT assay DEG: https://satijalab.org/seurat/articles/integration_introduction
+  ## Seurat recommends to use recorrected counts for visualization: https://github.com/satijalab/seurat/issues/6675
+  integrated <- Seurat::PrepSCTFindMarkers(integrated, assay = "SCT")
   # run the workflow for visualization and clustering
   integrated <- Seurat::FindNeighbors(integrated, assay = "SCT", reduction = "integrated.dr", dims = 1:50)
   # could give warning: "NAs introduced by coercion" as '.' in data will be coerced to NA
   integrated <- Seurat::FindClusters(integrated, resolution = 0.8, algorithm = 1)
   integrated <- Seurat::RunUMAP(integrated, assay = "SCT", reduction = "integrated.dr", dims = 1:50)
-  # prepare data (recorrect counts) for SCT assay DEG: https://satijalab.org/seurat/articles/integration_introduction
-  ## Seurat recommends to use recorrected counts for visualization: https://github.com/satijalab/seurat/issues/6675
-  integrated <- Seurat::PrepSCTFindMarkers(integrated, assay = "SCT")
 
   ### VISUALIZATION
   p1 <- Seurat::DimPlot(integrated, reduction = "umap", group.by = 'orig.ident') +
@@ -243,34 +255,24 @@ integration_analysis <- function(integrated, output_dir, sample_names, sample_na
   saveRDS(integrated, file = file.path(output_dir, paste0(sample_name, ".rds")))
 }
 
-
-
-
-
-
-
-
-
-
-
-
-
-# TODO create samples_integration() --> selection_subset(integrated_so, cell-level, cluster-expression, annotation-based) --> reintegration_analysis(selection_subset)
-# TODO change output_dir in workflow, e.g. Sakshi/ Saskshi/selection_.../
-## TODO MapMyCells selection
-## TODO cluster-expression with percent expressed = 30 and marker panels
-### neurons: c("MAP2", "DCX", "NEUROG2")
-### astrocytes: c("VIM", "S100B", "SOX9")
-### microglia new: c("AIF1", "GPR34", "CSF1R")
-### microglia old: c("ITGAM", "CX3CR1", "P2RY12")
-## TODO cell-level selection: marker panels, include cell if simply expressed in each marker of panel
-
-
-
-# TODO make into it's own selection_reintegration() function
-# run marker selection & rerun integration analysis
-# TODO roxygen skeleton
-selection_reintegration <- function(so, selection_markers = NULL, percent_expressed = NULL, reference_annotations = NULL) {
+#' Perform selection of cells/clusters/annotation
+#'
+#' Perform selection of cells/clusters/annotation and then reintegrate and reanalyze
+#'
+#' @param so seurat object to perform selection on
+#' @param selection_markers genes of interest to be used for selection
+#' @param percent_expressed threshold for percentage of cells that have to express all selection_markers
+#' @param reference_annotations reference database and annotation label of it to perform selection on
+#' @param output_dir Package home directory, used to create output directory for results.
+#' @param sample_names names of samples
+#' @param sample_name name of integrated sample, combined of samples_names
+#' @param features_of_interest genes of interest
+#'
+#' @export
+selection_reintegration <- function(
+    so, integration_method,
+    output_dir, sample_names, sample_name, features_of_interest,
+    selection_markers = NULL, percent_expressed = NULL, reference_annotations = NULL) {
   Seurat::DefaultAssay(so) <- "SCT"
 
   if (is.null(reference_annotations) && is.null(percent_expressed) && is.null(reference_annotations)) {
@@ -310,15 +312,17 @@ selection_reintegration <- function(so, selection_markers = NULL, percent_expres
   # remove empty clusters from original seurat_clusters
   so$seurat_clusters <- factor(so$seurat_clusters)
 
+  # cleanup filtered Seurat object
+  so <- Seurat::DietSeurat(so, assays = c("RNA"))
+  # split (recommended by Seurat V5: https://github.com/satijalab/seurat/issues/8406) -> layers
+  so[["RNA"]] <- split(so[["RNA"]], f = so$orig.ident)
+  options(future.globals.maxSize = 8000 * 1024^2)
+  so <- Seurat::SCTransform(so, vst.flavor = "v2", method = "glmGamPoi", return.only.var.genes = FALSE)
+  so <- Seurat::RunPCA(so, features = SeuratObject::VariableFeatures(object = so), npcs = 50, verbose = TRUE)
+
+  so <- run_integration(so = so, integration_method = integration_method)
 
 
-
-
-
-  # TODO properly perform reintegration after subsetting (QC/filter/reintegrate) # see Github
   # rerun integration_analysis post selection
-  integration_analysis(so)
-
-  # run integrated analysis
-  integration_analysis(so,     output_dir, sample_names, sample_name, features_of_interest)
+  integration_analysis(so, output_dir, sample_names, sample_name, features_of_interest)
 }
