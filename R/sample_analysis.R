@@ -81,7 +81,8 @@ sample_analysis <- function(
 
   # read 10X data (preprocessed by 10X Cellranger pipeline) and convert to Seurat object
   data.data <- Seurat::Read10X(data.dir = file.path(samples_dir, sample_name, "filtered_feature_bc_matrix"))
-  data <- Seurat::CreateSeuratObject(counts = data.data, project = sample_name, min.cells = 3, min.features = 700)
+  ## DEVNOTE: min.features = 500 (CellRanger default)
+  data <- Seurat::CreateSeuratObject(counts = data.data, project = sample_name, min.cells = 3, min.features = 500)
   rm(data.data)
 
   if (run_doublet_removal) {
