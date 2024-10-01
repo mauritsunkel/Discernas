@@ -12,7 +12,8 @@ samples_integration(
   perform_cell_level_selection = FALSE,
   selection_panel = c(),
   selection_percent_expressed = 20,
-  features_of_interest = features_of_interest
+  features_of_interest = features_of_interest,
+  integration_method = "RPCA"
 )
 }
 \arguments{
@@ -31,6 +32,8 @@ samples_integration(
 \item{selection_percent_expressed}{default: 20. Minimal percentage threshold for each marker in panel to be expressed in order to take whole cluster/cell into account}
 
 \item{features_of_interest}{list of gene marker panels used for plotting}
+
+\item{integration_method}{default: "RPCA", one of c("RPCA", "CCA", "harmony") "harmony", harmony is run from harmony::RunHarmony(), other are Seurat::IntegrateLayers()}
 }
 \description{
 Seurat sample integration by Canonical Correlation Analysis.

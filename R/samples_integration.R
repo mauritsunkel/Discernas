@@ -12,6 +12,7 @@
 #' @param perform_cell_level_selection perform marker selection based on selection panel and selection percent expressed for each cell, then reintegrate (note: advise to use either cell or cluster based selection, not both)
 #' @param selection_panel default: c(). Gene/feature marker panel for selection and reintegration
 #' @param selection_percent_expressed default: 20. Minimal percentage threshold for each marker in panel to be expressed in order to take whole cluster/cell into account
+#' @param integration_method default: "RPCA", one of c("RPCA", "CCA", "harmony") "harmony", harmony is run from harmony::RunHarmony(), other are Seurat::IntegrateLayers()
 #'
 #' @export
 #'
@@ -55,7 +56,8 @@ samples_integration <- function(sample_files, sample_names, output_dir,
                                 perform_cell_level_selection = FALSE,
                                 selection_panel = c(),
                                 selection_percent_expressed = 20,
-                                features_of_interest = features_of_interest) {
+                                features_of_interest = features_of_interest,
+                                integration_method = "RPCA") {
   set.seed(42)
   library(Seurat) # added because of error
   # Error: package or namespace load failed for ‘Seurat’ in .doLoadActions(where, attach):
@@ -90,28 +92,37 @@ samples_integration <- function(sample_files, sample_names, output_dir,
 
   data.merged <- Seurat::RunPCA(object = data.merged, assay = "SCT", features = data.features, npcs = 50)
 
-  integrated <- harmony::RunHarmony(
-    object = data.merged,
-    group.by.vars = "orig.ident",
-    assay.use = "SCT",
-    reduction.use = "pca",
-    dims.use = 1:50,
-    plot_convergence = FALSE,
-    epsilon.cluster=-Inf,
-    epsilon.harmony=-Inf)
-
-  ## DEVNOTE: deprecated, used with Seurat::PrepSCTIntegration and Seurat::IntegrateData
-  # data.merged <- lapply(X = data.merged, FUN = Seurat::RunPCA, features = data.features)
-  ## run Canonical Correlation Analysis (CCA) to find 'anchors' between data sets
-  # anchors <- Seurat::FindIntegrationAnchors(
-  #   object.list = data.merged,
-  #   normalization.method = "SCT",
-  #   anchor.features = data.features,
-  #   dims = 1:30, reduction = "cca", k.anchor = 20)
-  ## DEVNOTE: deprecated, used with Seurat::PrepSCTIntegration and Seurat::FindIntegrationAnchors
-  # integrate data by overlapping data spaces by integration anchors, creating 'integrated' data assay
-  # integrated <- Seurat::IntegrateData(anchorset = anchors, normalization.method = "SCT", dims = 1:30)
-  # rm(anchors)
+  if (integration_method == "harmony") {
+    integrated <- harmony::RunHarmony(
+      object = data.merged,
+      group.by.vars = "orig.ident",
+      assay.use = "SCT",
+      reduction.use = "pca",
+      reduction.save = "integrated.dr",
+      dims.use = 1:50,
+      plot_convergence = FALSE,
+      epsilon.cluster=-Inf,
+      epsilon.harmony=-Inf,
+      verbose = TRUE)
+  } else if (integration_method == "RPCA") {
+    integrated <- Seurat::IntegrateLayers(
+      object = data.merged,
+      method = Seurat::RPCAIntegration,
+      normalization.method = "SCT",
+      orig.reduction = "pca",
+      new.reduction = "integrated.dr",
+      dims = 1:50,
+      verbose = TRUE)
+  } else if (integration_method == "CCA") {
+    integrated <- Seurat::IntegrateLayers(
+      object = data.merged,
+      method = Seurat::CCAIntegration,
+      normalization.method = "SCT",
+      orig.reduction = "pca",
+      new.reduction = "integrated.dr",
+      dims = 1:50,
+      verbose = TRUE)
+  }
 
   # run integrated analysis
   integration_analysis(integrated, output_dir, sample_names, sample_name, features_of_interest)
@@ -127,10 +138,10 @@ samples_integration <- function(sample_files, sample_names, output_dir,
 #' @export
 integration_analysis <- function(integrated, output_dir, sample_names, sample_name, features_of_interest) {
   # run the workflow for visualization and clustering
-  integrated <- Seurat::FindNeighbors(integrated, assay = "SCT", reduction = "harmony", dims = 1:50)
+  integrated <- Seurat::FindNeighbors(integrated, assay = "SCT", reduction = "integrated.dr", dims = 1:50)
   # could give warning: "NAs introduced by coercion" as '.' in data will be coerced to NA
   integrated <- Seurat::FindClusters(integrated, resolution = 0.8, algorithm = 1)
-  integrated <- Seurat::RunUMAP(integrated, assay = "SCT", reduction = "harmony", dims = 1:50)
+  integrated <- Seurat::RunUMAP(integrated, assay = "SCT", reduction = "integrated.dr", dims = 1:50)
   # prepare data (recorrect counts) for SCT assay DEG: https://satijalab.org/seurat/articles/integration_introduction
   ## Seurat recommends to use recorrected counts for visualization: https://github.com/satijalab/seurat/issues/6675
   integrated <- Seurat::PrepSCTFindMarkers(integrated, assay = "SCT")
