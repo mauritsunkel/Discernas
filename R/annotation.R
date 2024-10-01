@@ -379,7 +379,7 @@ visualize_kriegstein_annotated_data <- function(
     levels(data.list[[sample]]$kriegstein.seurat.custom.clusters.mean) <- paste0(combined.results[[paste(sample, "custom.clusterv2")]]$mean.labels, ".", levels(data.list[[sample]]$kriegstein.seurat.custom.clusters.mean))
 
     # plot composition
-    composition_df <- data.list[[sample]]@meta.data[,c("orig.ident", "kriegstein.seurat.custom.clusters.mean")]
+    composition_df <- as.data.frame(table(data.list[[sample]]@meta.data[,c("orig.ident", "kriegstein.seurat.custom.clusters.mean")]))
     composition_df <- composition_df %>%
       dplyr::arrange(orig.ident, kriegstein.seurat.custom.clusters.mean) %>%
       dplyr::group_by(orig.ident) %>%

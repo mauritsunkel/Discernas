@@ -3,7 +3,7 @@ library(dplyr)
 # reticulate::use_python("C:/Users/mauri/AppData/Local/Programs/Python/Python311")
 
 ### USER INPUT ###
-seurat_file <- "C:/Users/mauri/Desktop/harmony.rds"
+seurat_file <- "C:/SynologyDrive/Projects/scRNAseqR/results/sakshi_pipeV7/NSM-NS-NC-M/NSM-NS-NC-M.rds"
 ##################
 
 # MapMyCells (Allen Institute for Brain Science): https://knowledge.brain-map.org/mapmycells/process/
@@ -46,8 +46,8 @@ anndata::write_h5ad(
   compression = "gzip")
 
 # RUN MapMyCells: https://knowledge.brain-map.org/mapmycells/process/
-## Human Whole Brain
-## Hierarchical Mapping
+## Reference Taxonomy: 10x Human Whole Brain (CCN202210140)
+## Mapping Algorithm: Hierarchical Mapping
 ### unpack downloaded results.zip to: dirname(anndata_outfile)
 
 # read MapMyCells result and save to Seurat object (.rds)
@@ -104,6 +104,3 @@ p <- ggplot2::ggplot(composition_df, ggplot2::aes(x = orig.ident, y = Freq, fill
 ggplot2::ggsave(plot = p, file = file.path(dirname(seurat_file), "annotation_MapMyCells", 'samples_composition.png'), width = 30, height = 20, units = "cm")
 
 saveRDS(data, file = seurat_file)
-
-print(composition_df, n = 56)
-as.data.frame(composition_df)
