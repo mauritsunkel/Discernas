@@ -7,6 +7,9 @@ Project data shared with UCSC Cell Browser: https://cells.ucsc.edu/?ds=ipsc-astr
 Using custom fork of Seurat v4.3.0 at github.com/kushnerlab/Seurat.
 
 # Installation
+install.packages(c("devtools", "BiocManager"))
+BiocManager::install(c("SingleCellExperiment", "SingleR", "scuttle", "enrichplot", "msigdb", "org.Hs.eg.db", "EnhancedVolcano", "HDF5Array"))
+devtools::install_github('cole-trapnell-lab/monocle3')
 devtools::install_github("kushnerlab/scRNAseqR")
 
 Kriegstein reference data used for annotation: https://cells.ucsc.edu/?ds=dev-brain-regions+wholebrain
