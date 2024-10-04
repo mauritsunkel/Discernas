@@ -328,5 +328,5 @@ selection_reintegration <- function(
 
 
   # rerun integration_analysis post selection
-  integration_analysis(so, output_dir, sample_names, sample_name, features_of_interest)
+  integration_analysis(so, output_dir, sample_name, features_of_interest)
 }
