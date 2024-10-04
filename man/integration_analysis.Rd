@@ -7,9 +7,9 @@
 integration_analysis(
   integrated,
   output_dir,
-  sample_names,
   sample_name,
-  features_of_interest
+  features_of_interest,
+  sample_names = NULL
 )
 }
 \arguments{
@@ -17,11 +17,11 @@ integration_analysis(
 
 \item{output_dir}{Package home directory, used to create output directory for results.}
 
-\item{sample_names}{names of samples}
-
 \item{sample_name}{name of integrated sample, combined of samples_names}
 
 \item{features_of_interest}{gene of interest}
+
+\item{sample_names}{names of samples to be integrated}
 }
 \description{
 Analysis of integrated samples

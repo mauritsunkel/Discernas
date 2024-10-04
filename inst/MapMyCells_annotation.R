@@ -1,9 +1,11 @@
 library(dplyr)
+library(Seurat)
+# library(reticulate)
 
 # reticulate::use_python("C:/Users/mauri/AppData/Local/Programs/Python/Python311")
 
 ### USER INPUT ###
-seurat_file <- "C:/SynologyDrive/Projects/scRNAseqR/results/sakshi_pipeV7/NSM-NS-NC-M/NSM-NS-NC-M.rds"
+seurat_file <- "C:/Users/Maurits/SynologyDrive/Projects/scRNAseqR/results/sakshi_pipeV8/NSM-NS-NC-M/NSM-NS-NC-M.rds"
 ##################
 
 # MapMyCells (Allen Institute for Brain Science): https://knowledge.brain-map.org/mapmycells/process/
@@ -18,7 +20,7 @@ data <- readRDS(seurat_file)
 if ("integrated" %in% names(data@assays)) Seurat::DefaultAssay(data) <- "integrated"
 
 ensemblIDs_geneSymbols <- read.csv(
-  file = "C:/SynologyDrive/Projects/scRNAseqR/inst/extdata/ensembl_genes.tsv",
+  file = "C:/Users/Maurits/SynologyDrive/Projects/scRNAseqR/inst/extdata/ensembl_genes.tsv",
   header = F,
   sep = "\t")
 colnames(ensemblIDs_geneSymbols) <- c("ENSEMBL_ID", "GENE_SYMBOL", "GENE_TYPE")

@@ -69,14 +69,6 @@ samples_integration <- function(sample_files, sample_names, output_dir,
   data.list <- lapply(X = sample_files, FUN = function(x) {
     readRDS(file = x)
   })
-
-  # set sample name for integration
-  sample_name <- paste(sample_names, collapse = "-")
-
-  # initialize start time and directories
-  output_dir <- file.path(output_dir, sample_name)
-  dir.create(file.path(output_dir, 'plots'), recursive = T)
-  dir.create(file.path(output_dir, 'UMAPs'), recursive = T)
   ### END INITIALIZATION
 
 
@@ -95,7 +87,8 @@ samples_integration <- function(sample_files, sample_names, output_dir,
   data.merged <- run_integration(so = data.merged, integration_method = integration_method)
 
   # run integrated analysis
-  integration_analysis(integrated, output_dir, sample_names, sample_name, features_of_interest)
+  sample_name <- paste(sample_names, collapse = "-")
+  integration_analysis(integrated, output_dir, sample_name, features_of_interest, sample_names)
 }
 
 #' Run sample layers integration
@@ -143,12 +136,18 @@ run_integration <- function(so, integration_method) {
 #'
 #' @param integrated Integrated Seurat object
 #' @param output_dir Package home directory, used to create output directory for results.
-#' @param sample_names names of samples
+#' @param sample_names names of samples to be integrated
 #' @param sample_name name of integrated sample, combined of samples_names
 #' @param features_of_interest gene of interest
 #'
 #' @export
-integration_analysis <- function(integrated, output_dir, sample_names, sample_name, features_of_interest) {
+integration_analysis <- function(integrated, output_dir, sample_name, features_of_interest, sample_names = NULL) {
+  if (is.null(sample_names)) sample_names <- sample_name
+  # initialize start time and directories
+  if (!grepl(paste0("/", sample_name, "/"), output_dir)) output_dir <- file.path(output_dir, sample_name)
+  dir.create(file.path(output_dir, 'plots'), recursive = TRUE)
+  dir.create(file.path(output_dir, 'UMAPs'), recursive = TRUE)
+
   # prepare data (recorrect counts) for SCT assay DEG: https://satijalab.org/seurat/articles/integration_introduction
   ## Seurat recommends to use recorrected counts for visualization: https://github.com/satijalab/seurat/issues/6675
   integrated <- Seurat::PrepSCTFindMarkers(integrated, assay = "SCT")
@@ -259,7 +258,7 @@ integration_analysis <- function(integrated, output_dir, sample_names, sample_na
 #'
 #' Perform selection of cells/clusters/annotation and then reintegrate and reanalyze
 #'
-#' @param so seurat object to perform selection on
+#' @param soso_filename filename of seurat object to perform selection on
 #' @param selection_markers genes of interest to be used for selection
 #' @param percent_expressed threshold for percentage of cells that have to express all selection_markers
 #' @param reference_annotations reference database and annotation label of it to perform selection on
@@ -270,9 +269,12 @@ integration_analysis <- function(integrated, output_dir, sample_names, sample_na
 #'
 #' @export
 selection_reintegration <- function(
-    so, integration_method,
+    so_filename, integration_method,
     output_dir, sample_names, sample_name, features_of_interest,
     selection_markers = NULL, percent_expressed = NULL, reference_annotations = NULL) {
+
+  so <- readRDS(file = so_filename)
+
   Seurat::DefaultAssay(so) <- "SCT"
 
   if (is.null(reference_annotations) && is.null(percent_expressed) && is.null(reference_annotations)) {
@@ -282,9 +284,10 @@ selection_reintegration <- function(
     message("Selecting specified annotation from reference as idents")
     # set idents to reference name
     Seurat::Idents(so) <- so@meta.data[, names(reference_annotations)]
+    to_select <- unique(Seurat::Idents(so)[grepl(reference_annotations[[names(reference_annotations)]], Seurat::Idents(so), ignore.case = TRUE)])
     # select idents by annotation (must be in reference)
     Seurat::DefaultAssay(so) <- "RNA"
-    so <- subset(so, idents = reference_annotations[[names(reference_annotations)]])
+    so <- subset(so, idents = to_select)
   } else if (!is.null(percent_expressed) && !is.null(selection_markers)) {
     message("Selecting clusters based on markers and percent expressed")
     # create dotplot to extract percent expressed information

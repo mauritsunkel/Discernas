@@ -5,7 +5,7 @@
 \title{Perform selection of cells/clusters/annotation}
 \usage{
 selection_reintegration(
-  so,
+  so_filename,
   integration_method,
   output_dir,
   sample_names,
@@ -17,8 +17,6 @@ selection_reintegration(
 )
 }
 \arguments{
-\item{so}{seurat object to perform selection on}
-
 \item{output_dir}{Package home directory, used to create output directory for results.}
 
 \item{sample_names}{names of samples}
@@ -32,6 +30,8 @@ selection_reintegration(
 \item{percent_expressed}{threshold for percentage of cells that have to express all selection_markers}
 
 \item{reference_annotations}{reference database and annotation label of it to perform selection on}
+
+\item{soso_filename}{filename of seurat object to perform selection on}
 }
 \description{
 Perform selection of cells/clusters/annotation and then reintegrate and reanalyze
