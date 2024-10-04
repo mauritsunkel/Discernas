@@ -1,7 +1,7 @@
 Package: EMC.SKlab.scRNAseq
 Type: Package
 Title: Single-cell RNA sequencing package for SKlab
-Version: 1.4.12
+Version: 1.4.13
 Author: Maurits Unkel
 Maintainer: Maurits Unkel <m.unkel@erasmusmc.nl>
 Description: Pipeline for automating scRNAseq analysis in the lab.
@@ -35,7 +35,8 @@ Imports:
 	org.Hs.eg.db (>= 3.15.0),
 	RcppAnnoy (>= 0.0.20),
 	openxlsx (>= 4.2.7),
-	EnhancedVolcano (>= 1.22.0)
+	EnhancedVolcano (>= 1.22.0),
+	anndata (>= 0.7.5.6)
 Remotes:
     kushnerlab/Seurat,
 	satijalab/seurat-wrappers
