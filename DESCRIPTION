@@ -36,7 +36,9 @@ Imports:
 	RcppAnnoy (>= 0.0.20),
 	openxlsx (>= 4.2.7),
 	EnhancedVolcano (>= 1.22.0),
-	anndata (>= 0.7.5.6)
+	anndata (>= 0.7.5.6),
+	SoupX (>= 1.6.2),
+	scDblFinder (>= 1.18.0)
 Remotes:
     kushnerlab/Seurat,
 	satijalab/seurat-wrappers

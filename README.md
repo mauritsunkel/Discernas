@@ -9,7 +9,7 @@ Using custom fork of Seurat v4.3.0 at github.com/kushnerlab/Seurat.
 # Installation
 install.packages(c("devtools", "BiocManager"))
 remotes::install_github('satijalab/seurat-wrappers')
-BiocManager::install(c("SingleCellExperiment", "SingleR", "scuttle", "enrichplot", "msigdb", "org.Hs.eg.db", "EnhancedVolcano", "HDF5Array"))
+BiocManager::install(c("SingleCellExperiment", "SingleR", "scuttle", "enrichplot", "msigdb", "org.Hs.eg.db", "EnhancedVolcano", "HDF5Array", "scDblFinder"))
 devtools::install_github('cole-trapnell-lab/monocle3')
 devtools::install_github("kushnerlab/scRNAseqR")
 
