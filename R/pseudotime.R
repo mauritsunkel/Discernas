@@ -145,7 +145,7 @@ pseudotime <- function(input_files, input_names, output_dir, pseudotime_root_mar
 
       if (partition_celltype %in% names(pseudotime_root_markers)) {
         genes_of_interest <- pseudotime_root_markers[[partition_celltype]]
-      } else if (TRUE) {
+      } else {
         for (r_label in names(pseudotime_root_markers)) {
           if (grepl(tolower(r_label), partition_celltype)) {
             genes_of_interest <- pseudotime_root_markers[[r_label]]
@@ -157,9 +157,8 @@ pseudotime <- function(input_files, input_names, output_dir, pseudotime_root_mar
       if (!exists("genes_of_interest")) {
         ## given default: probably a stem cell marker
         genes_of_interest <- pseudotime_root_markers[["other"]]
-      } else {
-        ## technical default, non-biologically relevant: pick gene with most expressino for this partition,
-        genes_of_interest <- names(which.max(Matrix::rowSums(cds@assays@data$counts[colnames(cds) %in% partition_cells])))
+        ## TODO else create a technical default, non-biologically relevant: pick gene with most expressino for this partition
+        ## test: genes_of_interest <- names(which.max(Matrix::rowSums(cds@assays@data$counts[colnames(cds) %in% partition_cells])))
       }
 
       # TODO check if need
