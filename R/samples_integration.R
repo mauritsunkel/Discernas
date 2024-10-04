@@ -273,11 +273,12 @@ selection_reintegration <- function(
     output_dir, sample_names, sample_name, features_of_interest,
     selection_markers = NULL, percent_expressed = NULL, reference_annotations = NULL) {
 
+  message("reading rds...")
   so <- readRDS(file = so_filename)
 
   Seurat::DefaultAssay(so) <- "SCT"
 
-  if (is.null(reference_annotations) && is.null(percent_expressed) && is.null(reference_annotations)) {
+  if (is.null(selection_markers) && is.null(percent_expressed) && is.null(reference_annotations)) {
     stop("To perform selection and reintegration, pass in the parameters")
   } else if (!is.null(reference_annotations)) {
     if (length(unique(names(reference_annotations))) != 1) stop("Pass a single reference")
