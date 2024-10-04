@@ -131,7 +131,8 @@ chunk_kriegstein_data <- function(n_chunks, kriegstein_data_dir, kriegstein_chun
 #' @param kriegstein_annotated_output_dir String with Kriegstein output directory for annotated data chunks.
 #' @param annotations default: c("age", "structure", "custom.clusterv2"), see (custom.)meta.tsv for selectable features.
 #' @param annotations_to_plot default: c("custom.clusterv2"), annotations from meta features used for individual heatmaps.
-#' @param ref_aggr_strategy default: "max", choose one of "max" or "mean".
+#' @param ref_aggr_strategy default: "max", choose one of "max" or "mean"
+#' @param run_only_visualization default: FALSE, if TRUE, skip/assume SingleR already ran, need to adjust visualisations only
 #'
 #' @export
 #'
@@ -157,64 +158,67 @@ annotate_visualize_with_kriegstein_data <- function(
     kriegstein_annotated_output_dir,
     annotations = c("age", "structure", "custom.clusterv2"),
     annotations_to_plot = c("custom.clusterv2"),
-    ref_aggr_strategy = "max") {
+    ref_aggr_strategy = "max",
+    run_only_visualization = FALSE) {
 
   dir.create(kriegstein_annotated_output_dir)
 
-  genes <- getGenes(kriegstein_data_dir)
+  if (!run_only_visualization) {
+    genes <- getGenes(kriegstein_data_dir)
 
-  # iterate files and perform SingleR for annotation with Pearson correlation
-  for (j in 1:length(sample_files)) {
-    # initialize iteration timer
-    start_iter_time <- Sys.time()
+    # iterate files and perform SingleR for annotation with Pearson correlation
+    for (j in 1:length(sample_files)) {
+      # initialize iteration timer
+      start_iter_time <- Sys.time()
 
-    sample_name <- sample_names[j]
-    message("start iteration of ", sample_name)
+      sample_name <- sample_names[j]
+      message("start iteration of ", sample_name)
 
-    sample_data <- readRDS(file = sample_files[j])
-    # set RNA assay to have genes in same feature space as the reference data
-    SeuratObject::DefaultAssay(sample_data) <- "RNA"
+      sample_data <- readRDS(file = sample_files[j])
+      # set RNA assay to have genes in same feature space as the reference data
+      SeuratObject::DefaultAssay(sample_data) <- "RNA"
 
-    # get overlapping genes between data and reference
-    sample_genes <- rownames(sample_data)
-    overlapping_genes <- intersect(sample_genes, genes)
+      # get overlapping genes between data and reference
+      sample_genes <- rownames(sample_data)
+      overlapping_genes <- intersect(sample_genes, genes)
 
-    # add overlapping genes to .rds and set back to SCT assay
-    SeuratObject::Misc(object = sample_data, slot = "Kriegstein.gene.overlap.assayRNA") <- overlapping_genes
-    SeuratObject::DefaultAssay(sample_data) <- "SCT"
-    saveRDS(sample_data, file = sample_files[j])
+      # add overlapping genes to .rds and set back to SCT assay
+      SeuratObject::Misc(object = sample_data, slot = "Kriegstein.gene.overlap.assayRNA") <- overlapping_genes
+      SeuratObject::DefaultAssay(sample_data) <- "SCT"
+      saveRDS(sample_data, file = sample_files[j])
 
-    message("create Seurat sample -> SCE")
-    sample_data <- Seurat::as.SingleCellExperiment(sample_data, assay = 'RNA')
-    sample_data <- sample_data[overlapping_genes,]
-    # perform transformation to have genes in the same feature space as the reference data
-    sample_data <- scuttle::logNormCounts(sample_data)
+      message("create Seurat sample -> SCE")
+      sample_data <- Seurat::as.SingleCellExperiment(sample_data, assay = 'RNA')
+      sample_data <- sample_data[overlapping_genes,]
+      # perform transformation to have genes in the same feature space as the reference data
+      sample_data <- scuttle::logNormCounts(sample_data)
 
-    for (i in 1:length(list.files(path = kriegstein_chunks_input_dir))) {
-      message("start iteration of ", sample_name, " at cell RData chunk:  ", kriegstein_chunks_input_dir, "/iter.", i, ".RData")
+      for (i in 1:length(list.files(path = kriegstein_chunks_input_dir))) {
+        message("start iteration of ", sample_name, " at cell RData chunk:  ", kriegstein_chunks_input_dir, "/iter.", i, ".RData")
 
-      load(file.path(kriegstein_chunks_input_dir, paste0("chunk.", i, ".RData"))) # cell_data (R object name)
-      cell_data <- cell_data[overlapping_genes,]
+        load(file.path(kriegstein_chunks_input_dir, paste0("chunk.", i, ".RData"))) # cell_data (R object name)
+        cell_data <- cell_data[overlapping_genes,]
 
-      # set filename base for RData saving
-      filename_base <- file.path(kriegstein_annotated_output_dir, paste0(sample_name, ".iter.", i))
-      # run SingleR for each annotation and save RData
-      for (annotation in annotations) {
-        message("sample=", sample_name, " iter=", i, " annotation=", annotation)
-        result <- SingleR::SingleR(
-          test = sample_data,
-          ref = cell_data,
-          labels = SummarizedExperiment::colData(cell_data)[, annotation],
-          clusters = SummarizedExperiment::colData(sample_data)[, "seurat_clusters"],
-          de.method = 'wilcox',
-          aggr.ref = FALSE)
-        save(result, file = paste0(filename_base, ".", annotation, ".RData"))
-        # remove result before next iteration to save memory
-        rm(result)
+        # set filename base for RData saving
+        filename_base <- file.path(kriegstein_annotated_output_dir, paste0(sample_name, ".iter.", i))
+        # run SingleR for each annotation and save RData
+        for (annotation in annotations) {
+          message("sample=", sample_name, " iter=", i, " annotation=", annotation)
+          result <- SingleR::SingleR(
+            test = sample_data,
+            ref = cell_data,
+            labels = SummarizedExperiment::colData(cell_data)[, annotation],
+            clusters = SummarizedExperiment::colData(sample_data)[, "seurat_clusters"],
+            de.method = 'wilcox',
+            aggr.ref = FALSE)
+          save(result, file = paste0(filename_base, ".", annotation, ".RData"))
+          # remove result before next iteration to save memory
+          rm(result)
+        }
       }
+      message("Iteration", i ,"runtime was", Sys.time()-start_iter_time, "minutes - memory in use:", as.data.frame(gc())$'(Mb)'[2])
+      message('point 1 mem ', utils::memory.size(), ' ', utils::memory.size(max=TRUE))
     }
-    message("Iteration", i ,"runtime was", Sys.time()-start_iter_time, "minutes - memory in use:", as.data.frame(gc())$'(Mb)'[2])
-    message('point 1 mem ', utils::memory.size(), ' ', utils::memory.size(max=TRUE))
   }
 
   # visualize UMAPs and heatmap after annotation

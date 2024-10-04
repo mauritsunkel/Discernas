@@ -35,7 +35,7 @@ beep <- function(n = 5) {
 #' see ?hcl.colors and notes. Default: mixed
 #' @param n integer. How many colors to return.
 #' @usage generate_color_palette(type = 'mixed', n = NULL)
-#' @note Can also look at creating gradients customy with
+#' @note Can also look at creating gradients custom with
 #' colorRampPalette(RColorBrewer::brewer.pal(n = 7, name = "PRGn"))(100)
 #' @return Color palette as character vector.
 #' @references https://i.stack.imgur.com/H8syw.png. test

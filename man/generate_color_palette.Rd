@@ -21,7 +21,7 @@ This function returns a color palette, based on featured
 qualitative palletes in base R, many are colorblind friendly.
 }
 \note{
-Can also look at creating gradients customy with
+Can also look at creating gradients custom with
 colorRampPalette(RColorBrewer::brewer.pal(n = 7, name = "PRGn"))(100)
 }
 \references{

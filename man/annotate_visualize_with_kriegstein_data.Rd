@@ -13,7 +13,8 @@ annotate_visualize_with_kriegstein_data(
   kriegstein_annotated_output_dir,
   annotations = c("age", "structure", "custom.clusterv2"),
   annotations_to_plot = c("custom.clusterv2"),
-  ref_aggr_strategy = "max"
+  ref_aggr_strategy = "max",
+  run_only_visualization = FALSE
 )
 }
 \arguments{
@@ -33,7 +34,9 @@ annotate_visualize_with_kriegstein_data(
 
 \item{annotations_to_plot}{default: c("custom.clusterv2"), annotations from meta features used for individual heatmaps.}
 
-\item{ref_aggr_strategy}{default: "max", choose one of "max" or "mean".}
+\item{ref_aggr_strategy}{default: "max", choose one of "max" or "mean"}
+
+\item{run_only_visualization}{default: FALSE, if TRUE, skip/assume SingleR already ran, need to adjust visualisations only}
 }
 \description{
 Perform annotation with chunked Kriegstein reference data
