@@ -173,7 +173,7 @@ integration_analysis <- function(integrated, output_dir, sample_name, features_o
   # initiate plot_list for arranging ggplot objects in final visualization
   plot_list <- list(p1, p2)
 
-  for (sample in sample_names) {
+  for (sample in unique(integrated$orig.ident)) {
     p3 <- Seurat::DimPlot(integrated, reduction = "umap", label = TRUE, repel = TRUE, cells = names(integrated$orig.ident[integrated$orig.ident == sample])) +
       ggplot2::labs(title = sample) +
       ggplot2::theme(plot.title = ggplot2::element_text(hjust = 0.5))
