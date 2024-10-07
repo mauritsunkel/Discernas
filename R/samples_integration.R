@@ -108,6 +108,7 @@ run_integration <- function(so, integration_method) {
       sizeSorted_sample_names <- names(sort(table(so$orig.ident)))
       so <- subset(so, idents = sizeSorted_sample_names[2:length(sizeSorted_sample_names)])
       integrated_so <- run_integration(so = so, integration_method = integration_method)
+      return(integrated_so)
     })
 
   } else if (integration_method == "CCA") {
