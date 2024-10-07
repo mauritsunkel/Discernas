@@ -8,25 +8,9 @@
 #' @param sample_names character vector with sample names of .rds data files
 #' @param output_dir Package home directory, used to create output directory for results.
 #' @param features_of_interest list of gene marker panels used for plotting
-#' @param perform_cluster_level_selection perform marker selection based on selection panel and selection percent expressed for each cluster, then reintegrate (note: advise to use either cell or cluster based selection, not both)
-#' @param perform_cell_level_selection perform marker selection based on selection panel and selection percent expressed for each cell, then reintegrate (note: advise to use either cell or cluster based selection, not both)
-#' @param selection_panel default: c(). Gene/feature marker panel for selection and reintegration
-#' @param selection_percent_expressed default: 20. Minimal percentage threshold for each marker in panel to be expressed in order to take whole cluster/cell into account
 #' @param integration_method default: "RPCA", one of c("RPCA", "CCA", "harmony") "harmony", harmony is run from harmony::RunHarmony(), other are Seurat::IntegrateLayers()
 #'
 #' @export
-#'
-#' @examplesIf FALSE
-#' output_dir <- file.path("EMC-SKlab-scRNAseq", "results")
-#'
-#' # files and sample names
-#' sample_files <- c(file.path("EMC-SKlab-scRNAseq", "results", "t1.rds"),
-#'                file.path("EMC-SKlab-scRNAseq", "results", "t2.rds"),
-#'                file.path("EMC-SKlab-scRNAseq", "results", "t3.rds"))
-#' sample_names <- c("t1", "t2", "t3")
-#' selection_panel <- c("GENES", "OF", "INTEREST")
-#' samples_integration(sample_files, sample_names, output_dir,
-#'                     selection_panel = selection_panel)
 #'
 #' @note During development notes
 #' Explored different selection panels
@@ -51,13 +35,9 @@
 #' IntegrateLayers(normalization.method = "SCT") replaces: SelectIntegrationFeatures, PrepSCTIntegration, FindIntegrationAnchors, IntegrateData
 #' - For IntegrateLayers, specifically using method = SeuratWrappers::FastMNNIntegration, got error  - following issue: https://github.com/satijalab/seurat/issues/8631
 #' - For IntegrateLayers, specifically using method = SeuratWrappers::scVIIntegration, need reticulate/conda setup for scVI
-samples_integration <- function(sample_files, sample_names, output_dir,
-                                perform_cluster_level_selection = TRUE,
-                                perform_cell_level_selection = FALSE,
-                                selection_panel = c(),
-                                selection_percent_expressed = 20,
-                                features_of_interest = features_of_interest,
-                                integration_method = "RPCA") {
+samples_integration <- function(
+    sample_files, sample_names, output_dir, features_of_interest,
+    integration_method = "RPCA") {
   set.seed(42)
   library(Seurat) # added because of error
   # Error: package or namespace load failed for ‘Seurat’ in .doLoadActions(where, attach):
@@ -82,7 +62,7 @@ samples_integration <- function(sample_files, sample_names, output_dir,
   data.merged <- base::merge(data.list[[1]], data.list[2:length(data.list)])
   Seurat::VariableFeatures(data.merged) <- data.features
 
-  data.merged <- Seurat::RunPCA(object = data.merged, assay = "SCT", features = data.features, npcs = 50)
+  data.merged <- Seurat::RunPCA(object = data.merged, assay = "SCT", features = data.features, npcs = min(c(dim(data.merged)[2], 50)))
 
   data.merged <- run_integration(so = data.merged, integration_method = integration_method)
 
@@ -111,15 +91,25 @@ run_integration <- function(so, integration_method) {
       epsilon.harmony=-Inf,
       verbose = TRUE)
   } else if (integration_method == "RPCA") {
-    integrated_so <- Seurat::IntegrateLayers(
-      object = so,
-      method = Seurat::RPCAIntegration,
-      normalization.method = "SCT",
-      orig.reduction = "pca",
-      new.reduction = "integrated.dr",
-      dims = 1:min(c(table(so$orig.ident), 50))-1,
-      k.weight = min(c(table(so$orig.ident), 100)),
-      verbose = TRUE)
+    tryCatch({
+      integrated_so <- Seurat::IntegrateLayers(
+        object = so,
+        method = Seurat::RPCAIntegration,
+        normalization.method = "SCT",
+        orig.reduction = "pca",
+        new.reduction = "integrated.dr",
+        dims = 1:(min(c(table(so$orig.ident), 50))-1),
+        k.weight = min(c(table(so$orig.ident), 100))-1,
+        verbose = TRUE)
+      },
+    error=function(e) {
+      message("Removing smallest sample as data cannot be integrated, rerunning without")
+      Seurat::Idents(so) <- so@meta.data[, "orig.ident"]
+      sizeSorted_sample_names <- names(sort(table(so$orig.ident)))
+      so <- subset(so, idents = sizeSorted_sample_names[2:length(sizeSorted_sample_names)])
+      run_integration(so = so, integration_method = integration_method)
+    })
+
   } else if (integration_method == "CCA") {
     integrated_so <- Seurat::IntegrateLayers(
       object = so,
@@ -127,7 +117,7 @@ run_integration <- function(so, integration_method) {
       normalization.method = "SCT",
       orig.reduction = "pca",
       new.reduction = "integrated.dr",
-      dims = 1:min(c(table(so$orig.ident), 50))-1,
+      dims = 1:(min(c(table(so$orig.ident), 50))-1),
       k.weight = min(c(table(so$orig.ident), 100)),
       verbose = TRUE)
   }
@@ -289,7 +279,7 @@ selection_reintegration <- function(
     Seurat::Idents(so) <- so@meta.data[, names(reference_annotations)]
     to_select <- unique(Seurat::Idents(so)[grepl(reference_annotations[[names(reference_annotations)]], Seurat::Idents(so), ignore.case = TRUE)])
     # select idents by annotation (must be in reference)
-    Seurat::DefaultAssay(so) <- "RNA"
+    Seurat::DefaultAssay(so) <- "SCT"
     so <- subset(so, idents = to_select)
   } else if (!is.null(percent_expressed) && !is.null(selection_markers)) {
     message("Selecting clusters based on markers and percent expressed")
@@ -324,7 +314,7 @@ selection_reintegration <- function(
   so[["RNA"]] <- split(so[["RNA"]], f = so$orig.ident)
   options(future.globals.maxSize = 8000 * 1024^2)
   so <- Seurat::SCTransform(so, vst.flavor = "v2", method = "glmGamPoi", return.only.var.genes = FALSE)
-  so <- Seurat::RunPCA(so, features = SeuratObject::VariableFeatures(object = so), npcs = 50, verbose = TRUE)
+  so <- Seurat::RunPCA(so, features = SeuratObject::VariableFeatures(object = so), npcs = min(c(dim(so)[2], 50)), verbose = TRUE)
 
   so <- run_integration(so = so, integration_method = integration_method)
 
