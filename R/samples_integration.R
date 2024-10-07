@@ -68,7 +68,7 @@ samples_integration <- function(
 
   # run integrated analysis
   sample_name <- paste(sample_names, collapse = "-")
-  integration_analysis(integrated, output_dir, sample_name, features_of_interest, sample_names)
+  integration_analysis(data.merged, output_dir, sample_name, features_of_interest, sample_names)
 }
 
 #' Run sample layers integration
