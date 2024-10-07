@@ -107,7 +107,7 @@ run_integration <- function(so, integration_method) {
       Seurat::Idents(so) <- so@meta.data[, "orig.ident"]
       sizeSorted_sample_names <- names(sort(table(so$orig.ident)))
       so <- subset(so, idents = sizeSorted_sample_names[2:length(sizeSorted_sample_names)])
-      run_integration(so = so, integration_method = integration_method)
+      integrated_so <- run_integration(so = so, integration_method = integration_method)
     })
 
   } else if (integration_method == "CCA") {
