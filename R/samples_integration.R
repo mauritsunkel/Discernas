@@ -117,7 +117,8 @@ run_integration <- function(so, integration_method) {
       normalization.method = "SCT",
       orig.reduction = "pca",
       new.reduction = "integrated.dr",
-      dims = 1:50,
+      dims = 1:min(c(table(so$orig.ident), 50))-1,
+      k.weight = min(c(table(so$orig.ident), 100)),
       verbose = TRUE)
   } else if (integration_method == "CCA") {
     integrated_so <- Seurat::IntegrateLayers(
@@ -126,7 +127,8 @@ run_integration <- function(so, integration_method) {
       normalization.method = "SCT",
       orig.reduction = "pca",
       new.reduction = "integrated.dr",
-      dims = 1:50,
+      dims = 1:min(c(table(so$orig.ident), 50))-1,
+      k.weight = min(c(table(so$orig.ident), 100)),
       verbose = TRUE)
   }
   return(integrated_so)
