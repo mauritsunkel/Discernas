@@ -91,7 +91,7 @@ run_integration <- function(so, integration_method) {
       epsilon.harmony=-Inf,
       verbose = TRUE)
   } else if (integration_method == "RPCA") {
-    tryCatch({
+    integrated_so <- tryCatch({
       integrated_so <- Seurat::IntegrateLayers(
         object = so,
         method = Seurat::RPCAIntegration,
@@ -103,7 +103,8 @@ run_integration <- function(so, integration_method) {
         verbose = TRUE)
       },
     error=function(e) {
-      message("Removing smallest sample as data cannot be integrated, rerunning without")
+      message(e)
+      message("\n Removing smallest sample as data cannot be integrated, rerunning without")
       Seurat::Idents(so) <- so@meta.data[, "orig.ident"]
       sizeSorted_sample_names <- names(sort(table(so$orig.ident)))
       so <- subset(so, idents = sizeSorted_sample_names[2:length(sizeSorted_sample_names)])
