@@ -1,0 +1,60 @@
+Package: EMC.SKlab.scRNAseq
+Type: Package
+Title: Single-cell RNA sequencing package for SKlab
+Version: 1.4.24
+Author: Maurits Unkel
+Maintainer: Maurits Unkel <m.unkel@erasmusmc.nl>
+Description: Pipeline for automating scRNAseq analysis in the lab.
+License: GPL (>= 3)
+Encoding: UTF-8
+LazyData: true
+RoxygenNote: 7.3.2
+Depends:
+	R (>= 4.2)
+Imports:
+    Seurat (>= 5.1.0),
+    SeuratObject (>= 5.0.2),
+	SingleCellExperiment (>= 1.18.1),
+	SingleR (>= 1.10.0),
+	scuttle (>= 1.6.3),
+	stringr (>= 1.4.1),
+    reshape2 (>= 1.4.4),
+    ggplot2 (>= 3.3.6),
+	ggrepel (>= 0.9.1),
+	gridExtra (>= 2.3),
+	grDevices (>= 4.2.2),
+    data.table (>= 1.14.4),
+    dplyr (>= 1.0.10),
+	enrichplot (>= 1.16.2),
+    magrittr (>= 2.0.3),
+	monocle3 (>= 1.3.1),
+	patchwork (>= 1.1.2),
+	pheatmap (>= 1.0.12),
+	RColorBrewer (>= 1.1-3),
+	msigdb (>= 1.4.0),
+	org.Hs.eg.db (>= 3.15.0),
+	RcppAnnoy (>= 0.0.20),
+	openxlsx (>= 4.2.7),
+	EnhancedVolcano (>= 1.22.0),
+	anndata (>= 0.7.5.6),
+	SoupX (>= 1.6.2),
+	scDblFinder (>= 1.18.0),
+	harmony (>= 1.2.1)
+Remotes:
+    kushnerlab/Seurat,
+	satijalab/seurat-wrappers
+Suggests: 
+    testthat (>= 3.0.0),
+	DOSE (>= 3.22.1),
+	GSEAbase (>= 1.58.0),
+	Matrix (>= 1.5-1),
+	ReactomePA (>= 1.40.0),
+	SummarizedExperiment (>= 1.26.1),
+	assertthat (>= 0.2.1),
+	clusterProfiler (>= 4.4.4),
+	ggrastr (>= 1.0.1),
+	igraph (>= 1.3.5),
+	methods (>= 4.2.2),
+	plyr (>= 1.8.7),
+	viridis (>= 0.6.2)
+Config/testthat/edition: 3
