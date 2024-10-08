@@ -313,6 +313,25 @@ selection_reintegration <- function(
   # cleanup filtered Seurat object
   so <- Seurat::DietSeurat(so, assays = c("RNA"))
   # split (recommended by Seurat V5: https://github.com/satijalab/seurat/issues/8406) -> layers
+  split_so <- function(so) {
+    so <- tryCatch({
+      so[["RNA"]] <- split(so[["RNA"]], f = so$orig.ident)
+      return(so)
+    },
+    error=function(e) {
+      message(e)
+      message("\n Removing smallest sample as data cannot be split, rerunning without")
+      Seurat::Idents(so) <- so@meta.data[, "orig.ident"]
+      sizeSorted_sample_names <- names(sort(table(so$orig.ident)))
+      so <- subset(so, idents = sizeSorted_sample_names[2:length(sizeSorted_sample_names)])
+      if(length(names(table(so$orig.ident))) == 0) stop("All samples to small to split in layers")
+      so <- split_so(so)
+      return(so)
+    })
+    return(so)
+  }
+  so <- split_so(so)
+
   so[["RNA"]] <- split(so[["RNA"]], f = so$orig.ident)
   options(future.globals.maxSize = 8000 * 1024^2)
   so <- Seurat::SCTransform(so, vst.flavor = "v2", method = "glmGamPoi", return.only.var.genes = FALSE)
