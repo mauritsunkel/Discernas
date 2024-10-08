@@ -331,8 +331,6 @@ selection_reintegration <- function(
     return(so)
   }
   so <- split_so(so)
-
-  so[["RNA"]] <- split(so[["RNA"]], f = so$orig.ident)
   options(future.globals.maxSize = 8000 * 1024^2)
   so <- Seurat::SCTransform(so, vst.flavor = "v2", method = "glmGamPoi", return.only.var.genes = FALSE)
   so <- Seurat::RunPCA(so, features = SeuratObject::VariableFeatures(object = so), npcs = min(c(dim(so)[2], 50)), verbose = TRUE)
