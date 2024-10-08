@@ -139,6 +139,7 @@ run_integration <- function(so, integration_method) {
 #'
 #' @export
 integration_analysis <- function(integrated, output_dir, sample_name, features_of_interest, sample_names = NULL) {
+  message("\n RUNNING integration_analysis \n")
   if (is.null(sample_names)) sample_names <- sample_name
   # initialize start time and directories
   if (!grepl(paste0("/", sample_name, "/"), output_dir)) output_dir <- file.path(output_dir, sample_name)
@@ -265,6 +266,13 @@ integration_analysis <- function(integrated, output_dir, sample_name, features_o
 #' @param features_of_interest genes of interest
 #'
 #' @export
+#'
+#' @note
+#' SCT + integration workflow: https://github.com/satijalab/seurat/issues/4896
+#' subset + reintegration workflow: https://github.com/satijalab/seurat/issues/1883
+#' RNA assay set --> selection --> DietSeurat to clean up https://github.com/satijalab/seurat/issues/8073
+#' - reanalyze using same workflow you used for the entire dataset as a blank slate
+#' no need to do MT_features as they are already regressed out, no need to redo doublet and ambient RNA removal
 selection_reintegration <- function(
     so_filename, integration_method,
     output_dir, sample_names, sample_name, features_of_interest,
