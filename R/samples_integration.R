@@ -68,7 +68,10 @@ samples_integration <- function(
 
   # run integrated analysis
   sample_name <- paste(sample_names, collapse = "-")
-  integration_analysis(data.merged, output_dir, sample_name, features_of_interest, sample_names)
+  integration_analysis(
+    integrated = data.merged, output_dir = output_dir,
+    sample_name = sample_name, features_of_interest = features_of_interest,
+    sample_names = sample_names)
 }
 
 #' Run sample layers integration
@@ -281,7 +284,7 @@ selection_reintegration <- function(
     Seurat::Idents(so) <- so@meta.data[, names(reference_annotations)]
     to_select <- unique(Seurat::Idents(so)[grepl(reference_annotations[[names(reference_annotations)]], Seurat::Idents(so), ignore.case = TRUE)])
     # select idents by annotation (must be in reference)
-    Seurat::DefaultAssay(so) <- "SCT"
+    Seurat::DefaultAssay(so) <- "RNA"
     so <- subset(so, idents = to_select)
   } else if (!is.null(percent_expressed) && !is.null(selection_markers)) {
     message("Selecting clusters based on markers and percent expressed")
@@ -337,7 +340,8 @@ selection_reintegration <- function(
 
   so <- run_integration(so = so, integration_method = integration_method)
 
-
   # rerun integration_analysis post selection
-  integration_analysis(so, output_dir, sample_name, features_of_interest)
+  integration_analysis(
+    integrated = so, output_dir = output_dir,
+    sample_name = sample_name, features_of_interest = features_of_interest)
 }
