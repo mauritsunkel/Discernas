@@ -79,8 +79,12 @@ sample_analysis <- function(
   dir.create(file.path(sample_path, 'Principal_Component_Analysis'))
   dir.create(file.path(sample_path, 'DE_analysis'))
 
+  ## find samples dir automatically, based on unique sample names from workflow
+  samples_dirs_list <- list.dirs(samples_dir, recursive = TRUE)
+  cellranger_filepath <- file.path(samples_dirs_list[grep(paste0("/", sample_name, "/*/filtered_feature_bc_matrix"), samples_dirs_list)])
+
   # read 10X data (preprocessed by 10X Cellranger pipeline) and convert to Seurat object
-  data.data <- Seurat::Read10X(data.dir = file.path(samples_dir, sample_name, "filtered_feature_bc_matrix"))
+  data.data <- Seurat::Read10X(data.dir = cellranger_filepath)
   ## DEVNOTE: min.features = 500 (CellRanger default)
   data <- Seurat::CreateSeuratObject(counts = data.data, project = sample_name, min.cells = 3, min.features = 500)
   rm(data.data)
