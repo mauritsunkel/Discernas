@@ -37,7 +37,7 @@
 #' - For IntegrateLayers, specifically using method = SeuratWrappers::scVIIntegration, need reticulate/conda setup for scVI
 samples_integration <- function(
     sample_files, sample_names, output_dir, features_of_interest,
-    integration_method = "RPCA") {
+    integration_method = "RPCA", integrated_sample_name = NULL) {
   set.seed(42)
   library(Seurat) # added because of error
   # Error: package or namespace load failed for ‘Seurat’ in .doLoadActions(where, attach):
@@ -66,11 +66,11 @@ samples_integration <- function(
 
   data.merged <- run_integration(so = data.merged, integration_method = integration_method)
 
+  if (is.null(integrated_sample_name)) integrated_sample_name <- paste(sample_names, collapse = "-")
   # run integrated analysis
-  sample_name <- paste(sample_names, collapse = "-")
   integration_analysis(
     integrated = data.merged, output_dir = output_dir,
-    sample_name = sample_name, features_of_interest = features_of_interest,
+    sample_name = integrated_sample_name, features_of_interest = features_of_interest,
     sample_names = sample_names)
 }
 
