@@ -283,7 +283,7 @@ selection_reintegration <- function(
 
   dir.create(output_dir, recursive = TRUE)
 
-  message(paste0("reading rds: ", so_filename))
+  message(paste0("reading rds... --> ", output_dir))
   so <- readRDS(file = so_filename)
 
   Seurat::DefaultAssay(so) <- "SCT"
