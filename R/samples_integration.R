@@ -308,6 +308,9 @@ selection_reintegration <- function(
     Seurat::Idents(so) <- so$seurat_subclusters
     # create dotplot to extract percent expressed information
     p <- Seurat::DotPlot(so, features = selection_markers)
+    png(file.path(output_dir, "subclusters_percentage_expressed.png"))
+    hist(p$data$pct.exp, breaks = seq(0, 100, 5), main = paste0("Cells percentage expressed: ", paste(selection_markers, collapse = ", ")))
+    dev.off()
     # get cluster names where percent expressed is above %threshold for each gene of selection_markers
     cluster_selection <- names(which(table(p$data[p$data$pct.exp > percent_expressed,]$id) == length(unique(p$data$features.plot))))
     # if no clusters selected, set selection to NULL
