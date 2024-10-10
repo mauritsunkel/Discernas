@@ -80,11 +80,13 @@ sample_analysis <- function(
   dir.create(file.path(sample_path, 'DE_analysis'))
 
   ## find samples dir automatically, based on unique sample names from workflow
+  pattern <- paste0("/", sample_name, "/")
   samples_dirs_list <- list.dirs(samples_dir, recursive = TRUE)
-  cellranger_filepath <- file.path(samples_dirs_list[grep(paste0("/", sample_name, "/*/filtered_feature_bc_matrix"), samples_dirs_list)])
+  samples_dir <- samples_dirs_list[grep(pattern, samples_dirs_list)][1]
+  samples_dir <- substr(samples_dir, 1, stringr::str_locate(samples_dir, pattern)[2]-1)
 
   # read 10X data (preprocessed by 10X Cellranger pipeline) and convert to Seurat object
-  data.data <- Seurat::Read10X(data.dir = cellranger_filepath)
+  data.data <- Seurat::Read10X(data.dir = file.path(samples_dir, "filtered_feature_bc_matrix"))
   ## DEVNOTE: min.features = 500 (CellRanger default)
   data <- Seurat::CreateSeuratObject(counts = data.data, project = sample_name, min.cells = 3, min.features = 500)
   rm(data.data)
@@ -122,7 +124,7 @@ sample_analysis <- function(
 
   if (run_ambient_RNA_removal) {
     clean_ambient_RNA <- function(data, samples_dir, sample_name) {
-      table_of_droplets = Seurat::Read10X(data.dir = file.path(samples_dir, sample_name, "raw_feature_bc_matrix"))
+      table_of_droplets = Seurat::Read10X(data.dir = file.path(samples_dir, "raw_feature_bc_matrix"))
 
       # add non-overlapping genes tot table_of_droplets with 0 counts to satisfy having same amount of genes
       non_overlapping_genes <- rownames(data@assays$RNA$counts)[which(!rownames(data@assays$RNA$counts) %in% rownames(table_of_droplets))]
@@ -139,7 +141,7 @@ sample_analysis <- function(
 
       sc <- SoupX::SoupChannel(tod = table_of_droplets, toc = data@assays$RNA$counts) # estimateSoup()
 
-      graphclust_dir <- file.path(samples_dir, sample_name, "analysis", "clustering")
+      graphclust_dir <- file.path(samples_dir, "analysis", "clustering")
       graphclust_dir <- list.files(graphclust_dir, full.names = T)[grep(pattern = "graphclust$", list.files(graphclust_dir))]
       tenx_graphclust <- read.csv(file.path(graphclust_dir, "clusters.csv"))
       tenx_clusters <- tenx_graphclust$Cluster[tenx_graphclust$Barcode %in% colnames(data@assays$RNA$counts)]
