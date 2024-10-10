@@ -81,6 +81,7 @@ samples_integration <- function(
 #'
 #' @return so
 run_integration <- function(so, integration_method) {
+  message("RUN integration: ", integration_method)
   if (integration_method == "harmony") {
     integrated_so <- harmony::RunHarmony(
       object = so,
@@ -139,7 +140,7 @@ run_integration <- function(so, integration_method) {
 #'
 #' @export
 integration_analysis <- function(integrated, output_dir, sample_name, features_of_interest, sample_names = NULL) {
-  message("\n RUNNING integration_analysis \n")
+  message("\n RUNNING integration_analysis: ", output_dir, "\n")
   if (is.null(sample_names)) sample_names <- sample_name
   # initialize start time and directories
   if (!grepl(paste0("/", sample_name, "/"), output_dir)) output_dir <- file.path(output_dir, sample_name)
@@ -152,7 +153,9 @@ integration_analysis <- function(integrated, output_dir, sample_name, features_o
   # run the workflow for visualization and clustering
   integrated <- Seurat::FindNeighbors(integrated, assay = "SCT", reduction = "integrated.dr", dims = 1:50)
   # could give warning: "NAs introduced by coercion" as '.' in data will be coerced to NA
+  message("\n RUN FindClusters: ", output_dir, "\n")
   integrated <- Seurat::FindClusters(integrated, resolution = 0.8, algorithm = 1)
+  message("\n RUN RunUMAP: ", output_dir, "\n")
   integrated <- Seurat::RunUMAP(integrated, assay = "SCT", reduction = "integrated.dr", dims = 1:50)
 
   ### VISUALIZATION
@@ -256,7 +259,7 @@ integration_analysis <- function(integrated, output_dir, sample_name, features_o
 #'
 #' Perform selection of cells/clusters/annotation and then reintegrate and reanalyze
 #'
-#' @param soso_filename filename of seurat object to perform selection on
+#' @param so_filename filename of seurat object to perform selection on
 #' @param selection_markers genes of interest to be used for selection
 #' @param percent_expressed threshold for percentage of cells that have to express all selection_markers
 #' @param reference_annotations reference database and annotation label of it to perform selection on
@@ -278,7 +281,7 @@ selection_reintegration <- function(
     output_dir, sample_names, sample_name, features_of_interest,
     selection_markers = NULL, percent_expressed = NULL, reference_annotations = NULL) {
 
-  message("reading rds...")
+  message(paste0("reading rds: ", so_filename))
   so <- readRDS(file = so_filename)
 
   Seurat::DefaultAssay(so) <- "SCT"
@@ -355,11 +358,13 @@ selection_reintegration <- function(
     })
     return(so)
   }
+  message("splitting seurat object into layers")
   so <- split_so(so)
   options(future.globals.maxSize = 8000 * 1024^2)
+  message("RUN SCTransform")
   so <- Seurat::SCTransform(so, vst.flavor = "v2", method = "glmGamPoi", return.only.var.genes = FALSE)
+  message("RUN PCA")
   so <- Seurat::RunPCA(so, features = SeuratObject::VariableFeatures(object = so), npcs = min(c(dim(so)[2], 50)), verbose = TRUE)
-
   so <- run_integration(so = so, integration_method = integration_method)
 
   # rerun integration_analysis post selection
