@@ -295,7 +295,17 @@ selection_reintegration <- function(
     Seurat::DefaultAssay(so) <- "RNA"
     so <- subset(so, idents = to_select)
   } else if (!is.null(percent_expressed) && !is.null(selection_markers)) {
-    message("Selecting clusters based on markers and percent expressed")
+    message("Selecting subclusters based on markers and percent expressed")
+    ## perform subclustering for increased resolution
+    Seurat::Idents(so) <- so$seurat_clusters
+    so <- Seurat::FindSubCluster(
+      object = so,
+      cluster = levels(so$seurat_clusters),
+      graph.name = "SCT_nn",
+      subcluster.name = "seurat_subclusters"
+    )
+    # set idents to subclustering
+    Seurat::Idents(so) <- so$seurat_subclusters
     # create dotplot to extract percent expressed information
     p <- Seurat::DotPlot(so, features = selection_markers)
     # get cluster names where percent expressed is above %threshold for each gene of selection_markers
@@ -305,6 +315,7 @@ selection_reintegration <- function(
     # perform cluster selection
     Seurat::DefaultAssay(so) <- "RNA"
     so <- subset(so, idents = cluster_selection)
+    Seurat::Idents(so) <- so$seurat_clusters
     # add selection panel and type as metadata
     so@misc$selection_markers <- selection_markers
   } else if (!is.null(selection_markers)) {
