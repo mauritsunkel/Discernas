@@ -281,6 +281,8 @@ selection_reintegration <- function(
     output_dir, sample_names, sample_name, features_of_interest,
     selection_markers = NULL, percent_expressed = NULL, reference_annotations = NULL) {
 
+  dir.create(output_dir, recursive = TRUE)
+
   message(paste0("reading rds: ", so_filename))
   so <- readRDS(file = so_filename)
 
