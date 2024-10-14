@@ -174,6 +174,9 @@ annotate_visualize_with_kriegstein_data <- function(
       sample_name <- sample_names[j]
       message("start iteration of ", sample_name)
 
+      sample_output_dir <- file.path(output_dir, sample_name, 'annotation_kriegstein')
+      dir.create(sample_output_dir, recursive = T)
+
       sample_data <- readRDS(file = sample_files[j])
       # set RNA assay to have genes in same feature space as the reference data
       SeuratObject::DefaultAssay(sample_data) <- "RNA"
@@ -183,9 +186,8 @@ annotate_visualize_with_kriegstein_data <- function(
       overlapping_genes <- intersect(sample_genes, genes)
 
       # add overlapping genes to .rds and set back to SCT assay
-      SeuratObject::Misc(object = sample_data, slot = "Kriegstein.gene.overlap.assayRNA") <- overlapping_genes
       SeuratObject::DefaultAssay(sample_data) <- "SCT"
-      saveRDS(sample_data, file = sample_files[j])
+      openxlsx::write.xlsx(x = overlapping_genes, file = file.path(sample_output_dir, "overlapping_genes.xlsx"))
 
       message("create Seurat sample -> SCE")
       sample_data <- Seurat::as.SingleCellExperiment(sample_data, assay = 'RNA')
@@ -272,13 +274,6 @@ visualize_kriegstein_annotated_data <- function(
   #   unable to find required package ‘Seurat’
 
   names(sample_files) <- sample_names
-  for (sample in sample_names) {
-    if (grepl('postSelect', sample_files[[sample]])) {
-      dir.create(file.path(output_dir, sample, 'postSelect', 'annotation_kriegstein'), recursive = T)
-    } else {
-      dir.create(file.path(output_dir, sample, 'annotation_kriegstein'), recursive = T)
-    }
-  }
 
   # get Kriegstein custom feature metadata with custom clusterv2 celltype mapping
   meta <- getMeta(kriegstein_data_dir)
