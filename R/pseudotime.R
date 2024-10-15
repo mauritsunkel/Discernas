@@ -7,6 +7,7 @@
 #' @param input_names Character vector with sample names of input files.
 #' @param output_dir String containing output directory.
 #' @param pseudotime_root_markers List with character vectors with gene name(s) of interest, used to select pseudotime trajectory starting point.
+#' @param single_partition default: FALSE, if TRUE, create pseudotime trajectory for all cells as a single partition
 #'
 #' @export
 #'
@@ -43,7 +44,7 @@
 #' #  input_names = c("sample_name"),
 #' #  output_dir = file.path("path", "to", results"),
 #' #  pseudotime_root_markers = list(c("GENES", "OF", "INTEREST")))
-pseudotime <- function(input_files, input_names, output_dir, pseudotime_root_markers = NULL) {
+pseudotime <- function(input_files, input_names, output_dir, pseudotime_root_markers = NULL, single_partition = FALSE) {
   if (is.null(pseudotime_root_markers)) {
     pseudotime_root_markers <- list(
       "Microglia" = c("AIF1"),
@@ -61,7 +62,12 @@ pseudotime <- function(input_files, input_names, output_dir, pseudotime_root_mar
     plots <- list()
 
     # create sample specific directory
-    output_dir <- file.path(base_output_dir, input_name, 'pseudotime')
+    if (!grepl(paste0("/", input_name, "/"), base_output_dir)) {
+      output_dir <- file.path(base_output_dir, input_name, 'pseudotime')
+    } else {
+      output_dir <- file.path(base_output_dir, 'pseudotime')
+    }
+
     dir.create(output_dir, recursive = TRUE)
 
     # get data
@@ -128,7 +134,7 @@ pseudotime <- function(input_files, input_names, output_dir, pseudotime_root_mar
     plots[[length(plots)+1]] <- p2
 
     # learn principal graph
-    cds <- monocle3::learn_graph(cds)
+    cds <- monocle3::learn_graph(cds, use_partition = single_partition)
 
     for (partition in seq_along(table(monocle3::partitions(cds)))) {
       message("partition: ", partition)

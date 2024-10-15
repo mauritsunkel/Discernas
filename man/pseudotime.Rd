@@ -8,7 +8,8 @@ pseudotime(
   input_files,
   input_names,
   output_dir,
-  pseudotime_root_markers = NULL
+  pseudotime_root_markers = NULL,
+  single_partition = FALSE
 )
 }
 \arguments{
@@ -19,6 +20,8 @@ pseudotime(
 \item{output_dir}{String containing output directory.}
 
 \item{pseudotime_root_markers}{List with character vectors with gene name(s) of interest, used to select pseudotime trajectory starting point.}
+
+\item{single_partition}{default: FALSE, if TRUE, create pseudotime trajectory for all cells as a single partition}
 }
 \description{
 Run monocle3 from Seurat object, performing its own clustering, partitioning
