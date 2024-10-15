@@ -8,12 +8,9 @@ samples_integration(
   sample_files,
   sample_names,
   output_dir,
-  perform_cluster_level_selection = TRUE,
-  perform_cell_level_selection = FALSE,
-  selection_panel = c(),
-  selection_percent_expressed = 20,
-  features_of_interest = features_of_interest,
-  integration_method = "RPCA"
+  features_of_interest,
+  integration_method = "RPCA",
+  integrated_sample_name = NULL
 )
 }
 \arguments{
@@ -22,14 +19,6 @@ samples_integration(
 \item{sample_names}{character vector with sample names of .rds data files}
 
 \item{output_dir}{Package home directory, used to create output directory for results.}
-
-\item{perform_cluster_level_selection}{perform marker selection based on selection panel and selection percent expressed for each cluster, then reintegrate (note: advise to use either cell or cluster based selection, not both)}
-
-\item{perform_cell_level_selection}{perform marker selection based on selection panel and selection percent expressed for each cell, then reintegrate (note: advise to use either cell or cluster based selection, not both)}
-
-\item{selection_panel}{default: c(). Gene/feature marker panel for selection and reintegration}
-
-\item{selection_percent_expressed}{default: 20. Minimal percentage threshold for each marker in panel to be expressed in order to take whole cluster/cell into account}
 
 \item{features_of_interest}{list of gene marker panels used for plotting}
 
@@ -51,6 +40,7 @@ working. Still trying to find the cause of this, issued on their Github.
 Seurat integration notes
 RPCA > CCA when: "a substantial fraction of the cells in one dataset have no matching type in the other" and/or "datasets originate from the same platform (i.e. multiple lanes of 10x genomics)"
  the major difference with Seurat V4 is that in Seurat v5, we perform the integration in low-dimensional space. What that means is that prior to performing any integration - we run a PCA on the full dataset (V5: IntegrateLayers() vs V4: IntegrateData(), no more 'integrated' assay)
+ RPCA struggles with varying cell amounts between samples because of mutual neighborhood constraints, in that case harmony could be better
 Using harmony::RunHarmony instead of Seurat::IntegrateLayers to have more parameter control.
 Harmony is fast, memory efficient, removes batch effects, scalable, and ranks among the top in many different type of benchmarking studies
 - only for the most complex use cases, consider scVI/scANVI/Scanorama/scGen (all Python based)
@@ -62,18 +52,4 @@ Harmony is fast, memory efficient, removes batch effects, scalable, and ranks am
 IntegrateLayers(normalization.method = "SCT") replaces: SelectIntegrationFeatures, PrepSCTIntegration, FindIntegrationAnchors, IntegrateData
 - For IntegrateLayers, specifically using method = SeuratWrappers::FastMNNIntegration, got error  - following issue: https://github.com/satijalab/seurat/issues/8631
 - For IntegrateLayers, specifically using method = SeuratWrappers::scVIIntegration, need reticulate/conda setup for scVI
-}
-\examples{
-\dontshow{if (FALSE) (if (getRversion() >= "3.4") withAutoprint else force)(\{ # examplesIf}
-output_dir <- file.path("EMC-SKlab-scRNAseq", "results")
-
-# files and sample names
-sample_files <- c(file.path("EMC-SKlab-scRNAseq", "results", "t1.rds"),
-               file.path("EMC-SKlab-scRNAseq", "results", "t2.rds"),
-               file.path("EMC-SKlab-scRNAseq", "results", "t3.rds"))
-sample_names <- c("t1", "t2", "t3")
-selection_panel <- c("GENES", "OF", "INTEREST")
-samples_integration(sample_files, sample_names, output_dir,
-                    selection_panel = selection_panel)
-\dontshow{\}) # examplesIf}
 }

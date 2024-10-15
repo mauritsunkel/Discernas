@@ -17,6 +17,8 @@ selection_reintegration(
 )
 }
 \arguments{
+\item{so_filename}{filename of seurat object to perform selection on}
+
 \item{output_dir}{Package home directory, used to create output directory for results.}
 
 \item{sample_names}{names of samples}
@@ -30,9 +32,14 @@ selection_reintegration(
 \item{percent_expressed}{threshold for percentage of cells that have to express all selection_markers}
 
 \item{reference_annotations}{reference database and annotation label of it to perform selection on}
-
-\item{soso_filename}{filename of seurat object to perform selection on}
 }
 \description{
 Perform selection of cells/clusters/annotation and then reintegrate and reanalyze
+}
+\note{
+SCT + integration workflow: https://github.com/satijalab/seurat/issues/4896
+subset + reintegration workflow: https://github.com/satijalab/seurat/issues/1883
+RNA assay set --> selection --> DietSeurat to clean up https://github.com/satijalab/seurat/issues/8073
+- reanalyze using same workflow you used for the entire dataset as a blank slate
+no need to do MT_features as they are already regressed out, no need to redo doublet and ambient RNA removal
 }
