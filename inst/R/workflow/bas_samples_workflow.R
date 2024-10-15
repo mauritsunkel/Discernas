@@ -68,47 +68,45 @@ integrated_sample_files <- unname(unlist(sapply(integrated_sample_names, simplif
 
 
 ## INDIVIDUAL SAMPLE ANALYSIS ----
-# message("\n RUNNING sample analysis \n")
-# for (sample_name in sample_names) {
-#   sample_analysis(
-#     samples_dir = samples_dir,
-#     sample_name = sample_name,
-#     output_dir = results_dir,
-#     features_of_interest = features_of_interest,
-#     run_cell_cycle_regression = FALSE
-#   )
-# }
+message("\n RUNNING sample analysis \n")
+for (sample_name in sample_names) {
+  sample_analysis(
+    samples_dir = samples_dir,
+    sample_name = sample_name,
+    output_dir = results_dir,
+    features_of_interest = features_of_interest,
+    run_cell_cycle_regression = FALSE
+  )
+}
 
 ## SAMPLES INTEGRATION ----
-# message("\n RUNNING samples integration \n")
-# samples_integration(
-#   sample_files = c(
-#     file.path(results_dir, sample_integrations[[1]][1], paste0(sample_integrations[[1]][1], ".rds")),
-#     file.path(results_dir, sample_integrations[[1]][2], paste0(sample_integrations[[1]][2], ".rds")),
-#     file.path(results_dir, sample_integrations[[1]][3], paste0(sample_integrations[[1]][3], ".rds"))
-#   ),
-#   sample_names = sample_integrations[[1]],
-#   output_dir = results_dir,
-#   features_of_interest = features_of_interest,
-#   integration_method = integration_method
-# )
+message("\n RUNNING samples integration \n")
+samples_integration(
+  sample_files = c(
+    file.path(results_dir, sample_integrations[[1]][1], paste0(sample_integrations[[1]][1], ".rds")),
+    file.path(results_dir, sample_integrations[[1]][2], paste0(sample_integrations[[1]][2], ".rds")),
+    file.path(results_dir, sample_integrations[[1]][3], paste0(sample_integrations[[1]][3], ".rds"))
+  ),
+  sample_names = sample_integrations[[1]],
+  output_dir = results_dir,
+  features_of_interest = features_of_interest,
+  integration_method = integration_method
+)
 
 
 
 ## ANNOTATE AND VISUALIZE (KRIEGSTEIN) ----
 ### MANUALLY PERFORM MAPMYCELLS SILETTI ANNOTATION ###
-# message("RUNNING annotate_visualize_with_kriegstein_data")
-# annotate_visualize_with_kriegstein_data(
-#   sample_names = integrated_sample_names,
-#   sample_files = integrated_sample_files,
-#   output_dir = results_dir,
-#   kriegstein_data_dir = kriegstein_data_dir,
-#   kriegstein_chunks_input_dir = kriegstein_chunks_output_dir,
-#   kriegstein_annotated_output_dir = file.path(kriegstein_data_dir, "RData", run_name),
-#   run_only_visualization = FALSE # DEVNOTE: check if TRUE, only when testing
-# )
-
-# TODO check if SCT assay got corrupted somehow
+message("RUNNING annotate_visualize_with_kriegstein_data")
+annotate_visualize_with_kriegstein_data(
+  sample_names = integrated_sample_names,
+  sample_files = integrated_sample_files,
+  output_dir = results_dir,
+  kriegstein_data_dir = kriegstein_data_dir,
+  kriegstein_chunks_input_dir = kriegstein_chunks_output_dir,
+  kriegstein_annotated_output_dir = file.path(kriegstein_data_dir, "RData", run_name),
+  run_only_visualization = FALSE # DEVNOTE: check if TRUE, only when testing
+)
 
 ## Subset selection neurons ----
 selection_reintegration(
@@ -166,7 +164,8 @@ pseudotime(
   input_files = integrated_sample_files,
   input_names = integrated_sample_names,
   output_dir = results_dir,
-  pseudotime_root_markers = pseudotime_root_markers
+  pseudotime_root_markers = pseudotime_root_markers,
+  single_partition = FALSE
 )
 
 

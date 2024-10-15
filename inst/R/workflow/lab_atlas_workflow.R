@@ -194,5 +194,6 @@ pseudotime(
   input_files = integrated_sample_files,
   input_names = integrated_sample_names,
   output_dir = results_dir,
-  pseudotime_root_markers = pseudotime_root_markers
+  pseudotime_root_markers = pseudotime_root_markers,
+  single_partition = FALSE
 )

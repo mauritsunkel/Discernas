@@ -145,25 +145,32 @@ integrated_sample_files <- unname(unlist(sapply(integrated_sample_names, simplif
 #   features_of_interest = features_of_interest,
 #   selection_markers = c("MAP2", "DCX", "NEUROG2"), percent_expressed = 30, reference_annotations = NULL)
 
-
-
-
-
-
-
+## selections PSEUDOTIME ----
+message("RUNNING pseudotime")
+pseudotime(
+  input_files = file.path(results_dir, integrated_sample_names[[1]], "subset", "microglia", basename(integrated_sample_files[[1]])),
+  input_names = integrated_sample_names[[1]],
+  output_dir = file.path(results_dir, integrated_sample_names[[1]], "subset", "microglia"),
+  pseudotime_root_markers = pseudotime_root_markers,
+  single_partition = TRUE
+)
+pseudotime(
+  input_files = file.path(results_dir, integrated_sample_names[[1]], "subset", "astrocytes", basename(integrated_sample_files[[1]])),
+  input_names = integrated_sample_names[[1]],
+  output_dir = file.path(results_dir, integrated_sample_names[[1]], "subset", "astrocytes"),
+  pseudotime_root_markers = pseudotime_root_markers,
+  single_partition = TRUE
+)
+pseudotime(
+  input_files = file.path(results_dir, integrated_sample_names[[1]], "subset", "neurons", basename(integrated_sample_files[[1]])),
+  input_names = integrated_sample_names[[1]],
+  output_dir = file.path(results_dir, integrated_sample_names[[1]], "subset", "neurons"),
+  pseudotime_root_markers = pseudotime_root_markers,
+  single_partition = TRUE
+)
 
 # TODO check if /sample_name/ in output_dir at every R script file: if (!grepl(paste0("/", sample_name, "/"), output_dir))
-## PSEUDOTIME ----
-# message("RUNNING pseudotime")
-# pseudotime(
-#   input_files = integrated_sample_files,
-#   input_names = integrated_sample_names,
-#   output_dir = results_dir,
-#   pseudotime_root_markers = pseudotime_root_markers
-# )
-
-
-
+## if (!grepl(paste0("/", sample_name, "/"), output_dir)) output_dir <- file.path(output_dir, sample_name)
 
 
 
