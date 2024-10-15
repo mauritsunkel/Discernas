@@ -24,6 +24,7 @@
 #' Seurat integration notes
 #' RPCA > CCA when: "a substantial fraction of the cells in one dataset have no matching type in the other" and/or "datasets originate from the same platform (i.e. multiple lanes of 10x genomics)"
 #'  the major difference with Seurat V4 is that in Seurat v5, we perform the integration in low-dimensional space. What that means is that prior to performing any integration - we run a PCA on the full dataset (V5: IntegrateLayers() vs V4: IntegrateData(), no more 'integrated' assay)
+#'  RPCA struggles with varying cell amounts between samples because of mutual neighborhood constraints, in that case harmony could be better
 #' Using harmony::RunHarmony instead of Seurat::IntegrateLayers to have more parameter control.
 #' Harmony is fast, memory efficient, removes batch effects, scalable, and ranks among the top in many different type of benchmarking studies
 #' - only for the most complex use cases, consider scVI/scANVI/Scanorama/scGen (all Python based)
@@ -283,7 +284,7 @@ selection_reintegration <- function(
 
   dir.create(output_dir, recursive = TRUE)
 
-  message(paste0("reading rds... --> ", output_dir))
+  message(paste0("\n reading rds... --> ", output_dir, "\n"))
   so <- readRDS(file = so_filename)
 
   Seurat::DefaultAssay(so) <- "SCT"
@@ -292,7 +293,7 @@ selection_reintegration <- function(
     stop("To perform selection and reintegration, pass in the parameters")
   } else if (!is.null(reference_annotations)) {
     if (length(unique(names(reference_annotations))) != 1) stop("Pass a single reference")
-    message("Selecting specified annotation from reference as idents")
+    message("\n Selecting specified annotation from reference as idents \n")
     # set idents to reference name
     Seurat::Idents(so) <- so@meta.data[, names(reference_annotations)]
     to_select <- unique(Seurat::Idents(so)[grepl(reference_annotations[[names(reference_annotations)]], Seurat::Idents(so), ignore.case = TRUE)])
@@ -300,7 +301,7 @@ selection_reintegration <- function(
     Seurat::DefaultAssay(so) <- "RNA"
     so <- subset(so, idents = to_select)
   } else if (!is.null(percent_expressed) && !is.null(selection_markers)) {
-    message("Selecting subclusters based on markers and percent expressed")
+    message("\n Selecting subclusters based on markers and percent expressed \n")
     ## perform subclustering for increased resolution
     Seurat::Idents(so) <- so$seurat_clusters
     so <- Seurat::FindSubCluster(
@@ -327,7 +328,7 @@ selection_reintegration <- function(
     # add selection panel and type as metadata
     so@misc$selection_markers <- selection_markers
   } else if (!is.null(selection_markers)) {
-    message("Selecting cells based on expressing all markers")
+    message("\n Selecting cells based on expressing all markers \n")
     layer_data <- SeuratObject::LayerData(so)
     # select each cell that has expresses each gene from selection_markers
     cellsToSelect <- sapply(as.data.frame(layer_data[selection_markers, ] > 0), sum) == length(rownames(layer_data[selection_markers, ]))
@@ -343,6 +344,7 @@ selection_reintegration <- function(
   # cleanup filtered Seurat object
   so <- Seurat::DietSeurat(so, assays = c("RNA"))
   # split (recommended by Seurat V5: https://github.com/satijalab/seurat/issues/8406) -> layers
+  message("\ splitting seurat object into layers \n")
   split_so <- function(so) {
     so <- tryCatch({
       so[["RNA"]] <- split(so[["RNA"]], f = so$orig.ident)
@@ -360,12 +362,26 @@ selection_reintegration <- function(
     })
     return(so)
   }
-  message("splitting seurat object into layers")
   so <- split_so(so)
+  message("\n RUN SCTransform \n")
   options(future.globals.maxSize = 8000 * 1024^2)
-  message("RUN SCTransform")
-  so <- Seurat::SCTransform(so, vst.flavor = "v2", method = "glmGamPoi", return.only.var.genes = FALSE)
-  message("RUN PCA")
+  SCTransform_subset <- function(so) {
+    so <- tryCatch({
+      so <- Seurat::SCTransform(so, vst.flavor = "v2", method = "glmGamPoi", return.only.var.genes = FALSE)
+    },
+    error=function(e) {
+      message(e)
+      message("\n Removing smallest sample as data cannot be processed by SCTransform, rerunning without")
+      Seurat::Idents(so) <- so@meta.data[, "orig.ident"]
+      sizeSorted_sample_names <- names(sort(table(so$orig.ident)))
+      so <- subset(so, idents = sizeSorted_sample_names[2:length(sizeSorted_sample_names)])
+      if(length(names(table(so$orig.ident))) == 0) stop("All samples to small to split in layers")
+      so <- SCTransform_subset(so)
+      return(so)
+    })
+  }
+  so <- SCTransform_subset(so)
+  message("\n RUN PCA \n")
   so <- Seurat::RunPCA(so, features = SeuratObject::VariableFeatures(object = so), npcs = min(c(dim(so)[2], 50)), verbose = TRUE)
   so <- run_integration(so = so, integration_method = integration_method)
 
