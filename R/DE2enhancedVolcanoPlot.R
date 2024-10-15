@@ -34,7 +34,7 @@ plotEnhancedVolcano <- function(
   n_cells.2 <- seurat_DE$pct.2 * n_cells_vs
   absolute_diff_scaled <- rescale(abs(n_cells.1 - n_cells.2), 0, 1)
   relative_diff_scaled <- rescale(abs(seurat_DE$pct.1-seurat_DE$pct.2), 0, 1)
-  point_size <- rescale(absolute_diff_scaled + relative_diff_scaled, 2, 4)
+  point_size <- rescale(absolute_diff_scaled + relative_diff_scaled, 1, 4)
 
   x_axis_min <- floor(min(seurat_DE$avg_log2FC))
   x_axis_max <- ceiling(max(seurat_DE$avg_log2FC))
