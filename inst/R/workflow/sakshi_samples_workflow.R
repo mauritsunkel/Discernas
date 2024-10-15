@@ -3,12 +3,12 @@ library(EMC.SKlab.scRNAseq)
 
 
 
-#####  USER INITIALIZATION #####
+#####  USER INITIALIZATION -----
 ### USER CONFIG ###
 # general
 run_name <- "sakshi_pipeV8"
 project_dir <- "C:/SynologyDrive/Projects/scRNAseqR"
-samples_dir <- file.path(project_dir, "data/samples/sakshi NGN2 microglia")
+samples_dir <- file.path(project_dir, "data/samples/")
 
 # sample analysis
 sample_names <- c("NS", "M", "NC", "NSM")
@@ -35,13 +35,13 @@ features_of_interest <- list(
                             "HOPX", "FAM107A", "AGT"),
   "interneuron" = c("SST", "PVALB", "GAD1"),
   "microglia" = c("IBA1", "TMEM119", "P2RY12", "CXCR1", "ITGAM", "PTPRC", "SALL1", "TREM2", "SPI1", "CSF1", "CSF1R",
-                  "AIF1", "C1QA", "C1QB", "CX3CR1"),
-  "microglia_absence" = c("CD163", "CCL2", "MRC1"),
+                  "AIF1", "C1QA", "C1QB", "CX3CR1", "TGFB1", "CX3CL1", "CSF2"),
+  "microglia_absence" = c("CD163", "CCL2", "MRC1", "IL34"),
   "proliferating" = c("MKI67", "SOX2", "HOPX", "NES", "POU5F1"),
   "supplement2" = c("TGFB1", "CSF1", "IL34", "LEFTY2")
 )
 pseudotime_root_markers <- list(
-  "Microglia" = c("AIF1"),
+  "Microglia" = c("AIF1", "CSF1R", "SPI1"),
   "Astrocyte" = c("VIM", "S100B", "SOX9"),
   "Neuron"    = c("MAP2", "DCX", "NEUROG2"),
   "Dividing"  = c("MKI67"),
@@ -68,7 +68,7 @@ integrated_sample_files <- unname(unlist(sapply(integrated_sample_names, simplif
 
 
 
-# # initial sample analysis
+## SAMPLE ANALYSIS ----
 # for (sample_name in sample_names) {
 #   message("RUNNING sample_analysis sample: ", sample_name)
 #   sample_analysis(
@@ -80,7 +80,8 @@ integrated_sample_files <- unname(unlist(sapply(integrated_sample_names, simplif
 #   )
 # }
 #
-# # integrate samples
+
+## SAMPLES INTEGRATION ----
 # message("RUNNING samples_integration")
 # samples_integration(
 #   sample_files = c(
@@ -95,7 +96,8 @@ integrated_sample_files <- unname(unlist(sapply(integrated_sample_names, simplif
 #   integration_method = integration_method
 # )
 #
-# ## annotate and visualize with kriegstein reference data
+
+## ANNOTATE AND VISUALIZE (KRIEGSTEIN) ----
 # message("RUNNING annotate_with_kriegstein_data")
 # annotate_visualize_with_kriegstein_data(
 #   sample_names = integrated_sample_names,
@@ -104,9 +106,10 @@ integrated_sample_files <- unname(unlist(sapply(integrated_sample_names, simplif
 #   kriegstein_data_dir = kriegstein_data_dir,
 #   kriegstein_chunks_input_dir = kriegstein_chunks_output_dir,
 #   kriegstein_annotated_output_dir = file.path(kriegstein_data_dir, "RData", run_name),
-#   run_only_visualization = TRUE
+#   run_only_visualization = FALSE # DEVNOTE: check if TRUE, only when testing
 # )
 #
+## PSEUDOTIME ----
 # message("RUNNING pseudotime")
 # pseudotime(
 #   input_files = integrated_sample_files,
@@ -116,6 +119,31 @@ integrated_sample_files <- unname(unlist(sapply(integrated_sample_names, simplif
 # )
 
 
+#### MANUAL selections ----
+# ## Subset selection microglia ----
+# selection_reintegration(
+#   so_filename = integrated_sample_files[[1]],
+#   integration_method = "harmony",
+#   output_dir = file.path(results_dir, integrated_sample_names[[1]], "subset", "microglia"),
+#   sample_name = integrated_sample_names[[1]],
+#   features_of_interest = features_of_interest,
+#   selection_markers = c("AIF1", "CSF1R", "SPI1"), percent_expressed = 30, reference_annotations = NULL)
+# ## Subset selection astrocytes ----
+# selection_reintegration(
+#   so_filename = integrated_sample_files[[1]],
+#   integration_method = "harmony",
+#   output_dir = file.path(results_dir, integrated_sample_names[[1]], "subset", "astrocytes"),
+#   sample_name = integrated_sample_names[[1]],
+#   features_of_interest = features_of_interest,
+#   selection_markers = c("VIM", "S100B", "SOX9"), percent_expressed = 30, reference_annotations = NULL)
+# ## Subset selection neurons ----
+# selection_reintegration(
+#   so_filename = integrated_sample_files[[1]],
+#   integration_method = "harmony",
+#   output_dir = file.path(results_dir, integrated_sample_names[[1]], "subset", "neurons"),
+#   sample_name = integrated_sample_names[[1]],
+#   features_of_interest = features_of_interest,
+#   selection_markers = c("MAP2", "DCX", "NEUROG2"), percent_expressed = 30, reference_annotations = NULL)
 
 
 
@@ -124,114 +152,15 @@ integrated_sample_files <- unname(unlist(sapply(integrated_sample_names, simplif
 
 
 
-### ---- MANUAL selections
 # TODO check if /sample_name/ in output_dir at every R script file: if (!grepl(paste0("/", sample_name, "/"), output_dir))
-
-# ---- Subset microglia
-# message("m1")
-# selection_reintegration(
-#   so_filename = integrated_sample_files[[1]],
-#   integration_method = integration_method,
-#   output_dir = file.path(results_dir, integrated_sample_names[[1]], "subset", "cells_microglia"),
-#   sample_name = integrated_sample_names[[1]],
-#   features_of_interest = features_of_interest,
-#   selection_markers = c("AIF1", "CSF1R", "CX3CR1"), percent_expressed = NULL, reference_annotations = NULL)
-# message("m2")
-# selection_reintegration(
-#   so_filename = integrated_sample_files[[1]],
-#   integration_method = integration_method,
-#   output_dir = file.path(results_dir, integrated_sample_names[[1]], "subset", "clusters_microglia"),
-#   sample_name = integrated_sample_names[[1]],
-#   features_of_interest = features_of_interest,
-#   selection_markers = c("AIF1", "CSF1R", "CX3CR1"), percent_expressed = 20, reference_annotations = NULL)
-# message("m3")
-# selection_reintegration(
-#   so_filename = integrated_sample_files[[1]],
-#   integration_method = integration_method,
-#   output_dir = file.path(results_dir, integrated_sample_names[[1]], "subset", "mmc_microglia"),
-#   sample_name = integrated_sample_names[[1]],
-#   features_of_interest = features_of_interest,
-#   selection_markers = NULL, percent_expressed = NULL, reference_annotations = c(mapmycells_supercluster = "Microglia"))
-# message("m4")
-# selection_reintegration(
-#   so_filename = integrated_sample_files[[1]],
-#   integration_method = integration_method,
-#   output_dir = file.path(results_dir, integrated_sample_names[[1]], "subset", "kriegstein_microglia"),
-#   sample_name = integrated_sample_names[[1]],
-#   features_of_interest = features_of_interest,
-#   selection_markers = NULL, percent_expressed = NULL, reference_annotations = c(kriegstein.seurat.custom.clusters.mean = "Microglia"))
-
-# ---- Subset astrocytes
-# message("a1")
-# selection_reintegration(
-#   so_filename = integrated_sample_files[[1]],
-#   integration_method = integration_method,
-#   output_dir = file.path(results_dir, integrated_sample_names[[1]], "subset", "cells_astrocytes"),
-#   sample_name = integrated_sample_names[[1]],
-#   features_of_interest = features_of_interest,
-#   selection_markers = c("VIM", "S100B", "SOX9"), percent_expressed = NULL, reference_annotations = NULL)
-# message("a2")
-# selection_reintegration(
-#   so_filename = integrated_sample_files[[1]],
-#   integration_method = integration_method,
-#   output_dir = file.path(results_dir, integrated_sample_names[[1]], "subset", "clusters_astrocytes"),
-#   sample_name = integrated_sample_names[[1]],
-#   features_of_interest = features_of_interest,
-#   selection_markers = c("VIM", "S100B", "SOX9"), percent_expressed = 20, reference_annotations = NULL)
-# message("a3")
-# selection_reintegration(
-#   so_filename = integrated_sample_files[[1]],
-#   integration_method = integration_method,
-#   output_dir = file.path(results_dir, integrated_sample_names[[1]], "subset", "mmc_astrocytes"),
-#   sample_name = integrated_sample_names[[1]],
-#   features_of_interest = features_of_interest,
-  # selection_markers = NULL, percent_expressed = NULL, reference_annotations = c(mapmycells_supercluster = "Astrocyte"))
-message("a4")
-selection_reintegration(
-  so_filename = integrated_sample_files[[1]],
-  integration_method = integration_method,
-  output_dir = file.path(results_dir, integrated_sample_names[[1]], "subset", "kriegstein_astrocytes"),
-  sample_name = integrated_sample_names[[1]],
-  features_of_interest = features_of_interest,
-  selection_markers = NULL, percent_expressed = NULL, reference_annotations = c(kriegstein.seurat.custom.clusters.mean = "Astrocyte"))
-
-# ---- Subset neurons
-message("n1")
-selection_reintegration(
-  so_filename = integrated_sample_files[[1]],
-  integration_method = integration_method,
-  output_dir = file.path(results_dir, integrated_sample_names[[1]], "subset", "cells_neurons"),
-  sample_name = integrated_sample_names[[1]],
-  features_of_interest = features_of_interest,
-  selection_markers = c("MAP2", "DCX", "NEUROG2"), percent_expressed = NULL, reference_annotations = NULL)
-message("n2")
-selection_reintegration(
-  so_filename = integrated_sample_files[[1]],
-  integration_method = integration_method,
-  output_dir = file.path(results_dir, integrated_sample_names[[1]], "subset", "clusters_neurons"),
-  sample_name = integrated_sample_names[[1]],
-  features_of_interest = features_of_interest,
-  selection_markers = c("MAP2", "DCX", "NEUROG2"), percent_expressed = 20, reference_annotations = NULL)
-message("n3")
-selection_reintegration(
-  so_filename = integrated_sample_files[[1]],
-  integration_method = integration_method,
-  output_dir = file.path(results_dir, integrated_sample_names[[1]], "subset", "mmc_neurons"),
-  sample_name = integrated_sample_names[[1]],
-  features_of_interest = features_of_interest,
-  selection_markers = NULL, percent_expressed = NULL, reference_annotations = c(mapmycells_supercluster = "Neuron"))
-message("n4")
-selection_reintegration(
-  so_filename = integrated_sample_files[[1]],
-  integration_method = integration_method,
-  output_dir = file.path(results_dir, integrated_sample_names[[1]], "subset", "kriegstein_neurons"),
-  sample_name = integrated_sample_names[[1]],
-  features_of_interest = features_of_interest,
-  selection_markers = NULL, percent_expressed = NULL, reference_annotations = c(kriegstein.seurat.custom.clusters.mean = "Neuron"))
-
-
-
-
+## PSEUDOTIME ----
+# message("RUNNING pseudotime")
+# pseudotime(
+#   input_files = integrated_sample_files,
+#   input_names = integrated_sample_names,
+#   output_dir = results_dir,
+#   pseudotime_root_markers = pseudotime_root_markers
+# )
 
 
 
