@@ -113,6 +113,9 @@ run_integration <- function(so, integration_method) {
       Seurat::Idents(so) <- so@meta.data[, "orig.ident"]
       sizeSorted_sample_names <- names(sort(table(so$orig.ident)))
       so <- subset(so, idents = sizeSorted_sample_names[2:length(sizeSorted_sample_names)])
+      if (length(unique(so$orig.ident)) <= 1) {
+        stop()
+      }
       integrated_so <- run_integration(so = so, integration_method = integration_method)
       return(integrated_so)
     })
@@ -268,6 +271,7 @@ integration_analysis <- function(integrated, output_dir, sample_name, features_o
 #' @param sample_names names of samples
 #' @param sample_name name of integrated sample, combined of samples_names
 #' @param features_of_interest genes of interest
+#' @param exclude_samples default NULL, else vector of sample names to exclude
 #'
 #' @export
 #'
@@ -279,7 +283,7 @@ integration_analysis <- function(integrated, output_dir, sample_name, features_o
 #' no need to do MT_features as they are already regressed out, no need to redo doublet and ambient RNA removal
 selection_reintegration <- function(
     so_filename, integration_method,
-    output_dir, sample_names, sample_name, features_of_interest,
+    output_dir, sample_names, sample_name, features_of_interest, exclude_samples = NULL,
     selection_markers = NULL, percent_expressed = NULL, reference_annotations = NULL) {
 
   dir.create(output_dir, recursive = TRUE)
@@ -324,7 +328,6 @@ selection_reintegration <- function(
     # perform cluster selection
     Seurat::DefaultAssay(so) <- "RNA"
     so <- subset(so, idents = cluster_selection)
-    Seurat::Idents(so) <- so$seurat_clusters
     # add selection panel and type as metadata
     so@misc$selection_markers <- selection_markers
   } else if (!is.null(selection_markers)) {
@@ -338,8 +341,13 @@ selection_reintegration <- function(
     # add selection panel and type as metadata
     so@misc$selection_markers <- selection_markers
   }
+  if (!is.null(exclude_samples)) {
+    Seurat::Idents(so) <- so$orig.ident
+    so <- subset(so, idents = exclude_samples)
+  }
   # remove empty clusters from original seurat_clusters
   so$seurat_clusters <- factor(so$seurat_clusters)
+  Seurat::Idents(so) <- so$seurat_clusters
 
   # cleanup filtered Seurat object
   so <- Seurat::DietSeurat(so, assays = c("RNA"))
