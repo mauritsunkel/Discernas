@@ -82,7 +82,7 @@ samples_integration <- function(
 #'
 #' @return so
 run_integration <- function(so, integration_method) {
-  message("RUN integration: ", integration_method)
+  message("\n RUN integration: ", integration_method, "\n")
   if (integration_method == "harmony") {
     integrated_so <- harmony::RunHarmony(
       object = so,
@@ -113,23 +113,36 @@ run_integration <- function(so, integration_method) {
       Seurat::Idents(so) <- so@meta.data[, "orig.ident"]
       sizeSorted_sample_names <- names(sort(table(so$orig.ident)))
       so <- subset(so, idents = sizeSorted_sample_names[2:length(sizeSorted_sample_names)])
-      if (length(unique(so$orig.ident)) <= 1) {
-        stop()
+      if (length(unique(so$orig.ident)) == 1) {
+        stop('Only a single sample leftover, no integration needed')
       }
       integrated_so <- run_integration(so = so, integration_method = integration_method)
       return(integrated_so)
     })
-
   } else if (integration_method == "CCA") {
-    integrated_so <- Seurat::IntegrateLayers(
-      object = so,
-      method = Seurat::CCAIntegration,
-      normalization.method = "SCT",
-      orig.reduction = "pca",
-      new.reduction = "integrated.dr",
-      dims = 1:(min(c(table(so$orig.ident), 50))-1),
-      k.weight = min(c(table(so$orig.ident), 100)),
-      verbose = TRUE)
+    integrated_so <- tryCatch({
+      integrated_so <- Seurat::IntegrateLayers(
+        object = so,
+        method = Seurat::CCAIntegration,
+        normalization.method = "SCT",
+        orig.reduction = "pca",
+        new.reduction = "integrated.dr",
+        dims = 1:(min(c(table(so$orig.ident), 50))-1),
+        k.weight = min(c(table(so$orig.ident), 100))-1,
+        verbose = TRUE)
+    },
+    error=function(e) {
+      message(e)
+      message("\n Removing smallest sample as data cannot be integrated, rerunning without")
+      Seurat::Idents(so) <- so@meta.data[, "orig.ident"]
+      sizeSorted_sample_names <- names(sort(table(so$orig.ident)))
+      so <- subset(so, idents = sizeSorted_sample_names[2:length(sizeSorted_sample_names)])
+      if (length(unique(so$orig.ident)) == 1) {
+        stop('Only a single sample leftover, no integration needed')
+      }
+      integrated_so <- run_integration(so = so, integration_method = integration_method)
+      return(integrated_so)
+    })
   }
   return(integrated_so)
 }
