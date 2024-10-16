@@ -343,8 +343,9 @@ selection_reintegration <- function(
   }
   if (!is.null(exclude_samples)) {
     Seurat::Idents(so) <- so$orig.ident
-    so <- subset(so, idents = exclude_samples)
+    so <- subset(so, idents = setdiff(unique(so$orig.ident), exclude_samples))
   }
+  
   # remove empty clusters from original seurat_clusters
   so$seurat_clusters <- factor(so$seurat_clusters)
   Seurat::Idents(so) <- so$seurat_clusters
