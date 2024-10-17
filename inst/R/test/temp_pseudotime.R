@@ -1,4 +1,4 @@
-data <- readRDS("C:/SynologyDrive/Projects/scRNAseqR/results/sakshi_4/NSM-NS-NC-M/NSM-NS-NC-M.rds")
+data <- qs::qread("C:/SynologyDrive/Projects/scRNAseqR/results/sakshi_4/NSM-NS-NC-M/NSM-NS-NC-M.qs")
 cds <- SeuratWrappers::as.cell_data_set(data, assay = "SCT")
 
 # load match_clustering function

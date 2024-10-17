@@ -14,9 +14,9 @@ samples_integration(
 )
 }
 \arguments{
-\item{sample_files}{character vector with paths to .rds data files to be integrated}
+\item{sample_files}{character vector with paths to .qs data files to be integrated}
 
-\item{sample_names}{character vector with sample names of .rds data files}
+\item{sample_names}{character vector with sample names of .qs data files}
 
 \item{output_dir}{Package home directory, used to create output directory for results.}
 

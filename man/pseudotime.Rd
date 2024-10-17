@@ -13,7 +13,7 @@ pseudotime(
 )
 }
 \arguments{
-\item{input_files}{Character vector with paths to Seurat .rds files.}
+\item{input_files}{Character vector with paths to Seurat .qs files.}
 
 \item{input_names}{Character vector with sample names of input files.}
 
@@ -58,7 +58,7 @@ multiply sum by total cell pairs, normalize by total weight of cell interactions
 \examples{
 \dontshow{if (FALSE) (if (getRversion() >= "3.4") withAutoprint else force)(\{ # examplesIf}
 # EMC.SKlab.scRNAseq::pseudotime(
-#  input_files = c(file.path("path", "to", "seurat.rds")),
+#  input_files = c(file.path("path", "to", "seurat.qs")),
 #  input_names = c("sample_name"),
 #  output_dir = file.path("path", "to", results"),
 #  pseudotime_root_markers = list(c("GENES", "OF", "INTEREST")))

@@ -3,7 +3,7 @@
 #' Run monocle3 from Seurat object, performing its own clustering, partitioning
 #' and then creating a pseudotime trajectory and plots.
 #'
-#' @param input_files Character vector with paths to Seurat .rds files.
+#' @param input_files Character vector with paths to Seurat .qs files.
 #' @param input_names Character vector with sample names of input files.
 #' @param output_dir String containing output directory.
 #' @param pseudotime_root_markers List with character vectors with gene name(s) of interest, used to select pseudotime trajectory starting point.
@@ -40,7 +40,7 @@
 #'
 #' @examplesIf FALSE
 #' # EMC.SKlab.scRNAseq::pseudotime(
-#' #  input_files = c(file.path("path", "to", "seurat.rds")),
+#' #  input_files = c(file.path("path", "to", "seurat.qs")),
 #' #  input_names = c("sample_name"),
 #' #  output_dir = file.path("path", "to", results"),
 #' #  pseudotime_root_markers = list(c("GENES", "OF", "INTEREST")))
@@ -71,7 +71,7 @@ pseudotime <- function(input_files, input_names, output_dir, pseudotime_root_mar
     dir.create(output_dir, recursive = TRUE)
 
     # get data
-    data <- readRDS(input_files[[input_name]])
+    data <- qs::qread(input_files[[input_name]])
 
     # convert from Seurat to cell data set object
     cds <- SeuratWrappers::as.cell_data_set(data, assay = "SCT")

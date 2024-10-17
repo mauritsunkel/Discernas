@@ -1,7 +1,7 @@
 
 library(Libra)
 
-data <- readRDS("C:/SynologyDrive/Projects/scRNAseqR/results/sakshi_4/NSM-NS-NC-M/NSM-NS-NC-M.rds")
+data <- qs::qread("C:/SynologyDrive/Projects/scRNAseqR/results/sakshi_4/NSM-NS-NC-M/NSM-NS-NC-M.qs")
 # SeuratObject::DefaultAssay(data) <- "RNA"
 SeuratObject::DefaultAssay(data) <- "RNA"
 

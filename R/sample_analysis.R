@@ -348,5 +348,5 @@ sample_analysis <- function(
   ggplot2::ggsave(file = file.path(sample_path, paste0("DEG-analysis_big-heatmap_", sample_name, ".png")), width = 30, height = 20, units = "cm")
 
   # save data
-  saveRDS(data, file = file.path(sample_path, paste0(sample_name, ".rds")))
+  qs::qsave(data, file = file.path(sample_path, paste0(sample_name, ".qs")), preset = 'custom', algorithm = "zstd_stream", compress_level = 4, shuffle_control = 15, nthreads = 1)
 }

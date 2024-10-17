@@ -18,7 +18,7 @@ visualize_kriegstein_annotated_data(
 \arguments{
 \item{sample_names}{Character vector with sample names.}
 
-\item{sample_files}{Character vector with sample .rds files.}
+\item{sample_files}{Character vector with sample .qs files.}
 
 \item{output_dir}{String with output directory for results.}
 
@@ -43,7 +43,7 @@ kriegstein_data_dir <-  "path/to/Kriegstein_data/"
 
 visualize_kriegstein_annotated_data(
   sample_names = c("A", "B"),
-  sample_files = c(file.path("path", "to", "sampleA.rds"), file.path("path", "to", "sampleB.rds")),
+  sample_files = c(file.path("path", "to", "sampleA.qs"), file.path("path", "to", "sampleB.qs")),
   output_dir = file.path("path", "to", "results"),
   kriegstein_data_dir = kriegstein_data_dir,
   kriegstein_annotated_input_dir = file.path("path", "to", "kriegstein_annotated_Rdata"),

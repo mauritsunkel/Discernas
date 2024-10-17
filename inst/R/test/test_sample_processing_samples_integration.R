@@ -19,18 +19,18 @@ data.list <- list(NSM.data, M.data, NS.data, NC.data)
 if (T) {
   plot_and_remove_doublets <- function(data, sample_path, sample_name, doublet_removal_rate = NULL) {
     temp_QC_data <- data
-    
+
     set.seed(1)
     sce <- scDblFinder::scDblFinder(temp_QC_data@assays$RNA$counts, clusters = TRUE, dbr = doublet_removal_rate)
     temp_QC_data$scDblFinder.score <- sce$scDblFinder.score
     temp_QC_data$scDblFinder.class <- sce$scDblFinder.class
-    
+
     temp_QC_data <- Seurat::NormalizeData(temp_QC_data)
     temp_QC_data <- Seurat::ScaleData(temp_QC_data)
     temp_QC_data <- Seurat::FindVariableFeatures(temp_QC_data)
     temp_QC_data <- Seurat::RunPCA(temp_QC_data, features = SeuratObject::VariableFeatures(object = temp_QC_data), npcs = 50, verbose = FALSE)
     temp_QC_data <- Seurat::RunUMAP(temp_QC_data, reduction = "pca", dims = 1:30)
-    
+
     p <- Seurat::FeaturePlot(temp_QC_data, features = "scDblFinder.score") +
       ggplot2::labs(subtitle = paste0(
         "singlets: ",
@@ -40,7 +40,7 @@ if (T) {
                " - doublet rate: ",
                round(table(temp_QC_data$scDblFinder.class)[2]/table(temp_QC_data$scDblFinder.class)[1], digits = 3))))
     ggplot2::ggsave(file=file.path(sample_path, "quality_control", paste0("scDblFinder_scores_", sample_name, ".png")), width = 30, height = 20, units = "cm")
-    
+
     # keep only singlets for downstream processing
     data <- data[, temp_QC_data$scDblFinder.class == "singlet"]
     return(data)
@@ -52,7 +52,7 @@ if (T) {
 if (T) {
   clean_ambient_RNA <- function(data, samples_dir, sample_name) {
     table_of_droplets = Seurat::Read10X(data.dir = file.path(samples_dir, sample_name, "raw_feature_bc_matrix"))
-    
+
     # add non-overlapping genes tot table_of_droplets with 0 counts to satisfy having same amount of genes
     non_overlapping_genes <- rownames(data@assays$RNA$counts)[which(!rownames(data@assays$RNA$counts) %in% rownames(table_of_droplets))]
     l <- list()
@@ -61,27 +61,27 @@ if (T) {
     }))
     colnames(l) <- colnames(table_of_droplets)
     table_of_droplets <- rbind(table_of_droplets, l)
-    
+
     overlapping_genes <- rownames(data@assays$RNA$counts)[which(rownames(data@assays$RNA$counts) %in% rownames(table_of_droplets))]
     table_of_droplets <- table_of_droplets[overlapping_genes,]
     data@assays$RNA$counts <- data@assays$RNA$counts[overlapping_genes,]
-    
+
     sc <- SoupX::SoupChannel(tod = table_of_droplets, toc = data@assays$RNA$counts) # estimateSoup()
-    
+
     graphclust_dir <- file.path(samples_dir, sample_name, "analysis", "clustering")
     graphclust_dir <- list.files(graphclust_dir, full.names = T)[grep(pattern = "graphclust$", list.files(graphclust_dir))]
     tenx_graphclust <- read.csv(file.path(graphclust_dir, "clusters.csv"))
     tenx_clusters <- tenx_graphclust$Cluster[tenx_graphclust$Barcode %in% colnames(data@assays$RNA$counts)]
     sc <- SoupX::setClusters(sc, tenx_clusters)
-    
+
     png(filename = file.path(sample_path, "quality_control", paste0("SoupX_contamination_", sample_name, ".png")))
     sc <- SoupX::autoEstCont(sc, doPlot = TRUE) # if fails, contamination rate default: 10% -> 0.1, or determine gene (sets) to estimate fraction
     dev.off()
-    
-    
+
+
     out <- SoupX::adjustCounts(sc, roundToInt = FALSE) # TODO set roundToInt = T is downstream processing algortihms need integers
     colnames(out) <- colnames(data@assays$RNA$counts)
-    
+
     data@misc[["tenx_counts"]] <- data@assays$RNA$counts
     data@assays$RNA$counts <- out
     data@misc[["SoupX_contamination_percentage"]] <- sc$fit$rhoEst * 100
@@ -100,15 +100,15 @@ for (i in seq_along(data.list)) {
   data.list[[i]] <- so
 }
 
-## list .rds files and make data.list with loading them
+## list .qs files and make data.list with loading them
 sample_files <- c(
-  "C:/SynologyDrive/Projects/scRNAseqR/results/sakshi_pipeV6/NSM/NSM.rds",
-  "C:/SynologyDrive/Projects/scRNAseqR/results/sakshi_pipeV6/NS/NS.rds",
-  "C:/SynologyDrive/Projects/scRNAseqR/results/sakshi_pipeV6/NC/NC.rds",
-  "C:/SynologyDrive/Projects/scRNAseqR/results/sakshi_pipeV6/M/M.rds"
+  "C:/SynologyDrive/Projects/scRNAseqR/results/sakshi_pipeV6/NSM/NSM.qs",
+  "C:/SynologyDrive/Projects/scRNAseqR/results/sakshi_pipeV6/NS/NS.qs",
+  "C:/SynologyDrive/Projects/scRNAseqR/results/sakshi_pipeV6/NC/NC.qs",
+  "C:/SynologyDrive/Projects/scRNAseqR/results/sakshi_pipeV6/M/M.qs"
 )
 data.list <- lapply(X = sample_files, FUN = function(x) {
-  readRDS(file = x)
+  qs::qread(file = x)
 })
 
 ## implemented and merged with samples_integration
@@ -145,4 +145,6 @@ data.merged <- Seurat::PrepSCTFindMarkers(data.merged, assay = "SCT")
 data.merged <- Seurat::RunUMAP(object = data.merged, assay = "SCT", reduction = "integrated.dr", dims = 1:50)
 Seurat::DimPlot(data.merged, reduction = "umap", group.by = c("orig.ident"))
 # Seurat::DimPlot(data.merged, reduction = "umap", group.by = c("seurat_clusters"))
-# saveRDS(data.merged, file = "harmony.rds")
+# qs::qsave(data.merged, "harmony.qs", preset = 'custom', algorithm = "zstd_stream", compress_level = 4, shuffle_control = 15, nthreads = 1))
+
+

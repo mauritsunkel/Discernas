@@ -61,52 +61,62 @@ integrated_sample_names <- unlist(sapply(sample_integrations, simplify = F, func
   paste(integrated_sample_name, collapse = "-")
 }))
 integrated_sample_files <- unname(unlist(sapply(integrated_sample_names, simplify = F, function(integrated_sample_name) {
-  file.path(project_dir, "results", run_name, integrated_sample_name, paste0(integrated_sample_name, ".rds"))
+  file.path(project_dir, "results", run_name, integrated_sample_name, paste0(integrated_sample_name, ".qs"))
 })))
 ##### END USER INITIALIZATION #####
 
 
 
 ## INDIVIDUAL SAMPLE ANALYSIS ----
-message("\n RUNNING sample analysis \n")
-for (sample_name in sample_names) {
-  sample_analysis(
-    samples_dir = samples_dir,
-    sample_name = sample_name,
-    output_dir = results_dir,
-    features_of_interest = features_of_interest,
-    run_cell_cycle_regression = FALSE
-  )
-}
+# message("\n RUNNING sample analysis \n")
+# for (sample_name in sample_names) {
+#   sample_analysis(
+#     samples_dir = samples_dir,
+#     sample_name = sample_name,
+#     output_dir = results_dir,
+#     features_of_interest = features_of_interest,
+#     run_cell_cycle_regression = FALSE
+#   )
+# }
 
 ## SAMPLES INTEGRATION ----
-message("\n RUNNING samples integration \n")
-samples_integration(
-  sample_files = c(
-    file.path(results_dir, sample_integrations[[1]][1], paste0(sample_integrations[[1]][1], ".rds")),
-    file.path(results_dir, sample_integrations[[1]][2], paste0(sample_integrations[[1]][2], ".rds")),
-    file.path(results_dir, sample_integrations[[1]][3], paste0(sample_integrations[[1]][3], ".rds"))
-  ),
-  sample_names = sample_integrations[[1]],
-  output_dir = results_dir,
-  features_of_interest = features_of_interest,
-  integration_method = integration_method
-)
+# message("\n RUNNING samples integration \n")
+# samples_integration(
+#   sample_files = c(
+#     file.path(results_dir, sample_integrations[[1]][1], paste0(sample_integrations[[1]][1], ".qs")),
+#     file.path(results_dir, sample_integrations[[1]][2], paste0(sample_integrations[[1]][2], ".qs")),
+#     file.path(results_dir, sample_integrations[[1]][3], paste0(sample_integrations[[1]][3], ".qs"))
+#   ),
+#   sample_names = sample_integrations[[1]],
+#   output_dir = results_dir,
+#   features_of_interest = features_of_interest,
+#   integration_method = integration_method
+# )
 
 
 
 ## ANNOTATE AND VISUALIZE (KRIEGSTEIN) ----
 ### MANUALLY PERFORM MAPMYCELLS SILETTI ANNOTATION ###
-message("RUNNING annotate_visualize_with_kriegstein_data")
-annotate_visualize_with_kriegstein_data(
-  sample_names = integrated_sample_names,
-  sample_files = integrated_sample_files,
-  output_dir = results_dir,
-  kriegstein_data_dir = kriegstein_data_dir,
-  kriegstein_chunks_input_dir = kriegstein_chunks_output_dir,
-  kriegstein_annotated_output_dir = file.path(kriegstein_data_dir, "RData", run_name),
-  run_only_visualization = FALSE # DEVNOTE: check if TRUE, only when testing
-)
+# message("RUNNING annotate_visualize_with_kriegstein_data")
+# annotate_visualize_with_kriegstein_data(
+#   sample_names = integrated_sample_names,
+#   sample_files = integrated_sample_files,
+#   output_dir = results_dir,
+#   kriegstein_data_dir = kriegstein_data_dir,
+#   kriegstein_chunks_input_dir = kriegstein_chunks_output_dir,
+#   kriegstein_annotated_output_dir = file.path(kriegstein_data_dir, "RData", run_name),
+#   run_only_visualization = FALSE # DEVNOTE: check if TRUE, only when testing
+# )
+
+## PSEUDOTIME ----
+# message("RUNNING pseudotime")
+# pseudotime(
+#   input_files = integrated_sample_files,
+#   input_names = integrated_sample_names,
+#   output_dir = results_dir,
+#   pseudotime_root_markers = pseudotime_root_markers,
+#   single_partition = FALSE
+# )
 
 ## Subset selection neurons ----
 selection_reintegration(
@@ -115,21 +125,24 @@ selection_reintegration(
   output_dir = file.path(results_dir, integrated_sample_names[[1]], "subset", "neurons_RPCA"),
   sample_name = integrated_sample_names[[1]],
   features_of_interest = features_of_interest,
-  selection_markers = c("MAP2", "DCX", "NEUROG2"), percent_expressed = 30, reference_annotations = NULL)
+  exclude_samples = c('A'),
+  selection_markers = c("MAP2", "DCX", "NEUROG2"), percent_expressed = 5, reference_annotations = NULL)
 selection_reintegration(
   so_filename = integrated_sample_files[[1]],
   integration_method = "CCA",
   output_dir = file.path(results_dir, integrated_sample_names[[1]], "subset", "neurons_CCA"),
   sample_name = integrated_sample_names[[1]],
   features_of_interest = features_of_interest,
-  selection_markers = c("MAP2", "DCX", "NEUROG2"), percent_expressed = 30, reference_annotations = NULL)
+  exclude_samples = c('A'),
+  selection_markers = c("MAP2", "DCX", "NEUROG2"), percent_expressed = 5, reference_annotations = NULL)
 selection_reintegration(
   so_filename = integrated_sample_files[[1]],
   integration_method = "harmony",
   output_dir = file.path(results_dir, integrated_sample_names[[1]], "subset", "neurons_harmony"),
   sample_name = integrated_sample_names[[1]],
   features_of_interest = features_of_interest,
-  selection_markers = c("MAP2", "DCX", "NEUROG2"), percent_expressed = 30, reference_annotations = NULL)
+  exclude_samples = c('A'),
+  selection_markers = c("MAP2", "DCX", "NEUROG2"), percent_expressed = 5, reference_annotations = NULL)
 ## Subset selection astrocytes ----
 selection_reintegration(
   so_filename = integrated_sample_files[[1]],
@@ -137,38 +150,64 @@ selection_reintegration(
   output_dir = file.path(results_dir, integrated_sample_names[[1]], "subset", "astrocytes_RPCA"),
   sample_name = integrated_sample_names[[1]],
   features_of_interest = features_of_interest,
-  selection_markers = c("VIM", "S100B", "SOX9"), percent_expressed = 30, reference_annotations = NULL)
+  exclude_samples = c('N'),
+  selection_markers = c("VIM", "S100B", "SOX9"), percent_expressed = 5, reference_annotations = NULL)
 selection_reintegration(
   so_filename = integrated_sample_files[[1]],
   integration_method = "CCA",
   output_dir = file.path(results_dir, integrated_sample_names[[1]], "subset", "astrocytes_CCA"),
   sample_name = integrated_sample_names[[1]],
   features_of_interest = features_of_interest,
-  selection_markers = c("VIM", "S100B", "SOX9"), percent_expressed = 30, reference_annotations = NULL)
+  exclude_samples = c('N'),
+  selection_markers = c("VIM", "S100B", "SOX9"), percent_expressed = 5, reference_annotations = NULL)
 selection_reintegration(
   so_filename = integrated_sample_files[[1]],
   integration_method = "harmony",
   output_dir = file.path(results_dir, integrated_sample_names[[1]], "subset", "astrocytes_harmony"),
   sample_name = integrated_sample_names[[1]],
   features_of_interest = features_of_interest,
-  selection_markers = c("VIM", "S100B", "SOX9"), percent_expressed = 30, reference_annotations = NULL)
+  exclude_samples = c('N'),
+  selection_markers = c("VIM", "S100B", "SOX9"), percent_expressed = 5, reference_annotations = NULL)
 
 
 
-# TODO test percent expressed in histograms
 # TODO check if /sample_name/ in output_dir at every R script file: if (!grepl(paste0("/", sample_name, "/"), output_dir))
 
-## PSEUDOTIME ----
-message("RUNNING pseudotime")
-pseudotime(
-  input_files = integrated_sample_files,
-  input_names = integrated_sample_names,
-  output_dir = results_dir,
-  pseudotime_root_markers = pseudotime_root_markers,
-  single_partition = FALSE
-)
 
 
+
+
+
+
+
+
+
+## selections PSEUDOTIME ----
+# message("RUNNING pseudotime selections")
+# pseudotime(
+#   input_files = file.path(results_dir, integrated_sample_names[[1]], "subset", "microglia", basename(integrated_sample_files[[1]])),
+#   input_names = integrated_sample_names[[1]],
+#   output_dir = file.path(results_dir, integrated_sample_names[[1]], "subset", "microglia"),
+#   pseudotime_root_markers = pseudotime_root_markers,
+#   single_partition = TRUE
+# )
+# pseudotime(
+#   input_files = file.path(results_dir, integrated_sample_names[[1]], "subset", "astrocytes", basename(integrated_sample_files[[1]])),
+#   input_names = integrated_sample_names[[1]],
+#   output_dir = file.path(results_dir, integrated_sample_names[[1]], "subset", "astrocytes"),
+#   pseudotime_root_markers = pseudotime_root_markers,
+#   single_partition = TRUE
+# )
+# pseudotime(
+#   input_files = file.path(results_dir, integrated_sample_names[[1]], "subset", "neurons", basename(integrated_sample_files[[1]])),
+#   input_names = integrated_sample_names[[1]],
+#   output_dir = file.path(results_dir, integrated_sample_names[[1]], "subset", "neurons"),
+#   pseudotime_root_markers = pseudotime_root_markers,
+#   single_partition = TRUE
+# )
+
+# TODO check if /sample_name/ in output_dir at every R script file: if (!grepl(paste0("/", sample_name, "/"), output_dir))
+## if (!grepl(paste0("/", sample_name, "/"), output_dir)) output_dir <- file.path(output_dir, sample_name)
 
 
 
@@ -241,7 +280,7 @@ pseudotime(
 # for (i in seq_along(integrated_sample_names)) {
 #   differential_expression_analysis(
 #     sample_name = sample_info[[1]][i],
-#     rds_file = sample_info[[2]][i],
+#     qs_file = sample_info[[2]][i],
 #     output_dir = dirname(sample_info[[2]][i])
 #   )
 # }

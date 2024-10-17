@@ -1,5 +1,5 @@
 ## NOTE: integrated becomes integrated.test during selection testing
-integrated <- readRDS("C:/Users/Maurits/SynologyDrive/Projects/scRNAseqR/results/sakshi_pipeV8/NSM-NS-NC-M/NSM-NS-NC-M.rds")
+integrated <- qs::qread("C:/Users/Maurits/SynologyDrive/Projects/scRNAseqR/results/sakshi_pipeV8/NSM-NS-NC-M/NSM-NS-NC-M.qs")
 # perform_cluster_level_selection <- T
 # "CX3CR1" %in% rownames(integrated)
 selection_panel <- c("VIM", "S100B", "SOX9") # 19: 14.7, 24: 9.6, 26: 40

@@ -11,7 +11,8 @@ plotEnhancedVolcano(
   vs_ident,
   filedir,
   comp_name,
-  genes_to_label = NULL
+  genes_to_label = NULL,
+  label_size = 4
 )
 }
 \arguments{

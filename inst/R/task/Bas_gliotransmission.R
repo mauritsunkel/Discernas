@@ -2,15 +2,15 @@ library(Seurat)
 library(SeuratObject)
 
 
-# file <- "C:/Users/mauri/Desktop/scRNAseqR/results/Bas test/BL_C.rds"
-# data <- readRDS(file)
+# file <- "C:/Users/mauri/Desktop/scRNAseqR/results/Bas test/BL_C.qs"
+# data <- qs::qread(file)
 # FeaturePlot(data, features = markers)
 # DotPlot(data, features = markers)
 
 
 markers <- c("SLC17A7", "SNAP25", "SYT1", "SLC1A2", "SLC1A3")
-file <- "C:/Users/mauri/Desktop/scRNAseqR/results/Bas test/BL_A + BL_C.rds"
-data <- readRDS(file)
+file <- "C:/Users/mauri/Desktop/scRNAseqR/results/Bas test/BL_A + BL_C.qs"
+data <- qs::qread(file)
 FeaturePlot(data, features = markers)
 DotPlot(data, features = markers)
 

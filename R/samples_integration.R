@@ -4,8 +4,8 @@
 #'
 #' @importFrom gridExtra grid.arrange arrangeGrob
 #'
-#' @param sample_files character vector with paths to .rds data files to be integrated
-#' @param sample_names character vector with sample names of .rds data files
+#' @param sample_files character vector with paths to .qs data files to be integrated
+#' @param sample_names character vector with sample names of .qs data files
 #' @param output_dir Package home directory, used to create output directory for results.
 #' @param features_of_interest list of gene marker panels used for plotting
 #' @param integration_method default: "RPCA", one of c("RPCA", "CCA", "harmony") "harmony", harmony is run from harmony::RunHarmony(), other are Seurat::IntegrateLayers()
@@ -48,7 +48,7 @@ samples_integration <- function(
 
   # read/load all sample data
   data.list <- lapply(X = sample_files, FUN = function(x) {
-    readRDS(file = x)
+    qs::qread(x)
   })
   ### END INITIALIZATION
 
@@ -268,8 +268,8 @@ integration_analysis <- function(integrated, output_dir, sample_name, features_o
     plot_DEG(data = integrated, data.features = features_of_interest[[feat_name]], name = feat_name, sample_order = sample_names, output_dir = output_dir)
   }
 
-  # save Seurat object in .RDS data file
-  saveRDS(integrated, file = file.path(output_dir, paste0(sample_name, ".rds")))
+  # save Seurat object in .qs data file
+  qs::qsave(integrated, file = file.path(output_dir, paste0(sample_name, ".qs")), preset = 'custom', algorithm = "zstd_stream", compress_level = 4, shuffle_control = 15, nthreads = 1)
 }
 
 #' Perform selection of cells/clusters/annotation
@@ -301,8 +301,8 @@ selection_reintegration <- function(
 
   dir.create(output_dir, recursive = TRUE)
 
-  message(paste0("\n reading rds... --> ", output_dir, "\n"))
-  so <- readRDS(file = so_filename)
+  message(paste0("\n reading .qs... --> ", output_dir, "\n"))
+  so <- qs::qread(file = so_filename)
 
   Seurat::DefaultAssay(so) <- "SCT"
 
@@ -358,7 +358,7 @@ selection_reintegration <- function(
     Seurat::Idents(so) <- so$orig.ident
     so <- subset(so, idents = setdiff(unique(so$orig.ident), exclude_samples))
   }
-  
+
   # remove empty clusters from original seurat_clusters
   so$seurat_clusters <- factor(so$seurat_clusters)
   Seurat::Idents(so) <- so$seurat_clusters

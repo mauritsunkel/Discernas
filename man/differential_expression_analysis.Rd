@@ -6,7 +6,7 @@
 \usage{
 differential_expression_analysis(
   sample_name,
-  rds_file,
+  qs_file,
   output_dir,
   sample_celltype_DEA = NULL,
   features_of_interest = NULL
@@ -15,7 +15,7 @@ differential_expression_analysis(
 \arguments{
 \item{sample_name}{sample name, string}
 
-\item{rds_file}{character string file path to .rds file of processed Seurat object}
+\item{qs_file}{character string file path to .qs file of processed Seurat object}
 
 \item{output_dir}{output directory for plots, string}
 
@@ -44,7 +44,7 @@ Perform differential expression analysis on processed and annotated Seurat objec
 \dontshow{if (FALSE) (if (getRversion() >= "3.4") withAutoprint else force)(\{ # examplesIf}
 differential_expression_analysis(
   sample_name = "T1",
-  rds_file = file.path("EMC-SKlab-scRNAseq", "results", "T1.rds"),
+  qs_file = file.path("EMC-SKlab-scRNAseq", "results", "T1.qs"),
   output_dir = file.path("EMC-SKlab-scRNAseq", "results", 'integrated', 'sample_name')
 )
 

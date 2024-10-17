@@ -11,6 +11,7 @@ selection_reintegration(
   sample_names,
   sample_name,
   features_of_interest,
+  exclude_samples = NULL,
   selection_markers = NULL,
   percent_expressed = NULL,
   reference_annotations = NULL
@@ -26,6 +27,8 @@ selection_reintegration(
 \item{sample_name}{name of integrated sample, combined of samples_names}
 
 \item{features_of_interest}{genes of interest}
+
+\item{exclude_samples}{default NULL, else vector of sample names to exclude}
 
 \item{selection_markers}{genes of interest to be used for selection}
 

@@ -13,13 +13,13 @@ plotEnhancedVolcano <- function(
     seurat_object, seurat_DE,
     ref_ident, vs_ident,
     filedir, comp_name,
-    genes_to_label = NULL) {
+    genes_to_label = NULL, label_size = 4) {
 
   if(!all(c(ref_ident, vs_ident) %in% levels(SeuratObject::Idents(seurat_object)))) {
     stop("Either ", ref_ident, " or ", vs_ident, " not in Idents(seurat_object")
   }
 
-  print(comp_name)
+  message("EnhancedVolcano:", comp_name)
   if (comp_name == "name") {
     title <- paste0(vs_ident, " vs ", ref_ident)
   } else {
@@ -54,7 +54,7 @@ plotEnhancedVolcano <- function(
     FCcutoff = 1,
     pointSize = point_size,
     colAlpha = .35,
-    labSize = 4,
+    labSize = label_size,
     borderWidth = 1.5,
     legendPosition = "right",
     legendIconSize = 4.5,

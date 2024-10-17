@@ -62,7 +62,7 @@ integrated_sample_names <- unlist(sapply(sample_integrations, simplify = F, func
   paste(integrated_sample_name, collapse = "-")
 }))
 integrated_sample_files <- unname(unlist(sapply(integrated_sample_names, simplify = F, function(integrated_sample_name) {
-  file.path(project_dir, "results", run_name, integrated_sample_name, paste0(integrated_sample_name, ".rds"))
+  file.path(project_dir, "results", run_name, integrated_sample_name, paste0(integrated_sample_name, ".qs"))
 })))
 #### END USER INITIALIZATION #####
 
@@ -85,10 +85,10 @@ integrated_sample_files <- unname(unlist(sapply(integrated_sample_names, simplif
 # message("RUNNING samples_integration")
 # samples_integration(
 #   sample_files = c(
-#     file.path(results_dir, sample_integrations[[1]][1], paste0(sample_integrations[[1]][1], ".rds")),
-#     file.path(results_dir, sample_integrations[[1]][2], paste0(sample_integrations[[1]][2], ".rds")),
-#     file.path(results_dir, sample_integrations[[1]][3], paste0(sample_integrations[[1]][3], ".rds")),
-#     file.path(results_dir, sample_integrations[[1]][4], paste0(sample_integrations[[1]][4], ".rds"))
+#     file.path(results_dir, sample_integrations[[1]][1], paste0(sample_integrations[[1]][1], ".qs")),
+#     file.path(results_dir, sample_integrations[[1]][2], paste0(sample_integrations[[1]][2], ".qs")),
+#     file.path(results_dir, sample_integrations[[1]][3], paste0(sample_integrations[[1]][3], ".qs")),
+#     file.path(results_dir, sample_integrations[[1]][4], paste0(sample_integrations[[1]][4], ".qs"))
 #   ),
 #   sample_names = sample_integrations[[1]],
 #   output_dir = results_dir,
@@ -120,33 +120,36 @@ integrated_sample_files <- unname(unlist(sapply(integrated_sample_names, simplif
 
 
 #### MANUAL selections ----
-# ## Subset selection microglia ----
-# selection_reintegration(
-#   so_filename = integrated_sample_files[[1]],
-#   integration_method = "harmony",
-#   output_dir = file.path(results_dir, integrated_sample_names[[1]], "subset", "microglia"),
-#   sample_name = integrated_sample_names[[1]],
-#   features_of_interest = features_of_interest,
-#   selection_markers = c("AIF1", "CSF1R", "SPI1"), percent_expressed = 30, reference_annotations = NULL)
-# ## Subset selection astrocytes ----
-# selection_reintegration(
-#   so_filename = integrated_sample_files[[1]],
-#   integration_method = "harmony",
-#   output_dir = file.path(results_dir, integrated_sample_names[[1]], "subset", "astrocytes"),
-#   sample_name = integrated_sample_names[[1]],
-#   features_of_interest = features_of_interest,
-#   selection_markers = c("VIM", "S100B", "SOX9"), percent_expressed = 30, reference_annotations = NULL)
-# ## Subset selection neurons ----
-# selection_reintegration(
-#   so_filename = integrated_sample_files[[1]],
-#   integration_method = "harmony",
-#   output_dir = file.path(results_dir, integrated_sample_names[[1]], "subset", "neurons"),
-#   sample_name = integrated_sample_names[[1]],
-#   features_of_interest = features_of_interest,
-#   selection_markers = c("MAP2", "DCX", "NEUROG2"), percent_expressed = 30, reference_annotations = NULL)
+## Subset selection microglia ----
+selection_reintegration(
+  so_filename = integrated_sample_files[[1]],
+  integration_method = "harmony",
+  output_dir = file.path(results_dir, integrated_sample_names[[1]], "subset", "microglia"),
+  sample_name = integrated_sample_names[[1]],
+  features_of_interest = features_of_interest,
+  exclude_samples = c('NS', 'NC'),
+  selection_markers = c("AIF1", "CSF1R", "SPI1"), percent_expressed = 30, reference_annotations = NULL)
+## Subset selection astrocytes ----
+selection_reintegration(
+  so_filename = integrated_sample_files[[1]],
+  integration_method = "harmony",
+  output_dir = file.path(results_dir, integrated_sample_names[[1]], "subset", "astrocytes"),
+  sample_name = integrated_sample_names[[1]],
+  features_of_interest = features_of_interest,
+  exclude_samples = c('M'),
+  selection_markers = c("VIM", "S100B", "SOX9"), percent_expressed = 30, reference_annotations = NULL)
+## Subset selection neurons ----
+selection_reintegration(
+  so_filename = integrated_sample_files[[1]],
+  integration_method = "harmony",
+  output_dir = file.path(results_dir, integrated_sample_names[[1]], "subset", "neurons"),
+  sample_name = integrated_sample_names[[1]],
+  features_of_interest = features_of_interest,
+  exclude_samples = c('M'),
+  selection_markers = c("MAP2", "DCX", "NEUROG2"), percent_expressed = 30, reference_annotations = NULL)
 
 ## selections PSEUDOTIME ----
-message("RUNNING pseudotime")
+message("RUNNING pseudotime selections")
 pseudotime(
   input_files = file.path(results_dir, integrated_sample_names[[1]], "subset", "microglia", basename(integrated_sample_files[[1]])),
   input_names = integrated_sample_names[[1]],
@@ -169,10 +172,14 @@ pseudotime(
   single_partition = TRUE
 )
 
+
+
+
+
+
+
 # TODO check if /sample_name/ in output_dir at every R script file: if (!grepl(paste0("/", sample_name, "/"), output_dir))
 ## if (!grepl(paste0("/", sample_name, "/"), output_dir)) output_dir <- file.path(output_dir, sample_name)
-
-
 
 
 
@@ -183,7 +190,7 @@ pseudotime(
 # ### MANUAL USER DEA ###
 # ## to provide sample(s)-sample(s) or sample(s)-celltype(s) DEA comparisons in sample_celltype_DEA list, follow and adjust example below
 # ## first get seurat_object to perform DEA on
-# integrated <- readRDS(list(integrated_sample_names, integrated_sample_files)[[2]][1])
+# integrated <- qs::qread(list(integrated_sample_names, integrated_sample_files)[[2]][1])
 # ## then check metadata column names to see which can be used for DE comparisons, look specifically for annotation column names: MapMyCells & Kriegstein
 # colnames(integrated@meta.data)
 # ## MapMyCells default: mapmycells_supercluster
@@ -255,7 +262,7 @@ pseudotime(
 # for (i in seq_along(integrated_sample_names)) {
 #   differential_expression_analysis(
 #     sample_name = sample_info[[1]][i],
-#     rds_file = sample_info[[2]][i],
+#     qs_file = sample_info[[2]][i],
 #     output_dir = dirname(sample_info[[2]][i]),
 #     sample_celltype_DEA = sample_celltype_DEA,
 #     features_of_interest = features_of_interest

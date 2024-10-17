@@ -1,7 +1,7 @@
 output_dir <- file.path("EMC-SKlab-scRNAseq", "results", "test_pipe")
 # files and sample names
-sample_files <- c("C:/Users/mauri/Desktop/Single Cell RNA Sequencing/EMC-SKlab-scRNAseq/results/Pipe_SCTv2_23-06 cluster_level_selection/BL_A/BL_A.rds",
-                  "C:/Users/mauri/Desktop/Single Cell RNA Sequencing/EMC-SKlab-scRNAseq/results/Pipe_SCTv2_23-06 cluster_level_selection/BL_C/BL_C.rds")
+sample_files <- c("C:/Users/mauri/Desktop/Single Cell RNA Sequencing/EMC-SKlab-scRNAseq/results/Pipe_SCTv2_23-06 cluster_level_selection/BL_A/BL_A.qs",
+                  "C:/Users/mauri/Desktop/Single Cell RNA Sequencing/EMC-SKlab-scRNAseq/results/Pipe_SCTv2_23-06 cluster_level_selection/BL_C/BL_C.qs")
 sample_names <- c("BL_A", "BL_C")
 selection_panel <- c("VIM", "S100B", "SOX9")
 # reticulate::use_python("C:/Users/mauri/AppData/Local/Programs/Python/Python38/python.exe")
@@ -23,7 +23,7 @@ EMC_SKlab_scRNAseq::samples_integration(sample_files, sample_names, output_dir,
 
 
 
-integrated <- readRDS("C:/Users/mauri/Desktop/test.rds")
+integrated <- qs::qread("C:/Users/mauri/Desktop/test.qs")
 # run FindClusters()
 
 

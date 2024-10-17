@@ -124,7 +124,7 @@ chunk_kriegstein_data <- function(n_chunks, kriegstein_data_dir, kriegstein_chun
 #' Perform annotation with chunked Kriegstein reference data
 #'
 #' @param sample_names Character vector with sample names.
-#' @param sample_files Character vector with sample .rds files to be annotated.
+#' @param sample_files Character vector with sample .qs files to be annotated.
 #' @param output_dir String with output directory for results.
 #' @param kriegstein_data_dir String with Kriegstein folder path, containing (custom.)meta.tsv and exprMatrix.tsv.gz.
 #' @param kriegstein_chunks_input_dir String with Kriegstein input directory for data chunks.
@@ -141,7 +141,7 @@ chunk_kriegstein_data <- function(n_chunks, kriegstein_data_dir, kriegstein_chun
 #'
 #' annotate_visualize_with_kriegstein_data(
 #'   sample_names = c("sample_a", "sample_b"),
-#'   sample_files = c("path/to/sample_a.rds", "path/to/sample_b.rds"),
+#'   sample_files = c("path/to/sample_a.qs", "path/to/sample_b.qs"),
 #'   kriegstein_data_dir = kriegstein_data_dir,
 #'   kriegstein_chunks_input_dir = paste0(kriegstein_data_dir, "/Kriegstein_chunks/"),
 #'   kriegstein_annotated_output_dir = paste0(kriegstein_data_dir, "Kriegstein_annotated_RData/"),
@@ -177,7 +177,7 @@ annotate_visualize_with_kriegstein_data <- function(
       sample_output_dir <- file.path(output_dir, sample_name, 'annotation_kriegstein')
       dir.create(sample_output_dir, recursive = T)
 
-      sample_data <- readRDS(file = sample_files[j])
+      sample_data <- qs::qread(file = sample_files[j])
       # set RNA assay to have genes in same feature space as the reference data
       SeuratObject::DefaultAssay(sample_data) <- "RNA"
 
@@ -185,7 +185,7 @@ annotate_visualize_with_kriegstein_data <- function(
       sample_genes <- rownames(sample_data)
       overlapping_genes <- intersect(sample_genes, genes)
 
-      # add overlapping genes to .rds and set back to SCT assay
+      # add overlapping genes to .qs and set back to SCT assay
       SeuratObject::DefaultAssay(sample_data) <- "SCT"
       openxlsx::write.xlsx(x = overlapping_genes, file = file.path(sample_output_dir, "overlapping_genes.xlsx"))
 
@@ -235,7 +235,7 @@ annotate_visualize_with_kriegstein_data <- function(
 #' Perform visualizations of annotated data from Kriegstein reference data.
 #'
 #' @param sample_names Character vector with sample names.
-#' @param sample_files Character vector with sample .rds files.
+#' @param sample_files Character vector with sample .qs files.
 #' @param output_dir String with output directory for results.
 #' @param kriegstein_data_dir String with Kriegstein folder path, containing (custom.)meta.tsv and exprMatrix.tsv.gz.
 #' @param kriegstein_annotated_input_dir String with Kriegstein input directory containing annotated data chunks.
@@ -252,7 +252,7 @@ annotate_visualize_with_kriegstein_data <- function(
 #'
 #' visualize_kriegstein_annotated_data(
 #'   sample_names = c("A", "B"),
-#'   sample_files = c(file.path("path", "to", "sampleA.rds"), file.path("path", "to", "sampleB.rds")),
+#'   sample_files = c(file.path("path", "to", "sampleA.qs"), file.path("path", "to", "sampleB.qs")),
 #'   output_dir = file.path("path", "to", "results"),
 #'   kriegstein_data_dir = kriegstein_data_dir,
 #'   kriegstein_annotated_input_dir = file.path("path", "to", "kriegstein_annotated_Rdata"),
@@ -278,9 +278,9 @@ visualize_kriegstein_annotated_data <- function(
   # get Kriegstein custom feature metadata with custom clusterv2 celltype mapping
   meta <- getMeta(kriegstein_data_dir)
 
-  # read and get .rds data
+  # read and get .qs data
   data.list <- lapply(X = sample_files, FUN = function(x) {
-    return(readRDS(file = x))
+    return(qs::qread(x))
   })
   names(data.list) <- sample_names
 
@@ -362,7 +362,7 @@ visualize_kriegstein_annotated_data <- function(
   })
   names(combined.results) <- names(results.list)
 
-  # save Kriegstein cluster labels into Seurat object --> rds
+  # save Kriegstein cluster labels into Seurat object --> .qs
   for (sample in sample_names) {
     for (anno in annotations) {
       # Kriegstein data and labels from sample-annotation correlation overlap
@@ -399,8 +399,8 @@ visualize_kriegstein_annotated_data <- function(
     # p + ggplot2::scale_fill_manual()
     ggplot2::ggsave(plot = p, file = file.path(output_dir, sample, 'annotation_kriegstein', 'samples_composition.png'), width = 30, height = 20, units = "cm")
 
-    # overwrite rds file with new misc annotation
-    saveRDS(data.list[[sample]], file = sample_files[[sample]])
+    # overwrite .qs file with new misc annotation
+    qs::qsave(data.list[[sample]], sample_files[[sample]], preset = 'custom', algorithm = "zstd_stream", compress_level = 4, shuffle_control = 15, nthreads = 1)
   }
 
 

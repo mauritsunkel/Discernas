@@ -3,7 +3,7 @@
 #' Perform differential expression analysis on processed and annotated Seurat object.
 #'
 #' @param sample_name sample name, string
-#' @param rds_file character string file path to .rds file of processed Seurat object
+#' @param qs_file character string file path to .qs file of processed Seurat object
 #' @param output_dir output directory for plots, string
 #' @param sample_celltype_DEA list of sample_celltype comparisons, as exampled
 #' @param features_of_interest marker features to plot as violins and dots per DE comparison
@@ -26,7 +26,7 @@
 #' @examplesIf FALSE
 #' differential_expression_analysis(
 #'   sample_name = "T1",
-#'   rds_file = file.path("EMC-SKlab-scRNAseq", "results", "T1.rds"),
+#'   qs_file = file.path("EMC-SKlab-scRNAseq", "results", "T1.qs"),
 #'   output_dir = file.path("EMC-SKlab-scRNAseq", "results", 'integrated', 'sample_name')
 #' )
 #'
@@ -34,7 +34,7 @@
 #' c("SampleA_CelltypeA", "SampleB_CelltypeA"),
 #' c("SampleA_CelltypeB", "SampleB_CelltypeB"))
 differential_expression_analysis <- function(
-    sample_name, rds_file, output_dir,
+    sample_name, qs_file, output_dir,
     sample_celltype_DEA = NULL,
     features_of_interest = NULL) {
   library(Seurat) # added because of error
@@ -46,7 +46,7 @@ differential_expression_analysis <- function(
   ## create output directories
   output_dir <- file.path(output_dir, 'DEA')
   ## read data
-  integrated <- readRDS(rds_file)
+  integrated <- qs::qread(qs_file)
 
   if (!length(unique(integrated$orig.ident)) > 1) {
     message("Need multiple samples in Seurat object to perform sample-level DEA")

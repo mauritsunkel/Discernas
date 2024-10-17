@@ -1,6 +1,6 @@
 library(dplyr)
 
-integrated <- readRDS("C:/SynologyDrive/Projects/scRNAseqR/results/sakshi_4/NSM-NS-NC-M/NSM-NS-NC-M.rds")
+integrated <- qs::qread("C:/SynologyDrive/Projects/scRNAseqR/results/sakshi_4/NSM-NS-NC-M/NSM-NS-NC-M.qs")
 integrated$kriegstein.seurat.custom.clusters.mean
 integrated$mapmycells_supercluster
 idents <- paste(integrated$orig.ident, integrated@meta.data[, "kriegstein.seurat.custom.clusters.mean"], sep = "_")
