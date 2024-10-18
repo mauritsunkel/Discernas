@@ -122,57 +122,57 @@ integrated_sample_files <- unname(unlist(sapply(integrated_sample_names, simplif
 
 
 #### MANUAL selections ----
-## Subset selection microglia ----
-selection_reintegration(
-  so_filename = integrated_sample_files[[1]],
-  integration_method = "harmony",
-  output_dir = file.path(results_dir, integrated_sample_names[[1]], "subset", "microglia"),
-  sample_name = integrated_sample_names[[1]],
-  features_of_interest = features_of_interest,
-  exclude_samples = c('NS', 'NC'),
-  selection_markers = c("AIF1", "CSF1R", "SPI1"), percent_expressed = 30, reference_annotations = NULL)
-## Subset selection astrocytes ----
-selection_reintegration(
-  so_filename = integrated_sample_files[[1]],
-  integration_method = "harmony",
-  output_dir = file.path(results_dir, integrated_sample_names[[1]], "subset", "astrocytes"),
-  sample_name = integrated_sample_names[[1]],
-  features_of_interest = features_of_interest,
-  exclude_samples = c('M'),
-  selection_markers = c("VIM", "S100B", "SOX9"), percent_expressed = 30, reference_annotations = NULL)
-## Subset selection neurons ----
-selection_reintegration(
-  so_filename = integrated_sample_files[[1]],
-  integration_method = "harmony",
-  output_dir = file.path(results_dir, integrated_sample_names[[1]], "subset", "neurons"),
-  sample_name = integrated_sample_names[[1]],
-  features_of_interest = features_of_interest,
-  exclude_samples = c('M'),
-  selection_markers = c("MAP2", "DCX", "NEUROG2"), percent_expressed = 30, reference_annotations = NULL)
+# ## Subset selection microglia ----
+# selection_reintegration(
+#   so_filename = integrated_sample_files[[1]],
+#   integration_method = "harmony",
+#   output_dir = file.path(results_dir, integrated_sample_names[[1]], "subset", "microglia"),
+#   sample_name = integrated_sample_names[[1]],
+#   features_of_interest = features_of_interest,
+#   exclude_samples = c('NS', 'NC'),
+#   selection_markers = c("AIF1", "CSF1R", "SPI1"), percent_expressed = 30, reference_annotations = NULL)
+# ## Subset selection astrocytes ----
+# selection_reintegration(
+#   so_filename = integrated_sample_files[[1]],
+#   integration_method = "harmony",
+#   output_dir = file.path(results_dir, integrated_sample_names[[1]], "subset", "astrocytes"),
+#   sample_name = integrated_sample_names[[1]],
+#   features_of_interest = features_of_interest,
+#   exclude_samples = c('M'),
+#   selection_markers = c("VIM", "S100B", "SOX9"), percent_expressed = 30, reference_annotations = NULL)
+# ## Subset selection neurons ----
+# selection_reintegration(
+#   so_filename = integrated_sample_files[[1]],
+#   integration_method = "harmony",
+#   output_dir = file.path(results_dir, integrated_sample_names[[1]], "subset", "neurons"),
+#   sample_name = integrated_sample_names[[1]],
+#   features_of_interest = features_of_interest,
+#   exclude_samples = c('M'),
+#   selection_markers = c("MAP2", "DCX", "NEUROG2"), percent_expressed = 30, reference_annotations = NULL)
 
 ## selections PSEUDOTIME ----
-message("RUNNING pseudotime selections")
-pseudotime(
-  input_files = file.path(results_dir, integrated_sample_names[[1]], "subset", "microglia", basename(integrated_sample_files[[1]])),
-  input_names = integrated_sample_names[[1]],
-  output_dir = file.path(results_dir, integrated_sample_names[[1]], "subset", "microglia"),
-  pseudotime_root_markers = pseudotime_root_markers,
-  single_partition = TRUE
-)
-pseudotime(
-  input_files = file.path(results_dir, integrated_sample_names[[1]], "subset", "astrocytes", basename(integrated_sample_files[[1]])),
-  input_names = integrated_sample_names[[1]],
-  output_dir = file.path(results_dir, integrated_sample_names[[1]], "subset", "astrocytes"),
-  pseudotime_root_markers = pseudotime_root_markers,
-  single_partition = TRUE
-)
-pseudotime(
-  input_files = file.path(results_dir, integrated_sample_names[[1]], "subset", "neurons", basename(integrated_sample_files[[1]])),
-  input_names = integrated_sample_names[[1]],
-  output_dir = file.path(results_dir, integrated_sample_names[[1]], "subset", "neurons"),
-  pseudotime_root_markers = pseudotime_root_markers,
-  single_partition = TRUE
-)
+# message("RUNNING pseudotime selections")
+# pseudotime(
+#   input_files = file.path(results_dir, integrated_sample_names[[1]], "subset", "microglia", basename(integrated_sample_files[[1]])),
+#   input_names = integrated_sample_names[[1]],
+#   output_dir = file.path(results_dir, integrated_sample_names[[1]], "subset", "microglia"),
+#   pseudotime_root_markers = pseudotime_root_markers,
+#   single_partition = TRUE
+# )
+# pseudotime(
+#   input_files = file.path(results_dir, integrated_sample_names[[1]], "subset", "astrocytes", basename(integrated_sample_files[[1]])),
+#   input_names = integrated_sample_names[[1]],
+#   output_dir = file.path(results_dir, integrated_sample_names[[1]], "subset", "astrocytes"),
+#   pseudotime_root_markers = pseudotime_root_markers,
+#   single_partition = TRUE
+# )
+# pseudotime(
+#   input_files = file.path(results_dir, integrated_sample_names[[1]], "subset", "neurons", basename(integrated_sample_files[[1]])),
+#   input_names = integrated_sample_names[[1]],
+#   output_dir = file.path(results_dir, integrated_sample_names[[1]], "subset", "neurons"),
+#   pseudotime_root_markers = pseudotime_root_markers,
+#   single_partition = TRUE
+# )
 
 
 

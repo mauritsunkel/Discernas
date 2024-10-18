@@ -5,5 +5,6 @@ data/
 .git/
 .Rhistory
 .Rproj.user/
-inst/temp/
-inst/R/
+inst/R/task/
+inst/R/temp/
+inst/R/test/

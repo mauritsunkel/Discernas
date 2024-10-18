@@ -179,18 +179,15 @@ annotate_visualize_with_kriegstein_data <- function(
 
       sample_data <- qs::qread(file = sample_files[j])
       # set RNA assay to have genes in same feature space as the reference data
-      SeuratObject::DefaultAssay(sample_data) <- "RNA"
+      SeuratObject::DefaultAssay(sample_data) <- "SCT"
 
       # get overlapping genes between data and reference
       sample_genes <- rownames(sample_data)
       overlapping_genes <- intersect(sample_genes, genes)
-
-      # add overlapping genes to .qs and set back to SCT assay
-      SeuratObject::DefaultAssay(sample_data) <- "SCT"
       openxlsx::write.xlsx(x = overlapping_genes, file = file.path(sample_output_dir, "overlapping_genes.xlsx"))
 
       message("create Seurat sample -> SCE")
-      sample_data <- Seurat::as.SingleCellExperiment(sample_data, assay = 'RNA')
+      sample_data <- Seurat::as.SingleCellExperiment(sample_data, assay = 'SCT')
       sample_data <- sample_data[overlapping_genes,]
       # perform transformation to have genes in the same feature space as the reference data
       sample_data <- scuttle::logNormCounts(sample_data)
