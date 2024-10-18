@@ -160,6 +160,7 @@ annotate_visualize_with_kriegstein_data <- function(
     annotations_to_plot = c("custom.clusterv2"),
     ref_aggr_strategy = "max",
     run_only_visualization = FALSE) {
+  library(Seurat)
 
   dir.create(kriegstein_annotated_output_dir)
 
