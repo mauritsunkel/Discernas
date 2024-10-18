@@ -63,6 +63,8 @@ integrated_sample_names <- unlist(sapply(sample_integrations, simplify = F, func
 integrated_sample_files <- unname(unlist(sapply(integrated_sample_names, simplify = F, function(integrated_sample_name) {
   file.path(project_dir, "results", run_name, integrated_sample_name, paste0(integrated_sample_name, ".qs"))
 })))
+
+file.copy(EMC.SKlab.scRNAseq::thisFilePath(), results_dir, overwrite = TRUE)
 ##### END USER INITIALIZATION #####
 
 

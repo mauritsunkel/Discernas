@@ -50,6 +50,8 @@ pseudotime_root_markers <- list(
 
 kriegstein_data_dir <- file.path(project_dir, "data/Kriegstein")
 kriegstein_chunks_output_dir <- file.path(kriegstein_data_dir, "RData", "chunks_25")
+
+file.copy(EMC.SKlab.scRNAseq::thisFilePath(), results_dir, overwrite = TRUE)
 ### END USER CONFIG ###
 
 

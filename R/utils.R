@@ -82,3 +82,32 @@ generate_color_palette <- function(type = 'mixed', n = NULL) {
 
   return(palette)
 }
+
+#' Get file path of file this function was called from
+#'
+#' @export
+#'
+#' @note
+#' https://stackoverflow.com/questions/47044068/get-the-path-of-current-script
+#'
+#' @examples thisFilePath()
+thisFilePath <- function() {
+  stub <- function() {}
+  cmdArgs <- commandArgs(trailingOnly = FALSE)
+  if (length(grep("^-f$", cmdArgs)) > 0) {
+    # R console option
+    normalizePath(cmdArgs[grep("^-f", cmdArgs) + 1])[1]
+  } else if (length(grep("^--file=", cmdArgs)) > 0) {
+    # Rscript/R console option
+    scriptPath <- normalizePath(sub("^--file=", "", cmdArgs[grep("^--file=", cmdArgs)]))[1]
+  } else if (Sys.getenv("RSTUDIO") == "1") {
+    # RStudio
+    rstudioapi::getSourceEditorContext()$path
+  } else if (is.null(attr(stub, "srcref")) == FALSE) {
+    # 'source'd via R console
+    normalizePath(attr(attr(stub, "srcref"), "srcfile")$filename)
+  } else {
+    stop("Cannot find file path")
+  }
+}
+thisFilePath()
