@@ -162,7 +162,7 @@ annotate_visualize_with_kriegstein_data <- function(
     run_only_visualization = FALSE) {
   library(Seurat)
 
-  dir.create(kriegstein_annotated_output_dir)
+  dir.create(kriegstein_annotated_output_dir, recursive = TRUE)
 
   if (!run_only_visualization) {
     genes <- getGenes(kriegstein_data_dir)
@@ -194,7 +194,7 @@ annotate_visualize_with_kriegstein_data <- function(
       sample_data <- scuttle::logNormCounts(sample_data)
 
       for (i in 1:length(list.files(path = kriegstein_chunks_input_dir))) {
-        message("start iteration of ", sample_name, " at cell RData chunk:  ", kriegstein_chunks_input_dir, "/iter.", i, ".RData")
+        message("start iteration of ", sample_name, " at cell RData chunk:  ", kriegstein_chunks_input_dir, "/chunk.", i, ".RData")
 
         load(file.path(kriegstein_chunks_input_dir, paste0("chunk.", i, ".RData"))) # cell_data (R object name)
         cell_data <- cell_data[overlapping_genes,]
