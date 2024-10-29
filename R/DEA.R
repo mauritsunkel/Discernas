@@ -45,6 +45,7 @@ differential_expression_analysis <- function(
 
   ## create output directories
   output_dir <- file.path(output_dir, 'DEA')
+  dir.create(output_dir, recursive = TRUE)
   ## read data
   integrated <- qs::qread(qs_file)
 
