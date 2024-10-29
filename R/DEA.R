@@ -78,18 +78,31 @@ differential_expression_analysis <- function(
       for (i in seq_along(sample_celltype_DEA[[meta_name]])) {
         ref_ident_DEA <- sample_celltype_DEA[[meta_name]][[i]]$ref
         vs_ident_DEA <- sample_celltype_DEA[[meta_name]][[i]]$vs
-        ref_ident <- c()
-        for (id in ref_ident_DEA) {
-          ref_ident <- c(ref_ident, grep(id, levels(SeuratObject::Idents(integrated)), value = TRUE))
+
+        if ('regexp' %in% sample_celltype_DEA[[meta_name]][[i]]) {
+          if (sample_celltype_DEA[[meta_name]][[i]][['regexp']] == TRUE) {
+            ref_ident <- c()
+            for (id in ref_ident_DEA) {
+              ref_ident <- c(ref_ident, grep(id, levels(SeuratObject::Idents(integrated)), value = TRUE))
+            }
+            if (vs_ident_DEA != 'rest') {
+              vs_ident <- c()
+              for (id in vs_ident_DEA) {
+                vs_ident <- c(vs_ident, grep(id, levels(SeuratObject::Idents(integrated)), value = TRUE))
+              }
+            }
+          } else {
+            ref_ident <- ref_ident_DEA
+            vs_ident <- vs_ident_DEA
+          }
+        } else {
+          ref_ident <- ref_ident_DEA
+          vs_ident <- vs_ident_DEA
         }
         if (vs_ident_DEA == 'rest') {
           vs_ident <- 'rest'
-        } else {
-          vs_ident <- c()
-          for (id in vs_ident_DEA) {
-            vs_ident <- c(vs_ident, grep(id, levels(SeuratObject::Idents(integrated)), value = TRUE))
-          }
         }
+
 
         comp_name <- names(sample_celltype_DEA[[meta_name]])[i]
         if (comp_name == "name") {
