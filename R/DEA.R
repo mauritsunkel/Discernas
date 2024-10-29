@@ -80,7 +80,7 @@ differential_expression_analysis <- function(
         ref_ident_DEA <- sample_celltype_DEA[[meta_name]][[i]]$ref
         vs_ident_DEA <- sample_celltype_DEA[[meta_name]][[i]]$vs
 
-        if ('regexp' %in% sample_celltype_DEA[[meta_name]][[i]]) {
+        if ('regexp' %in% names(sample_celltype_DEA[[meta_name]][[i]])) {
           if (sample_celltype_DEA[[meta_name]][[i]][['regexp']] == TRUE) {
             ref_ident <- c()
             for (id in ref_ident_DEA) {
