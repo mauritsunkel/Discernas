@@ -15,7 +15,7 @@ plotEnhancedVolcano <- function(
     filedir, comp_name,
     genes_to_label = NULL, label_size = 4) {
 
-  if (vs_ident != 'rest') {
+  if (all(vs_ident != 'rest')) {
     if(!all(c(ref_ident, vs_ident) %in% levels(SeuratObject::Idents(seurat_object)))) {
       stop("Either ", ref_ident, " or ", vs_ident, " not in Idents(seurat_object")
     }
@@ -38,7 +38,7 @@ plotEnhancedVolcano <- function(
 
   rescale <- function(x, from, to) {(x - min(x))/(max(x)-min(x)) * (to - from) + from}
   n_cells_ref <- sum(SeuratObject::Idents(seurat_object) %in% ref_ident)
-  if (vs_ident != 'rest') {
+  if (all(vs_ident != 'rest')) {
     n_cells_vs <- sum(SeuratObject::Idents(seurat_object) %in% vs_ident)
   } else {
     n_cells_vs <- sum(!SeuratObject::Idents(seurat_object) %in% ref_ident)

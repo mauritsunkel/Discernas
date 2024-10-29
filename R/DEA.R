@@ -166,8 +166,8 @@ DE_EnhancedVolcano <- function(seurat_object, ref_ident, vs_ident, DE_output_dir
     seurat_object,
     assay = "SCT",
     ident.1 = ref_ident,
-    ident.2 = if (vs_ident != 'rest') vs_ident else NULL,
-    only.pos = if (vs_ident == 'rest') TRUE else FALSE,
+    ident.2 = if (all(vs_ident != 'rest')) vs_ident else NULL,
+    only.pos = if (all(vs_ident == 'rest')) TRUE else FALSE,
     verbose = TRUE,
     logfc.threshold = 0,
     min.pct = 0)
