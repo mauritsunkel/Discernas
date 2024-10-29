@@ -15,9 +15,18 @@ plotEnhancedVolcano <- function(
     filedir, comp_name,
     genes_to_label = NULL, label_size = 4) {
 
-  if(!all(c(ref_ident, vs_ident) %in% levels(SeuratObject::Idents(seurat_object)))) {
-    stop("Either ", ref_ident, " or ", vs_ident, " not in Idents(seurat_object")
+  if (vs_ident != 'rest') {
+    if(!all(c(ref_ident, vs_ident) %in% levels(SeuratObject::Idents(seurat_object)))) {
+      stop("Either ", ref_ident, " or ", vs_ident, " not in Idents(seurat_object")
+    }
+  } else {
+    if(!all(c(ref_ident) %in% levels(SeuratObject::Idents(seurat_object)))) {
+      stop("Any of ", ref_ident, " not in Idents(seurat_object")
+    }
   }
+
+
+
 
   message("EnhancedVolcano:", comp_name)
   if (comp_name == "name") {
@@ -29,7 +38,12 @@ plotEnhancedVolcano <- function(
 
   rescale <- function(x, from, to) {(x - min(x))/(max(x)-min(x)) * (to - from) + from}
   n_cells_ref <- sum(SeuratObject::Idents(seurat_object) %in% ref_ident)
-  n_cells_vs <- sum(SeuratObject::Idents(seurat_object) %in% vs_ident)
+  if (vs_ident != 'rest') {
+    n_cells_vs <- sum(SeuratObject::Idents(seurat_object) %in% vs_ident)
+  } else {
+    n_cells_vs <- sum(!SeuratObject::Idents(seurat_object) %in% ref_ident)
+  }
+
   n_cells.1 <- seurat_DE$pct.1 * n_cells_ref
   n_cells.2 <- seurat_DE$pct.2 * n_cells_vs
   absolute_diff_scaled <- rescale(abs(n_cells.1 - n_cells.2), 0, 1)

@@ -75,12 +75,24 @@ differential_expression_analysis <- function(
       }
 
       for (i in seq_along(sample_celltype_DEA[[meta_name]])) {
-        ref_ident <- sample_celltype_DEA[[meta_name]][[i]]$ref
-        vs_ident <- sample_celltype_DEA[[meta_name]][[i]]$vs
+        ref_ident_DEA <- sample_celltype_DEA[[meta_name]][[i]]$ref
+        vs_ident_DEA <- sample_celltype_DEA[[meta_name]][[i]]$vs
+        ref_ident <- c()
+        for (id in ref_ident_DEA) {
+          ref_ident <- c(ref_ident, grep(id, levels(SeuratObject::Idents(integrated)), value = TRUE))
+        }
+        if (vs_ident_DEA == 'rest') {
+          vs_ident <- 'rest'
+        } else {
+          vs_ident <- c()
+          for (id in vs_ident_DEA) {
+            vs_ident <- c(vs_ident, grep(id, levels(SeuratObject::Idents(integrated)), value = TRUE))
+          }
+        }
 
         comp_name <- names(sample_celltype_DEA[[meta_name]])[i]
         if (comp_name == "name") {
-          comp_name <- paste0(ref_ident, "_vs_", vs_ident)
+          comp_name <- paste0(ref_ident_DEA, "_vs_", vs_ident_DEA)
         }
         meta_dirname <- switch(
           meta_name,
@@ -91,7 +103,9 @@ differential_expression_analysis <- function(
         DE_output_dir <- file.path(output_dir, meta_dirname, comp_name)
         dir.create(DE_output_dir, recursive = TRUE)
 
-        message("DE: ", ref_ident, " vs ", vs_ident)
+        message("DE: ", comp_name)
+        message("ref_idents: ", ref_ident)
+        message("vs_idents: ", vs_ident)
         DE_EnhancedVolcano(integrated, ref_ident, vs_ident, DE_output_dir, comp_name)
         if (!is.null(features_of_interest)) {
           DE_MarkerExpression(integrated, features_of_interest, idents = c(ref_ident, vs_ident), DE_output_dir)
@@ -137,8 +151,8 @@ DE_EnhancedVolcano <- function(seurat_object, ref_ident, vs_ident, DE_output_dir
     seurat_object,
     assay = "SCT",
     ident.1 = ref_ident,
-    ident.2 = vs_ident,
-    only.pos = FALSE,
+    ident.2 = if (vs_ident != 'rest') vs_ident else NULL,
+    only.pos = if (vs_ident == 'rest') TRUE else FALSE,
     verbose = TRUE,
     logfc.threshold = 0,
     min.pct = 0)
