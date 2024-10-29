@@ -9,7 +9,8 @@ differential_expression_analysis(
   qs_file,
   output_dir,
   sample_celltype_DEA = NULL,
-  features_of_interest = NULL
+  features_of_interest = NULL,
+  DE_test = "wilcox"
 )
 }
 \arguments{
@@ -22,6 +23,8 @@ differential_expression_analysis(
 \item{sample_celltype_DEA}{list of sample_celltype comparisons, as exampled}
 
 \item{features_of_interest}{marker features to plot as violins and dots per DE comparison}
+
+\item{DE_test}{default: 'wilcox' (presto implementation if installed), else 'DESeq2' see Seurat::FindMarkers(test.use) documentation}
 }
 \description{
 Changed following functions in mauritsunkel/EMC-SKlab-seurat:

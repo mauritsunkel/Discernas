@@ -9,7 +9,8 @@ DE_EnhancedVolcano(
   ref_ident,
   vs_ident,
   DE_output_dir,
-  comp_name
+  comp_name,
+  DE_test
 )
 }
 \arguments{
