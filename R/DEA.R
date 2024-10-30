@@ -201,7 +201,7 @@ DE_EnhancedVolcano <- function(seurat_object, ref_ident, vs_ident, DE_output_dir
   }
   openxlsx::write.xlsx(x = DE_res, file = filename, row.names = TRUE)
   openxlsx::write.xlsx(x = DE_res_pct, file = sub(".xlsx$", "_pct.xlsx", filename), row.names = TRUE)
-  openxlsx::write.xlsx(x = DE_res_adj, file = sub(".xlsx$", "_adj.xlsx", filename), row.names = TRUE)
+  openxlsx::write.xlsx(x = filtered_DE, file = sub(".xlsx$", "_filtered.xlsx", filename), row.names = TRUE)
 
   ## plot EnhancedVolcano per sample DE
   plotEnhancedVolcano(
