@@ -74,6 +74,7 @@ sample_analysis <- function(
   if (dir.exists(sample_path)) {
     stop("Sample already exists in output directory, please choose another to avoid overwriting results...")
   }
+  message("creating: ", sample_path)
   dir.create(sample_path, recursive = T)
   dir.create(file.path(sample_path, 'quality_control'), recursive = T)
   dir.create(file.path(sample_path, 'Principal_Component_Analysis'), recursive = T)
