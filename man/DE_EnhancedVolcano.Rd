@@ -10,6 +10,7 @@ DE_EnhancedVolcano(
   vs_ident,
   DE_output_dir,
   comp_name,
+  DE_min_pct,
   DE_test
 )
 }

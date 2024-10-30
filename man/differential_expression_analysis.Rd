@@ -10,6 +10,7 @@ differential_expression_analysis(
   output_dir,
   sample_celltype_DEA = NULL,
   features_of_interest = NULL,
+  DE_min_pct = 0.01,
   DE_test = "wilcox"
 )
 }
@@ -23,6 +24,8 @@ differential_expression_analysis(
 \item{sample_celltype_DEA}{list of sample_celltype comparisons, as exampled}
 
 \item{features_of_interest}{marker features to plot as violins and dots per DE comparison}
+
+\item{DE_min_pct}{default: 0.01, see Seurat::FindMarkers(min.pct) documentation}
 
 \item{DE_test}{default: 'wilcox' (presto implementation if installed), else 'DESeq2' see Seurat::FindMarkers(test.use) documentation}
 }

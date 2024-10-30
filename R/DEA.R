@@ -7,6 +7,7 @@
 #' @param output_dir output directory for plots, string
 #' @param sample_celltype_DEA list of sample_celltype comparisons, as exampled
 #' @param features_of_interest marker features to plot as violins and dots per DE comparison
+#' @param DE_min_pct default: 0.01, see Seurat::FindMarkers(min.pct) documentation
 #' @param DE_test default: 'wilcox' (presto implementation if installed), else 'DESeq2' see Seurat::FindMarkers(test.use) documentation
 #'
 #' @export
@@ -38,6 +39,7 @@ differential_expression_analysis <- function(
     sample_name, qs_file, output_dir,
     sample_celltype_DEA = NULL,
     features_of_interest = NULL,
+    DE_min_pct = 0.01,
     DE_test = 'wilcox') {
   library(Seurat) # added because of error
   # Error: package or namespace load failed for ‘Seurat’ in .doLoadActions(where, attach):
@@ -123,7 +125,7 @@ differential_expression_analysis <- function(
         message("DE: ", comp_name)
         message("ref_idents: ", ref_ident)
         message("vs_idents: ", vs_ident)
-        DE_EnhancedVolcano(integrated, ref_ident, vs_ident, DE_output_dir, comp_name, DE_test)
+        DE_EnhancedVolcano(integrated, ref_ident, vs_ident, DE_output_dir, comp_name, DE_min_pct, DE_test)
         if (!is.null(features_of_interest)) {
           DE_MarkerExpression(integrated, features_of_interest, idents = c(ref_ident, vs_ident), DE_output_dir)
         }
@@ -163,7 +165,7 @@ DE_MarkerExpression <- function(seurat_object, features_of_interest, idents, out
 #' @param vs_ident versus sample name, pct.2 in Seurat DE result
 #' @param directory to save plot in, filename is based on reference and versus sample
 #' @param comp_name used to handle filenaming and EnhancedVolcano plot title
-DE_EnhancedVolcano <- function(seurat_object, ref_ident, vs_ident, DE_output_dir, comp_name, DE_test) {
+DE_EnhancedVolcano <- function(seurat_object, ref_ident, vs_ident, DE_output_dir, comp_name, DE_min_pct, DE_test) {
   DE_res <- Seurat::FindMarkers(
     seurat_object,
     assay = "SCT",
@@ -172,7 +174,7 @@ DE_EnhancedVolcano <- function(seurat_object, ref_ident, vs_ident, DE_output_dir
     only.pos = if (all(vs_ident == 'rest')) TRUE else FALSE,
     verbose = TRUE,
     logfc.threshold = 0,
-    min.pct = 0,
+    min.pct = DE_min_pct,
     test.use = DE_test)
 
   ## sort by average log2 fold-change
