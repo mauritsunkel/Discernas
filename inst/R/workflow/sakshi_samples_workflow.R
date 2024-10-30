@@ -50,8 +50,6 @@ pseudotime_root_markers <- list(
 
 kriegstein_data_dir <- file.path(project_dir, "data/Kriegstein")
 kriegstein_chunks_output_dir <- file.path(kriegstein_data_dir, "RData", "chunks_25")
-
-file.copy(EMC.SKlab.scRNAseq::thisFilePath(), results_dir, overwrite = TRUE)
 ### END USER CONFIG ###
 
 
@@ -64,11 +62,13 @@ integrated_sample_names <- unlist(sapply(sample_integrations, simplify = F, func
   paste(integrated_sample_name, collapse = "-")
 }))
 integrated_sample_files <- unname(unlist(sapply(integrated_sample_names, simplify = F, function(integrated_sample_name) {
-  file.path(project_dir, "results", run_name, integrated_sample_name, paste0(integrated_sample_name, ".qs"))
+  file.path(results_dir, integrated_sample_name, paste0(integrated_sample_name, ".qs"))
 })))
 #### END USER INITIALIZATION #####
 
 
+
+## START ANALYSIS ----
 
 ## SAMPLE ANALYSIS ----
 # for (sample_name in sample_names) {
@@ -150,123 +150,203 @@ integrated_sample_files <- unname(unlist(sapply(integrated_sample_names, simplif
 #   exclude_samples = c('M'),
 #   selection_markers = c("MAP2", "DCX", "NEUROG2"), percent_expressed = 30, reference_annotations = NULL)
 
-## selections PSEUDOTIME ----
-# message("RUNNING pseudotime selections")
-# pseudotime(
-#   input_files = file.path(results_dir, integrated_sample_names[[1]], "subset", "microglia", basename(integrated_sample_files[[1]])),
-#   input_names = integrated_sample_names[[1]],
-#   output_dir = file.path(results_dir, integrated_sample_names[[1]], "subset", "microglia"),
-#   pseudotime_root_markers = pseudotime_root_markers,
-#   single_partition = TRUE
-# )
-# pseudotime(
-#   input_files = file.path(results_dir, integrated_sample_names[[1]], "subset", "astrocytes", basename(integrated_sample_files[[1]])),
-#   input_names = integrated_sample_names[[1]],
-#   output_dir = file.path(results_dir, integrated_sample_names[[1]], "subset", "astrocytes"),
-#   pseudotime_root_markers = pseudotime_root_markers,
-#   single_partition = TRUE
-# )
-# pseudotime(
-#   input_files = file.path(results_dir, integrated_sample_names[[1]], "subset", "neurons", basename(integrated_sample_files[[1]])),
-#   input_names = integrated_sample_names[[1]],
-#   output_dir = file.path(results_dir, integrated_sample_names[[1]], "subset", "neurons"),
-#   pseudotime_root_markers = pseudotime_root_markers,
-#   single_partition = TRUE
-# )
-
-
-
-
-
-
-
-# TODO check if /sample_name/ in output_dir at every R script file: if (!grepl(paste0("/", sample_name, "/"), output_dir))
-## if (!grepl(paste0("/", sample_name, "/"), output_dir)) output_dir <- file.path(output_dir, sample_name)
-
-
-
-
-# sample_celltype_options <- unique(paste(integrated$orig.ident, integrated@meta.data[, metadata_celltype_annotation], sep = "_"))
-#
-#
-# ### MANUAL USER DEA ###
-# ## to provide sample(s)-sample(s) or sample(s)-celltype(s) DEA comparisons in sample_celltype_DEA list, follow and adjust example below
-# ## first get seurat_object to perform DEA on
-# integrated <- qs::qread(list(integrated_sample_names, integrated_sample_files)[[2]][1])
-# ## then check metadata column names to see which can be used for DE comparisons, look specifically for annotation column names: MapMyCells & Kriegstein
-# colnames(integrated@meta.data)
-# ## MapMyCells default: mapmycells_supercluster
-# ## Kriegstein default: kriegstein.seurat.custom.clusters.mean
-# sample_options <- unique(integrated$orig.ident)
-# sample_celltype_mmc_options <- unique(paste(integrated$orig.ident, integrated@meta.data[, "mapmycells_supercluster"], sep = "_"))
-# sample_celltype_kriegstein.seurat_options <- unique(paste(integrated$orig.ident, integrated@meta.data[, "kriegstein.seurat.custom.clusters.mean"], sep = "_"))
-# ## see above options for MapMyCells annotated single-cells or Kriegstein.Seurat annotated clusters for DE comparisons
-# ## setup sample_celltype_DEA list, with named list by metadata column and then (named) list(s) of comparisons, follow and adjust the sample_celltype format below
-# sample_celltype_DEA <- list(
-#   orig.ident = list(
-#     ## comparing whole samples
-#     name = list(ref = "NC", vs = "NS")
-#   ),
-#   mapmycells_supercluster = list(
-#     ## comparing microglia/astrocyte/neuron pairs
-#     name = list(ref = "NSM_Astrocyte", vs = "NS_Astrocyte"),
-#     name = list(ref = "NSM_Neuron", vs = "NS_Neuron"),
-#     name = list(ref = "NSM_Astrocyte", vs = "NC_Astrocyte"),
-#     name = list(ref = "NSM_Neuron", vs = "NC_Neuron"),
-#     name = list(ref = "NC_Astrocyte", vs = "NS_Astrocyte"),
-#     name = list(ref = "NC_Neuron", vs = "NS_Neuron"),
-#     name = list(ref = "NSM_Microglia", vs = "M_Microglia")
-#   ),
-#   kriegstein.seurat.custom.clusters.mean = list(
-#     ## comparing microglia pairs
-#     name = list(ref = "M_Microglia.4", vs = "M_Microglia.5"),
-#     name = list(ref = "M_Microglia.4", vs = "M_Microglia.6"),
-#     name = list(ref = "M_Microglia.4", vs = "M_Microglia.9"),
-#     name = list(ref = "M_Microglia.5", vs = "M_Microglia.6"),
-#     name = list(ref = "M_Microglia.5", vs = "M_Microglia.9"),
-#     name = list(ref = "M_Microglia.6", vs = "M_Microglia.9"),
-#     name = list(ref = "NSM_Microglia.4", vs = "NSM_Microglia.5"),
-#     name = list(ref = "NSM_Microglia.4", vs = "NSM_Microglia.6"),
-#     name = list(ref = "NSM_Microglia.4", vs = "NSM_Microglia.9"),
-#     name = list(ref = "NSM_Microglia.5", vs = "NSM_Microglia.6"),
-#     name = list(ref = "NSM_Microglia.5", vs = "NSM_Microglia.9"),
-#     name = list(ref = "NSM_Microglia.6", vs = "NSM_Microglia.9"),
-#     name = list(ref = "NSM_Microglia.4", vs = "M_Microglia.4"),
-#     name = list(ref = "NSM_Microglia.5", vs = "M_Microglia.5"),
-#     name = list(ref = "NSM_Microglia.6", vs = "M_Microglia.6"),
-#     name = list(ref = "NSM_Microglia.9", vs = "M_Microglia.9"),
-#     ## comparing microglia multiples
-#     NSM_Microglia.4.5.6_vs_M_Microglia.4.5.6 = list(ref = c("NSM_Microglia.4", "NSM_Microglia.5", "NSM_Microglia.6"), vs = c("M_Microglia.4", "M_Microglia.5", "M_Microglia.6")),
-#     NSM_Microglia.4.5_vs_M_Microglia.4.5 = list(ref = c("NSM_Microglia.4", "NSM_Microglia.5"), vs = c("M_Microglia.4", "M_Microglia.5")),
-#
-#     ## for "progenitor" cells, differently labeled by MapMyCells and Kriegstein, manually inspect
-#     M_Microglia.9_vs_NSM_NS_NC_Microglia.9 = list(ref = "M_Microglia.9", vs = c("NSM_Microglia.9", "NS_Microglia.9", "NC_Microglia.9")),
-#     M_Dividing.8_vs_NSM_NS_NC_Dividing.8 = list(ref = "M_Dividing.8", vs = c("NSM_Dividing.8", "NS_Dividing.8", "NC_Dividing.8")),
-#     NSM_Progenitors.0.7.8.9.14.17_vs_NS_Progenitors.0.7.8.9.14.17 = list(ref = c("NSM_Dividing.0", "NSM_IPC.7", "NSM_Dividing.8", "NSM_Microglia.9", "NSM_Endo 1.14", "NSM_Dividing.17"), vs = c("NS_Dividing.0", "NS_IPC.7", "NS_Dividing.8", "NS_Microglia.9", "NS_Endo 1.14", "NS_Dividing.17")),
-#     NSM_Progenitors.0.7.8.9.14.17_vs_NC_Progenitors.0.7.8.9.14.17 = list(ref = c("NSM_Dividing.0", "NSM_IPC.7", "NSM_Dividing.8", "NSM_Microglia.9", "NSM_Endo 1.14", "NSM_Dividing.17"), vs = c("NC_Dividing.0", "NC_IPC.7", "NC_Dividing.8", "NC_Microglia.9", "NC_Endo 1.14", "NC_Dividing.17")),
-#     NS_Progenitors.0.7.8.9.14.17_vs_NC_Progenitors.0.7.8.9.14.17 = list(ref = c("NS_Dividing.0", "NS_IPC.7", "NS_Dividing.8", "NS_Microglia.9", "NS_Endo 1.14", "NS_Dividing.17"), vs = c("NC_Dividing.0", "NC_IPC.7", "NC_Dividing.8", "NC_Microglia.9", "NC_Endo 1.14", "NC_Dividing.17")),
-#     ## only positive markers
-#     M_Microglia.4_vs_M_Microglia.5.6.9 = list(ref = c("M_Microglia.4"), vs = c("M_Microglia.5", "M_Microglia.6", "M_Microglia.9")),
-#     M_Microglia.5_vs_M_Microglia.4.6.9 = list(ref = c("M_Microglia.5"), vs = c("M_Microglia.4", "M_Microglia.6", "M_Microglia.9")),
-#     M_Microglia.6_vs_M_Microglia.4.5.9 = list(ref = c("M_Microglia.6"), vs = c("M_Microglia.4", "M_Microglia.5", "M_Microglia.9")),
-#     M_Microglia.9_vs_M_Microglia.4.5.6 = list(ref = c("M_Microglia.9"), vs = c("M_Microglia.4", "M_Microglia.5", "M_Microglia.6")),
-#     NSM_Microglia.4_vs_NSM_Microglia.5.6 = list(ref = c("NSM_Microglia.4"), vs = c("NSM_Microglia.5", "NSM_Microglia.6")),
-#     NSM_Microglia.5_vs_NSM_Microglia.4.6 = list(ref = c("NSM_Microglia.5"), vs = c("NSM_Microglia.4", "NSM_Microglia.6")),
-#     NSM_Microglia.6_vs_NSM_Microglia.4.5 = list(ref = c("NSM_Microglia.6"), vs = c("NSM_Microglia.4", "NSM_Microglia.5"))
-#   )
-# )
-# ### END MANUAL USER DEA
-#
-#
-#
-# # differential expression analysis
-# sample_info <- list(integrated_sample_names, integrated_sample_files)
-# for (i in seq_along(integrated_sample_names)) {
-#   differential_expression_analysis(
-#     sample_name = sample_info[[1]][i],
-#     qs_file = sample_info[[2]][i],
-#     output_dir = dirname(sample_info[[2]][i]),
-#     sample_celltype_DEA = sample_celltype_DEA,
-#     features_of_interest = features_of_interest
+## Selections KRIEGSTEIN ANNOTATION ----
+# message("RUNNING subset annotate_with_kriegstein_data")
+# subset_names <- c("microglia", "astrocytes", "neurons")
+# for (subset_name in subset_names) {
+#   annotate_visualize_with_kriegstein_data(
+#     sample_names = integrated_sample_names[[1]],
+#     sample_files = file.path(results_dir, integrated_sample_names[[1]], "subset", subset_name, basename(integrated_sample_files[[1]])),
+#     output_dir = file.path(results_dir, integrated_sample_names[[1]], "subset", subset_name),
+#     kriegstein_data_dir = kriegstein_data_dir,
+#     kriegstein_chunks_input_dir = kriegstein_chunks_output_dir,
+#     kriegstein_annotated_output_dir = file.path(kriegstein_data_dir, "RData", run_name, integrated_sample_names[[1]], "subset", subset_name),
+#     run_only_visualization = FALSE # DEVNOTE: check if TRUE, only when testing
 #   )
 # }
+
+
+## selections PSEUDOTIME ----
+# message("RUNNING subset pseudotime selections")
+# subset_names <- c("microglia", "astrocytes", "neurons")
+# for (subset_name in subset_names) {
+#   pseudotime(
+#     input_files = file.path(results_dir, integrated_sample_names[[1]], "subset", subset_name, basename(integrated_sample_files[[1]])),
+#     input_names = integrated_sample_names[[1]],
+#     output_dir = file.path(results_dir, integrated_sample_names[[1]], "subset", subset_name),
+#     pseudotime_root_markers = pseudotime_root_markers,
+#     single_partition = TRUE
+#   )
+# }
+
+
+
+
+
+
+
+
+
+
+#### MANUAL DEA ----
+## to provide sample(s)-sample(s) or sample(s)-celltype(s) DEA comparisons in sample_celltype_DEA list, follow and adjust example below
+## first get seurat_object to perform DEA on
+## then check metadata column names to see which can be used for DE comparisons, look specifically for annotation column names: MapMyCells & Kriegstein
+# library(Seurat)
+# DEA_qs <- file.path(results_dir, integrated_sample_names[[1]], "subset", "microglia", basename(integrated_sample_files[[1]]))
+# integrated <- qs::qread(DEA_qs)
+#
+# colnames(integrated@meta.data) # MapMyCells default: mapmycells_supercluster - Kriegstein default: kriegstein.seurat.custom.clusters.mean
+# sample_options <- sort(table(factor(integrated$orig.ident)), decreasing = T)
+# sample_celltype_mmc_options <- sort(table(paste(integrated$orig.ident, factor(integrated@meta.data[, "mapmycells_supercluster"]), sep = "_")), decreasing = T)
+# sample_celltype_kriegstein.seurat_options <- sort(table(paste(integrated$orig.ident, factor(integrated@meta.data[, "kriegstein.seurat.custom.clusters.mean"]), sep = "_")), decreasing = T)
+## sample_cluster_options <- sort(table(paste(integrated$orig.ident, integrated$seurat_clusters, sep = "_")), decreasing = T)
+## see above options for MapMyCells annotated single-cells or Kriegstein.Seurat annotated clusters for DE comparisons
+## look at the (subset) UMAPs for sample original identity, MapMyCells and Kriegstein to see which cells/clusters to compare
+## setup sample_celltype_DEA list, with custom named list by metadata and list(s) of comparisons, recreate and add to the sample_celltype format below
+###
+### DEA SETUP
+###
+sample_celltype_DEA <- list(
+  'microglia' = list(
+    orig.ident = list(
+      ## comparing whole samples
+      name = list(ref = "M", vs = "NSM")
+    ),
+    mapmycells_supercluster = list(
+      ## comparing microglia pairs
+      name = list(ref = "M_Microglia", vs = "NSM_Microglia")
+    ),
+    kriegstein.seurat.custom.clusters.mean = list(
+      ## comparing microglia pairs between M and NSM
+      name = list(ref = "M_Microglia.0", vs = "NSM_Microglia.0"),
+      name = list(ref = "M_Microglia.1", vs = "NSM_Microglia.1"),
+      name = list(ref = "M_Microglia.2", vs = "NSM_Microglia.2"),
+      name = list(ref = "M_Microglia.3", vs = "NSM_Microglia.3"),
+      name = list(ref = "M_Microglia.4", vs = "NSM_Microglia.4"),
+      name = list(ref = "M_Microglia.5", vs = "NSM_Microglia.5"),
+      name = list(ref = "M_Microglia.6", vs = "NSM_Microglia.6"),
+      name = list(ref = "M_Microglia.7", vs = "NSM_Microglia.7"),
+      name = list(ref = "M_Microglia.8", vs = "NSM_Microglia.8"),
+      ## comparing vs all other cells, with focus on positive markers
+      "M_NSM_Microglia.0_vs_rest" = list(ref = c("M_Microglia.0", "NSM_Microglia.0"), vs = "rest"),
+      "M_NSM_Microglia.1_vs_rest" = list(ref = c("M_Microglia.1", "NSM_Microglia.1"), vs = "rest"),
+      "M_NSM_Microglia.2_vs_rest" = list(ref = c("M_Microglia.2", "NSM_Microglia.2"), vs = "rest"),
+      "M_NSM_Microglia.3_vs_rest" = list(ref = c("M_Microglia.3", "NSM_Microglia.3"), vs = "rest"),
+      "M_NSM_Microglia.4_vs_rest" = list(ref = c("M_Microglia.4", "NSM_Microglia.4"), vs = "rest"),
+      "M_NSM_Microglia.5_vs_rest" = list(ref = c("M_Microglia.5", "NSM_Microglia.5"), vs = "rest"),
+      "M_NSM_Microglia.6_vs_rest" = list(ref = c("M_Microglia.6", "NSM_Microglia.6"), vs = "rest"),
+      "M_NSM_Microglia.7_vs_rest" = list(ref = c("M_Microglia.7", "NSM_Microglia.7"), vs = "rest"),
+      "M_NSM_Microglia.8_vs_rest" = list(ref = c("M_Microglia.8", "NSM_Microglia.8"), vs = "rest")
+    )
+ ),
+ 'astrocytes' = list(
+   orig.ident = list(
+     ## comparing whole samples
+     name = list(ref = "NC", vs = "NS"),
+     name = list(ref = "NC", vs = "NSM"),
+     name = list(ref = "NS", vs = "NSM"),
+     "NS_NC_vs_NSM" = list(ref = c("NS", "NC"), vs = "NSM")
+   ),
+   mapmycells_supercluster = list(
+     ## comparing astrocyte pairs
+     name = list(ref = "NC_Astrocyte", vs = "NS_Astrocyte"),
+     name = list(ref = "NC_Astrocyte", vs = "NSM_Astrocyte"),
+     name = list(ref = "NS_Astrocyte", vs = "NSM_Astrocyte"),
+     "NC_NS_Astrocyte_vs_NSM_Astrocyte" = list(ref = c("NC_Astrocyte", "NS_Astrocyte"), vs = "NSM_Astrocyte"),
+     "Ependymal_vs_rest" = list(ref = c("NC_Ependymal", "NS_Ependymal", "NSM_Ependymal"), vs = "rest"),
+     "Neuron_vs_rest" = list(ref = c("NC_Neuron", "NS_Neuron", "NSM_Neuron"), vs = "rest")
+   ),
+   kriegstein.seurat.custom.clusters.mean = list(
+     ## comparing astrocyte pairs
+     'NC_NS_Astrocyte 2.0_vs_NSM_Astrocyte 2.0' = list(ref = c("NC_Astrocyte 2.0", "NS_Astrocyte 2.0"), vs = "NSM_Astrocyte 2.0"),
+     'NC_NS_Radial glia 2.1_vs_NSM_Radial glia 2.1' = list(ref = c("NC_Radial glia 2.1", "NS_Radial glia 2.1"), vs = "NSM_Radial glia 2.1"),
+     'NC_NS_Astrocyte 2.2_vs_NSM_Astrocyte 2.2' = list(ref = c("NC_Astrocyte 2.2", "NS_Astrocyte 2.2"), vs = "NSM_Astrocyte 2.2"),
+     'NC_NS_Astrocyte 2.3_vs_NSM_Astrocyte 2.3' = list(ref = c("NC_Astrocyte 2.3", "NS_Astrocyte 2.3"), vs = "NSM_Astrocyte 2.3"),
+     'NC_NS_Radial glia 2.4_vs_NSM_Radial glia 2.4' = list(ref = c("NC_Radial glia 2.4", "NS_Radial glia 2.4"), vs = "NSM_Radial glia 2.4"),
+     'NC_NS_Radial glia 2.5_vs_NSM_Radial glia 2.5' = list(ref = c("NC_Radial glia 2.5", "NS_Radial glia 2.5"), vs = "NSM_Radial glia 2.5"),
+     'NC_NS_Radial glia 2.6_vs_NSM_Radial glia 2.6' = list(ref = c("NC_Radial glia 2.6", "NS_Radial glia 2.6"), vs = "NSM_Radial glia 2.6"),
+     'NC_NS_Radial glia 2.7_vs_NSM_Radial glia 2.7' = list(ref = c("NC_Radial glia 2.7", "NS_Radial glia 2.7"), vs = "NSM_Radial glia 2.7"),
+     ## comparing astrocytes & microglia
+     'NC_NS_Astrocyte 2_vs_NSM_Astrocyte 2' = list(ref = c("NC_Astrocyte 2.0", "NS_Astrocyte 2.0", "NC_Astrocyte 2.2", "NS_Astrocyte 2.2", "NC_Astrocyte 2.3", "NS_Astrocyte 2.3"), vs = c("NSM_Astrocyte 2.0", "NSM_Astrocyte 2.2", "NSM_Astrocyte 2.3")),
+     'NC_NS_Radial glia 2_vs_NSM_Radial glia 2' = list(ref = c("NC_Radial glia 2.1", "NS_Radial glia 2.1", "NC_Radial glia 2.4", "NS_Radial glia 2.4", "NC_Radial glia 2.5", "NS_Radial glia 2.5", "NC_Radial glia 2.6", "NS_Radial glia 2.6", "NC_Radial glia 2.7", "NS_Radial glia 2.7"), vs = c("NSM_Radial glia 2.1", "NSM_Radial glia 2.4", "NSM_Radial glia 2.5", "NSM_Radial glia 2.6", "NSM_Radial glia 2.7")),
+     'Astrocyte 2_vs_Radial glia 2' = list(ref = c("NC_Astrocyte 2.0", "NS_Astrocyte 2.0", "NC_Astrocyte 2.2", "NS_Astrocyte 2.2", "NC_Astrocyte 2.3", "NS_Astrocyte 2.3", "NSM_Astrocyte 2.0", "NSM_Astrocyte 2.2", "NSM_Astrocyte 2.3"), vs = c("NC_Radial glia 2.1", "NS_Radial glia 2.1", "NC_Radial glia 2.4", "NS_Radial glia 2.4", "NC_Radial glia 2.5", "NS_Radial glia 2.5", "NC_Radial glia 2.6", "NS_Radial glia 2.6", "NC_Radial glia 2.7", "NS_Radial glia 2.7", "NSM_Radial glia 2.1", "NSM_Radial glia 2.4", "NSM_Radial glia 2.5", "NSM_Radial glia 2.6", "NSM_Radial glia 2.7")),
+     ## comparing vs rest
+     'NC_NS_NSM_Astrocyte 2.0_vs_rest' = list(ref = c("NC_Astrocyte 2.0", "NS_Astrocyte 2.0", "NSM_Astrocyte 2.0"), vs = "rest"),
+     'NC_NS_NSM_Astrocyte 2.2_vs_rest' = list(ref = c("NC_Astrocyte 2.2", "NS_Astrocyte 2.2", "NSM_Astrocyte 2.2"), vs = "rest"),
+     'NC_NS_NSM_Astrocyte 2.3_vs_rest' = list(ref = c("NC_Astrocyte 2.3", "NS_Astrocyte 2.3", "NSM_Astrocyte 2.3"), vs = "rest"),
+     'NC_NS_NSM_Radial glia 2.1_vs_rest' = list(ref = c("NC_Radial glia 2.1", "NS_Radial glia 2.1", "NSM_Radial glia 2.1"), vs = "rest"),
+     'NC_NS_NSM_Radial glia 2.4_vs_rest' = list(ref = c("NC_Radial glia 2.4", "NS_Radial glia 2.4", "NSM_Radial glia 2.4"), vs = "rest"),
+     'NC_NS_NSM_Radial glia 2.5_vs_rest' = list(ref = c("NC_Radial glia 2.5", "NS_Radial glia 2.5", "NSM_Radial glia 2.5"), vs = "rest"),
+     'NC_NS_NSM_Radial glia 2.6_vs_rest' = list(ref = c("NC_Radial glia 2.6", "NS_Radial glia 2.6", "NSM_Radial glia 2.6"), vs = "rest"),
+     'NC_NS_NSM_Radial glia 2.7_vs_rest' = list(ref = c("NC_Radial glia 2.7", "NS_Radial glia 2.7", "NSM_Radial glia 2.7"), vs = "rest")
+   )
+ ),
+ 'neurons' = list(
+   orig.ident = list(
+     ## comparing whole samples
+     name = list(ref = "NC", vs = "NS"),
+     name = list(ref = "NC", vs = "NSM"),
+     name = list(ref = "NS", vs = "NSM"),
+     "NS_NC_vs_NSM" = list(ref = c("NS", "NC"), vs = "NSM")
+   ),
+   mapmycells_supercluster = list(
+     ## comparing neuron pairs
+     name = list(ref = "NC_Neuron", vs = "NS_Neuron"),
+     name = list(ref = "NC_Neuron", vs = "NSM_Neuron"),
+     name = list(ref = "NS_Neuron", vs = "NSM_Neuron"),
+     "NC_NS_Neuron_vs_NSM_Neuron" = list(ref = c("NC_Neuron", "NS_Neuron"), vs = "NSM_Neuron")
+   ),
+   kriegstein.seurat.custom.clusters.mean = list(
+     ## comparing neuron pairs (>100 or more cells per group)
+     'NC_NS_Excitatory neuron 1.0_vs_NSM_Excitatory neuron 1.0' = list(ref = c("NC_Excitatory neuron 1.0", "NS_Excitatory neuron 1.0"), vs = c("NSM_Excitatory neuron 1.0")),
+     'NC_NS_Excitatory neuron 4.1_vs_NSM_Excitatory neuron 4.1' = list(ref = c("NC_Excitatory neuron 4.1", "NS_Excitatory neuron 4.1"), vs = c("NSM_Excitatory neuron 4.1")),
+     'NC_NS_Excitatory neuron 4.2_vs_NSM_Excitatory neuron 4.2' = list(ref = c("NC_Excitatory neuron 4.2", "NS_Excitatory neuron 4.2"), vs = c("NSM_Excitatory neuron 4.2")),
+     'NC_NS_Excitatory neuron 1.3_vs_NSM_Excitatory neuron 1.3' = list(ref = c("NC_Excitatory neuron 1.3", "NS_Excitatory neuron 1.3"), vs = c("NSM_Excitatory neuron 1.3")),
+     'NC_NS_Excitatory neuron 1.4_vs_NSM_Excitatory neuron 1.4' = list(ref = c("NC_Excitatory neuron 1.4", "NS_Excitatory neuron 1.4"), vs = c("NSM_Excitatory neuron 1.4")),
+     'NC_NS_Excitatory neuron 4.5_vs_NSM_Excitatory neuron 4.5' = list(ref = c("NC_Excitatory neuron 4.5", "NS_Excitatory neuron 4.5"), vs = c("NSM_Excitatory neuron 4.5")),
+     'NC_NS_Excitatory neuron 1.6_vs_NSM_Excitatory neuron 1.6' = list(ref = c("NC_Excitatory neuron 1.6", "NS_Excitatory neuron 1.6"), vs = c("NSM_Excitatory neuron 1.6")),
+     'NC_NS_Excitatory neuron 1.7_vs_NSM_Excitatory neuron 1.7' = list(ref = c("NC_Excitatory neuron 1.7", "NS_Excitatory neuron 1.7"), vs = c("NSM_Excitatory neuron 1.7")),
+     'NC_NS_Excitatory neuron 1.8_vs_NSM_Excitatory neuron 1.8' = list(ref = c("NC_Excitatory neuron 1.8", "NS_Excitatory neuron 1.8"), vs = c("NSM_Excitatory neuron 1.8")),
+     'NC_NS_Excitatory neuron 4.9_vs_NSM_Excitatory neuron 4.9' = list(ref = c("NC_Excitatory neuron 4.9", "NS_Excitatory neuron 4.9"), vs = c("NSM_Excitatory neuron 4.9")),
+     'NC_NS_Excitatory neuron 1.10_vs_NSM_Excitatory neuron 1.10' = list(ref = c("NC_Excitatory neuron 1.10", "NS_Excitatory neuron 1.10"), vs = c("NSM_Excitatory neuron 1.10")),
+     'NC_NS_Excitatory neuron 1.12_vs_NSM_Excitatory neuron 1.12' = list(ref = c("NC_Excitatory neuron 1.12", "NS_Excitatory neuron 1.12"), vs = c("NSM_Excitatory neuron 1.12")),
+     ## comparing En1 vs En4
+     'Excitatory neuron 1_vs_Excitatory neuron 4' = list(ref = c('Excitatory neuron 1'), vs = c('Excitatory neuron 4'), regexp = TRUE),
+     ## comparing vs rest
+     'Excitatory neuron 1.0_vs_rest' = list(ref = c('Excitatory neuron 1.0'), vs = 'rest', regexp = TRUE),
+     'Excitatory neuron 1.3_vs_rest' = list(ref = c('Excitatory neuron 1.3'), vs = 'rest', regexp = TRUE),
+     'Excitatory neuron 1.4_vs_rest' = list(ref = c('Excitatory neuron 1.4'), vs = 'rest', regexp = TRUE),
+     'Excitatory neuron 1.6_vs_rest' = list(ref = c('Excitatory neuron 1.6'), vs = 'rest', regexp = TRUE),
+     'Excitatory neuron 1.7_vs_rest' = list(ref = c('Excitatory neuron 1.7'), vs = 'rest', regexp = TRUE),
+     'Excitatory neuron 1.8_vs_rest' = list(ref = c('Excitatory neuron 1.8'), vs = 'rest', regexp = TRUE),
+     'Excitatory neuron 1.10_vs_rest' = list(ref = c('Excitatory neuron 1.10'), vs = 'rest', regexp = TRUE),
+     'Excitatory neuron 1.12_vs_rest' = list(ref = c('Excitatory neuron 1.12'), vs = 'rest', regexp = TRUE),
+     'Excitatory neuron 4.1_vs_rest' = list(ref = c('Excitatory neuron 4.1'), vs = 'rest', regexp = TRUE),
+     'Excitatory neuron 4.2_vs_rest' = list(ref = c('Excitatory neuron 4.2'), vs = 'rest', regexp = TRUE),
+     'Excitatory neuron 4.5_vs_rest' = list(ref = c('Excitatory neuron 4.5'), vs = 'rest', regexp = TRUE),
+     'Excitatory neuron 4.9_vs_rest' = list(ref = c('Excitatory neuron 4.9'), vs = 'rest', regexp = TRUE)
+   )
+ )
+)
+### END MANUAL USER DEA
+
+
+## DEA EXECUTION ----
+message("RUNNING subset DEA")
+subset_names <- c("microglia", "astrocytes", "neurons")
+for (subset_name in subset_names) {
+  differential_expression_analysis(
+    sample_name = integrated_sample_names[[1]],
+    qs_file = file.path(results_dir, integrated_sample_names[[1]], "subset", subset_name, basename(integrated_sample_files[[1]])),
+    output_dir = file.path(results_dir, integrated_sample_names[[1]], "subset", subset_name),
+    sample_celltype_DEA = sample_celltype_DEA[[subset_name]],
+    features_of_interest = NULL, # features_of_interest, # if NULL, don't plot features etc
+    pct.both = 0.01,
+    pct.either = 0.05,
+    DE_test = 'wilcox'
+  )
+}
+
+## end with adding this file as config file.R to results folder
+file.copy(EMC.SKlab.scRNAseq::thisFilePath(), results_dir, overwrite = TRUE)
