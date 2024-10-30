@@ -75,9 +75,9 @@ sample_analysis <- function(
     stop("Sample already exists in output directory, please choose another to avoid overwriting results...")
   }
   dir.create(sample_path, recursive = T)
-  dir.create(file.path(sample_path, 'quality_control'))
-  dir.create(file.path(sample_path, 'Principal_Component_Analysis'))
-  dir.create(file.path(sample_path, 'DE_analysis'))
+  dir.create(file.path(sample_path, 'quality_control'), recursive = T)
+  dir.create(file.path(sample_path, 'Principal_Component_Analysis'), recursive = T)
+  dir.create(file.path(sample_path, 'DE_analysis'), recursive = T)
 
   ## find samples dir automatically, based on unique sample names from workflow
   pattern <- paste0("/", sample_name, "/")
@@ -193,7 +193,7 @@ sample_analysis <- function(
 
   # TODO check: https://github.com/satijalab/seurat/discussions/4259
   if (run_cell_cycle_regression) {
-    dir.create('Cell_Cycle/')
+    dir.create(file.path(sample_path, 'Cell_Cycle'), recursive = T)
 
     # A list of cell cycle markers, from Tirosh et al, 2015, is loaded with Seurat.
     # We can segregate this list into markers of G2/M phase and markers of S phase.
@@ -300,8 +300,8 @@ sample_analysis <- function(
   features_of_interest[["topn-features"]] <- topn
 
   plot_DEG <- function(data, features, name) {
-    dir.create(file.path(sample_path, "DE_analysis", name))
-    dir.create(file.path(sample_path, "DE_analysis", name, "Feature"))
+    dir.create(file.path(sample_path, "DE_analysis", name), recursive = T)
+    dir.create(file.path(sample_path, "DE_analysis", name, "Feature"), recursive = T)
 
     # plot feature expression, if available in Seurat
     for (i in seq_along(features)) {
