@@ -85,7 +85,7 @@ plotEnhancedVolcano <- function(
 
   if (!is.null(filedir)) {
     if (!is.null(filesuffix)) {
-      filesuffix <- paste0("_", fileprefix)
+      filesuffix <- paste0("_", filesuffix)
       filename <- file.path(filedir, paste0(sub(" vs ", "_vs_", title), filesuffix, '_EVP.png'))
     } else {
       filename <- file.path(filedir, paste0(sub(" vs ", "_vs_", title), '_EVP.png'))
