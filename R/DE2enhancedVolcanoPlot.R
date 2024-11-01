@@ -4,15 +4,17 @@
 #' @param seurat_DE Seurat DE result, from a FindMarkers() function
 #' @param ref_ident reference sample name, pct.1 in Seurat DE result
 #' @param vs_ident versus sample name, pct.2 in Seurat DE result
-#' @param filedir directory to save plot in, filename is based on reference and versus sample
+#' @param filedir directory to save plot in, filename is based on reference and versus sample, if NULL: return plot
 #' @param comp_name used to handle filenaming and EnhancedVolcano plot title
+#' @param filesuffix default NULL, if string: used to add prefix to filename, useful for seperation of comparisons
 #' @param genes_to_label default: NULL, if gene vector given, only those are labeled
+#' @param label_size default: 4, change to control label font size
 #'
 #' @export
 plotEnhancedVolcano <- function(
     seurat_object, seurat_DE,
     ref_ident, vs_ident,
-    filedir, comp_name,
+    filedir, comp_name, filesuffix = NULL,
     genes_to_label = NULL, label_size = 4) {
 
   if (all(vs_ident != 'rest')) {
@@ -24,9 +26,6 @@ plotEnhancedVolcano <- function(
       stop("Any of ", ref_ident, " not in Idents(seurat_object")
     }
   }
-
-
-
 
   message("EnhancedVolcano:", comp_name)
   if (comp_name == "name") {
@@ -84,6 +83,15 @@ plotEnhancedVolcano <- function(
     ggplot2::scale_x_continuous(
       breaks=seq(x_axis_min, x_axis_max, 1))
 
-  filename <- file.path(filedir, paste0(sub(" vs ", "_vs_", title), '_EVP.png'))
-  ggplot2::ggsave(plot = p, file = filename, width = 30, height = 20, units = "cm")
+  if (!is.null(filedir)) {
+    if (!is.null(filesuffix)) {
+      filesuffix <- paste0("_", fileprefix)
+      filename <- file.path(filedir, paste0(sub(" vs ", "_vs_", title), filesuffix, '_EVP.png'))
+    } else {
+      filename <- file.path(filedir, paste0(sub(" vs ", "_vs_", title), '_EVP.png'))
+    }
+    ggplot2::ggsave(plot = p, file = filename, width = 30, height = 20, units = "cm")
+  } else {
+    return(p)
+  }
 }
