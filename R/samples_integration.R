@@ -106,7 +106,7 @@ run_integration <- function(so, integration_method) {
         dims = 1:(min(c(table(so$orig.ident), 50))-1),
         k.weight = min(c(table(so$orig.ident), 100))-1,
         verbose = TRUE)
-      },
+    },
     error=function(e) {
       message(e)
       message("\n Removing smallest sample as data cannot be integrated, rerunning without")
@@ -323,7 +323,7 @@ selection_reintegration <- function(
     Seurat::Idents(so) <- so$seurat_clusters
     so <- Seurat::FindSubCluster(
       object = so,
-      cluster = levels(so$seurat_clusters),
+      cluster = factor(so$seurat_clusters),
       graph.name = "SCT_nn",
       subcluster.name = "seurat_subclusters"
     )
