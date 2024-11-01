@@ -10,8 +10,9 @@ differential_expression_analysis(
   output_dir,
   sample_celltype_DEA = NULL,
   features_of_interest = NULL,
-  pct.both = 0.01,
-  pct.either = 0.05,
+  pct.all = 0.01,
+  pct.any = 0.05,
+  p.adj.threshold = 0.05,
   DE_test = "wilcox"
 )
 }
@@ -26,9 +27,11 @@ differential_expression_analysis(
 
 \item{features_of_interest}{marker features to plot as violins and dots per DE comparison}
 
-\item{pct.both}{default: 0.01, see Seurat::FindMarkers(min.pct) documentation, yet this filters on BOTH pct.1 and pct.2}
+\item{pct.all}{default: 0.01, see Seurat::FindMarkers(min.pct) documentation, yet this filters on BOTH pct.1 and pct.2}
 
-\item{pct.either}{default: 0.05, see Seurat::FindMarkers(min.pct) documentationm this filters on EITHER pct.1 or pct.2}
+\item{pct.any}{default: 0.05, see Seurat::FindMarkers(min.pct) documentationm this filters on EITHER pct.1 or pct.2}
+
+\item{p.adj.threshold}{default: 0.05, adjust to change threshold on multiple testing corrected p-values}
 
 \item{DE_test}{default: 'wilcox' (presto implementation if installed), else 'DESeq2' see Seurat::FindMarkers(test.use) documentation}
 }

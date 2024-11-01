@@ -10,8 +10,9 @@ DE_EnhancedVolcano(
   vs_ident,
   DE_output_dir,
   comp_name,
-  pct.both,
-  pct.either,
+  pct.all,
+  pct.any,
+  p.adj.threshold,
   DE_test
 )
 }

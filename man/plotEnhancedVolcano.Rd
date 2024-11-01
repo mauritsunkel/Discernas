@@ -11,6 +11,7 @@ plotEnhancedVolcano(
   vs_ident,
   filedir,
   comp_name,
+  filesuffix = NULL,
   genes_to_label = NULL,
   label_size = 4
 )
@@ -24,11 +25,15 @@ plotEnhancedVolcano(
 
 \item{vs_ident}{versus sample name, pct.2 in Seurat DE result}
 
-\item{filedir}{directory to save plot in, filename is based on reference and versus sample}
+\item{filedir}{directory to save plot in, filename is based on reference and versus sample, if NULL: return plot}
 
 \item{comp_name}{used to handle filenaming and EnhancedVolcano plot title}
 
+\item{filesuffix}{default NULL, if string: used to add prefix to filename, useful for seperation of comparisons}
+
 \item{genes_to_label}{default: NULL, if gene vector given, only those are labeled}
+
+\item{label_size}{default: 4, change to control label font size}
 }
 \description{
 Create enhanced Volcano plot from Seurat DE

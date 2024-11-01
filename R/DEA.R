@@ -7,8 +7,9 @@
 #' @param output_dir output directory for plots, string
 #' @param sample_celltype_DEA list of sample_celltype comparisons, as exampled
 #' @param features_of_interest marker features to plot as violins and dots per DE comparison
-#' @param pct.both default: 0.01, see Seurat::FindMarkers(min.pct) documentation, yet this filters on BOTH pct.1 and pct.2
-#' @param pct.either default: 0.05, see Seurat::FindMarkers(min.pct) documentationm this filters on EITHER pct.1 or pct.2
+#' @param pct.all default: 0.01, see Seurat::FindMarkers(min.pct) documentation, yet this filters on BOTH pct.1 and pct.2
+#' @param pct.any default: 0.05, see Seurat::FindMarkers(min.pct) documentationm this filters on EITHER pct.1 or pct.2
+#' @param p.adj.threshold default: 0.05, adjust to change threshold on multiple testing corrected p-values
 #' @param DE_test default: 'wilcox' (presto implementation if installed), else 'DESeq2' see Seurat::FindMarkers(test.use) documentation
 #'
 #' @export
@@ -40,8 +41,9 @@ differential_expression_analysis <- function(
     sample_name, qs_file, output_dir,
     sample_celltype_DEA = NULL,
     features_of_interest = NULL,
-    pct.both = 0.01,
-    pct.either = 0.05,
+    pct.all = 0.01,
+    pct.any = 0.05,
+    p.adj.threshold = 0.05,
     DE_test = 'wilcox') {
   library(Seurat) # added because of error
   # Error: package or namespace load failed for ‘Seurat’ in .doLoadActions(where, attach):
@@ -127,7 +129,7 @@ differential_expression_analysis <- function(
         message("DE: ", comp_name)
         message("ref_idents: ", ref_ident)
         message("vs_idents: ", vs_ident)
-        DE_EnhancedVolcano(integrated, ref_ident, vs_ident, DE_output_dir, comp_name, pct.both, pct.either, DE_test)
+        DE_EnhancedVolcano(integrated, ref_ident, vs_ident, DE_output_dir, comp_name, pct.all, pct.any, p.adj.threshold, DE_test)
         if (!is.null(features_of_interest)) {
           DE_MarkerExpression(integrated, features_of_interest, idents = c(ref_ident, vs_ident), DE_output_dir)
         }
@@ -167,7 +169,7 @@ DE_MarkerExpression <- function(seurat_object, features_of_interest, idents, out
 #' @param vs_ident versus sample name, pct.2 in Seurat DE result
 #' @param directory to save plot in, filename is based on reference and versus sample
 #' @param comp_name used to handle filenaming and EnhancedVolcano plot title
-DE_EnhancedVolcano <- function(seurat_object, ref_ident, vs_ident, DE_output_dir, comp_name, pct.both, pct.either, DE_test) {
+DE_EnhancedVolcano <- function(seurat_object, ref_ident, vs_ident, DE_output_dir, comp_name, pct.all, pct.any, p.adj.threshold, DE_test) {
   DE_res <- Seurat::FindMarkers(
     seurat_object,
     assay = "SCT",
@@ -181,15 +183,21 @@ DE_EnhancedVolcano <- function(seurat_object, ref_ident, vs_ident, DE_output_dir
 
   ## sort by average log2 fold-change
   DE_res <- DE_res %>% dplyr::arrange(dplyr::desc(avg_log2FC))
-  plot_DE_stats(DE_res, filepath = DE_output_dir, filename = "DE_stat_pct=none")
-  DE_res_pct <- DE_res[pmin(DE_res$pct.1, DE_res$pct.2) >= pct.both,] # should be expressed in BOTH groups
-  DE_res_pct <- DE_res_pct[pmax(DE_res_pct$pct.1, DE_res_pct$pct.2) >= pct.either,] # should be expressed in EITHER group
-  plot_DE_stats(DE_res_pct, filepath = DE_output_dir, filename = paste0("DE_stat_pctBoth=", pct.both, "_pctEither=", pct.either))
-  filtered_DE <- DE_res[!rownames(DE_res) %in% rownames(DE_res_pct),]
-  filtered_DE <- filtered_DE %>% dplyr::arrange(dplyr::desc(avg_log2FC))
-  plot_DE_stats(filtered_DE, filepath = DE_output_dir, filename = "DE_stat_filtered")
-  ## filter by p-val-adj (Bonferroni corrected)
-  DE_res_adj <- DE_res[DE_res$p_val_adj < 0.05,]
+
+  ## apply filters
+  DE_res_padj <- DE_res[DE_res$p_val_adj <= p.adj.threshold,]
+  DE_res_pct <- DE_res[pmin(DE_res$pct.1, DE_res$pct.2) >= pct.all,] # should be expressed in BOTH groups
+  DE_res_pct <- DE_res_pct[pmax(DE_res_pct$pct.1, DE_res_pct$pct.2) >= pct.any,] # should be expressed in EITHER group
+  DE_res_pct_padj <- DE_res_pct[DE_res_pct$p_val_adj <= p.adj.threshold,]
+  DE_res_filtered <- DE_res[!rownames(DE_res) %in% rownames(DE_res_pct_padj),]
+
+  ## plot in between filters for quality control
+  plot_DE_stats(DE_res, filepath = DE_output_dir, filename = "DE_stats")
+  plot_DE_stats(DE_res_padj, filepath = DE_output_dir, filename = paste0("DE_stats_p.adj=", p.adj.threshold))
+  plot_DE_stats(DE_res_pct_padj, filepath = DE_output_dir, filename = paste0("DE_stats_pctAll=", pct.all, "_pctAny=", pct.any, "_p.adj=", p.adj.threshold))
+  plot_DE_stats(DE_res_pct, filepath = DE_output_dir, filename = paste0("DE_stats_pctAll=", pct.all, "_pctAny=", pct.any))
+  plot_DE_stats(DE_res_filtered, filepath = DE_output_dir, filename = "DE_stat_filtered")
+
   ## write raw and p-val-adj filtered sample-level DE
   if (comp_name == "name") {
     filename <- file.path(DE_output_dir, paste0("1=", ref_ident, "_vs_2=", vs_ident, ".xlsx"))
@@ -200,13 +208,31 @@ DE_EnhancedVolcano <- function(seurat_object, ref_ident, vs_ident, DE_output_dir
     filename <- file.path(DE_output_dir, paste0("1=", ref_ident_name, "_vs_2=", vs_ident_name, ".xlsx"))
   }
   openxlsx::write.xlsx(x = DE_res, file = filename, row.names = TRUE)
+  openxlsx::write.xlsx(x = DE_res_padj, file = sub(".xlsx$", "_p.adj.xlsx", filename), row.names = TRUE)
   openxlsx::write.xlsx(x = DE_res_pct, file = sub(".xlsx$", "_pct.xlsx", filename), row.names = TRUE)
-  openxlsx::write.xlsx(x = filtered_DE, file = sub(".xlsx$", "_filtered.xlsx", filename), row.names = TRUE)
+  openxlsx::write.xlsx(x = DE_res_pct_padj, file = sub(".xlsx$", "_pct_p.adj.xlsx", filename), row.names = TRUE)
+  openxlsx::write.xlsx(x = DE_res_filtered, file = sub(".xlsx$", "_filtered.xlsx", filename), row.names = TRUE)
 
   ## plot EnhancedVolcano per sample DE
   plotEnhancedVolcano(
     seurat_object, DE_res, ref_ident, vs_ident,
-    filedir = DE_output_dir, comp_name
+    filedir = DE_output_dir, comp_name, filesuffix = NULL
+  )
+  plotEnhancedVolcano(
+    seurat_object, DE_res_padj, ref_ident, vs_ident,
+    filedir = DE_output_dir, comp_name, filesuffix = paste0("p.adj=", p.adj.threshold)
+  )
+  plotEnhancedVolcano(
+    seurat_object, DE_res_pct, ref_ident, vs_ident,
+    filedir = DE_output_dir, comp_name, filesuffix = paste0("pctAll=", pct.all, "_pctAny=", pct.any)
+  )
+  plotEnhancedVolcano(
+    seurat_object, DE_res_pct_padj, ref_ident, vs_ident,
+    filedir = DE_output_dir, comp_name, filesuffix = paste0("pctAll=", pct.all, "_pctAny=", pct.any, "_p.adj=", p.adj.threshold)
+  )
+  plotEnhancedVolcano(
+    seurat_object, DE_res_filtered, ref_ident, vs_ident,
+    filedir = DE_output_dir, comp_name, filesuffix = "filtered"
   )
 }
 
