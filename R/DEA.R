@@ -191,13 +191,6 @@ DE_EnhancedVolcano <- function(seurat_object, ref_ident, vs_ident, DE_output_dir
   DE_res_pct_padj <- DE_res_pct[DE_res_pct$p_val_adj <= p.adj.threshold,]
   DE_res_filtered <- DE_res[!rownames(DE_res) %in% rownames(DE_res_pct_padj),]
 
-  ## plot in between filters for quality control
-  plot_DE_stats(DE_res, filepath = DE_output_dir, filename = "DE_stats")
-  plot_DE_stats(DE_res_padj, filepath = DE_output_dir, filename = paste0("DE_stats_p.adj=", p.adj.threshold))
-  plot_DE_stats(DE_res_pct_padj, filepath = DE_output_dir, filename = paste0("DE_stats_pctAll=", pct.all, "_pctAny=", pct.any, "_p.adj=", p.adj.threshold))
-  plot_DE_stats(DE_res_pct, filepath = DE_output_dir, filename = paste0("DE_stats_pctAll=", pct.all, "_pctAny=", pct.any))
-  plot_DE_stats(DE_res_filtered, filepath = DE_output_dir, filename = "DE_stat_filtered")
-
   ## write raw and p-val-adj filtered sample-level DE
   if (comp_name == "name") {
     filename <- file.path(DE_output_dir, paste0("1=", ref_ident, "_vs_2=", vs_ident, ".xlsx"))
@@ -207,33 +200,35 @@ DE_EnhancedVolcano <- function(seurat_object, ref_ident, vs_ident, DE_output_dir
     vs_ident_name <- split_name[[1]][2]
     filename <- file.path(DE_output_dir, paste0("1=", ref_ident_name, "_vs_2=", vs_ident_name, ".xlsx"))
   }
-  openxlsx::write.xlsx(x = DE_res, file = filename, row.names = TRUE)
-  openxlsx::write.xlsx(x = DE_res_padj, file = sub(".xlsx$", "_p.adj.xlsx", filename), row.names = TRUE)
-  openxlsx::write.xlsx(x = DE_res_pct, file = sub(".xlsx$", "_pct.xlsx", filename), row.names = TRUE)
-  openxlsx::write.xlsx(x = DE_res_pct_padj, file = sub(".xlsx$", "_pct_p.adj.xlsx", filename), row.names = TRUE)
-  openxlsx::write.xlsx(x = DE_res_filtered, file = sub(".xlsx$", "_filtered.xlsx", filename), row.names = TRUE)
 
+  ## plot in between filters for quality control
+  ## write DE res to .xlsx
   ## plot EnhancedVolcano per sample DE
-  plotEnhancedVolcano(
-    seurat_object, DE_res, ref_ident, vs_ident,
-    filedir = DE_output_dir, comp_name, filesuffix = NULL
-  )
-  plotEnhancedVolcano(
-    seurat_object, DE_res_padj, ref_ident, vs_ident,
-    filedir = DE_output_dir, comp_name, filesuffix = paste0("p.adj=", p.adj.threshold)
-  )
-  plotEnhancedVolcano(
-    seurat_object, DE_res_pct, ref_ident, vs_ident,
-    filedir = DE_output_dir, comp_name, filesuffix = paste0("pctAll=", pct.all, "_pctAny=", pct.any)
-  )
-  plotEnhancedVolcano(
-    seurat_object, DE_res_pct_padj, ref_ident, vs_ident,
-    filedir = DE_output_dir, comp_name, filesuffix = paste0("pctAll=", pct.all, "_pctAny=", pct.any, "_p.adj=", p.adj.threshold)
-  )
-  plotEnhancedVolcano(
-    seurat_object, DE_res_filtered, ref_ident, vs_ident,
-    filedir = DE_output_dir, comp_name, filesuffix = "filtered"
-  )
+  if (dim(DE_res)[1] == 0) {
+    plot_DE_stats(DE_res, filepath = DE_output_dir, filename = "DE_stats")
+    openxlsx::write.xlsx(x = DE_res, file = filename, row.names = TRUE)
+    plotEnhancedVolcano(seurat_object, DE_res, ref_ident, vs_ident, filedir = DE_output_dir, comp_name, filesuffix = NULL)
+  }
+  if (dim(DE_res_padj)[1] == 0) {
+    plot_DE_stats(DE_res_padj, filepath = DE_output_dir, filename = paste0("DE_stats_p.adj=", p.adj.threshold))
+    openxlsx::write.xlsx(x = DE_res_padj, file = sub(".xlsx$", "_p.adj.xlsx", filename), row.names = TRUE)
+    plotEnhancedVolcano(seurat_object, DE_res_padj, ref_ident, vs_ident, filedir = DE_output_dir, comp_name, filesuffix = paste0("p.adj=", p.adj.threshold))
+  }
+  if (dim(DE_res_pct_padj)[1] == 0) {
+    plot_DE_stats(DE_res_pct_padj, filepath = DE_output_dir, filename = paste0("DE_stats_pctAll=", pct.all, "_pctAny=", pct.any, "_p.adj=", p.adj.threshold))
+    openxlsx::write.xlsx(x = DE_res_pct, file = sub(".xlsx$", "_pct.xlsx", filename), row.names = TRUE)
+    plotEnhancedVolcano(seurat_object, DE_res_pct, ref_ident, vs_ident, filedir = DE_output_dir, comp_name, filesuffix = paste0("pctAll=", pct.all, "_pctAny=", pct.any))
+  }
+  if (dim(DE_res_pct)[1] == 0) {
+    plot_DE_stats(DE_res_pct, filepath = DE_output_dir, filename = paste0("DE_stats_pctAll=", pct.all, "_pctAny=", pct.any))
+    openxlsx::write.xlsx(x = DE_res_pct_padj, file = sub(".xlsx$", "_pct_p.adj.xlsx", filename), row.names = TRUE)
+    plotEnhancedVolcano(seurat_object, DE_res_pct_padj, ref_ident, vs_ident, filedir = DE_output_dir, comp_name, filesuffix = paste0("pctAll=", pct.all, "_pctAny=", pct.any, "_p.adj=", p.adj.threshold))
+  }
+  if (dim(DE_res_filtered)[1] == 0) {
+    plot_DE_stats(DE_res_filtered, filepath = DE_output_dir, filename = "DE_stat_filtered")
+    openxlsx::write.xlsx(x = DE_res_filtered, file = sub(".xlsx$", "_filtered.xlsx", filename), row.names = TRUE)
+    plotEnhancedVolcano(seurat_object, DE_res_filtered, ref_ident, vs_ident, filedir = DE_output_dir, comp_name, filesuffix = "filtered")
+  }
 }
 
 
@@ -245,6 +240,7 @@ DE_EnhancedVolcano <- function(seurat_object, ref_ident, vs_ident, DE_output_dir
 #'
 #' @export
 plot_DE_stats <- function(DE_res, filepath, filename = "DE_stats") {
+  message('plot_DE_stats: ', filepath, filename)
   pdf(file = file.path(filepath, paste0(filename, ".pdf")))
   pct <- c(DE_res$pct.1, DE_res$pct.2)
   hist(pct, breaks = seq(floor(min(pct)), ceiling(max(pct)), 0.01), main = "pct.1 & pct.2", xlab = paste("n_genes =", dim(DE_res)[1]))
