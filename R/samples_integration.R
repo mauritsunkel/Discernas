@@ -340,7 +340,7 @@ selection_reintegration <- function(
     Seurat::Idents(so) <- so$seurat_subclusters
     # create dotplot to extract percent expressed information
     p <- Seurat::DotPlot(so, features = selection_markers)
-    png(file.path(output_dir, "subclusters_percentage_expressed.png"))
+    png(file.path(output_dir, paste0("subclusters_percentage_expressed=", percent_expressed, ".png")))
     hist(p$data$pct.exp, breaks = seq(0, 100, 5), main = paste0("Cells percentage expressed: ", paste(selection_markers, collapse = ", ")))
     dev.off()
     # get cluster names where percent expressed is above %threshold for each gene of selection_markers
@@ -363,18 +363,17 @@ selection_reintegration <- function(
     message("\n Selecting cells based on expressing all markers \n")
     layer_data <- SeuratObject::LayerData(so)
     # select each cell that has expresses each gene from selection_markers
-    if (length(levels(so$orig.ident)) == 1) {
-      if (any(selection_markers %in% rownames(layer_data))) {
+    if (any(selection_markers %in% rownames(layer_data))) {
+      if (length(selection_markers) == 1) {
         cells_to_select <- names(which(layer_data[selection_markers, ] > 0))
         cells_to_plot <- layer_data[selection_markers, ] > 0
       } else {
-        warning('None of the selection markers found in the data, please check...')
-        return(NULL)
+        cells_to_select <- sapply(as.data.frame(layer_data[selection_markers, ] > 0), sum) == length(rownames(layer_data[selection_markers, ]))
+        cells_to_plot <- unname(cells_to_select)
       }
     } else {
-      cells_to_select <- sapply(as.data.frame(layer_data[selection_markers, ] > 0), sum) == length(rownames(layer_data[selection_markers, ]))
-      # TODO
-      cells_to_plot <- NULL
+      warning('None of the selection markers found in the data, please check...')
+      return(NULL)
     }
 
     # set RNA assay
