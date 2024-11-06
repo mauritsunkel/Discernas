@@ -6,23 +6,21 @@
 \usage{
 selection_reintegration(
   so_filename,
-  integration_method,
   output_dir,
-  sample_names,
   sample_name,
-  features_of_interest,
+  features_of_interest = NULL,
   exclude_samples = NULL,
+  integration_method = "RPCA",
   selection_markers = NULL,
   percent_expressed = NULL,
-  reference_annotations = NULL
+  reference_annotations = NULL,
+  subset_reintegration = TRUE
 )
 }
 \arguments{
 \item{so_filename}{filename of seurat object to perform selection on}
 
-\item{output_dir}{Package home directory, used to create output directory for results.}
-
-\item{sample_names}{names of samples}
+\item{output_dir}{Package home directory, used to create output directory for results}
 
 \item{sample_name}{name of integrated sample, combined of samples_names}
 
@@ -35,6 +33,8 @@ selection_reintegration(
 \item{percent_expressed}{threshold for percentage of cells that have to express all selection_markers}
 
 \item{reference_annotations}{reference database and annotation label of it to perform selection on}
+
+\item{integration}{method default = "RPCA", else "CCA" or "harmony"}
 }
 \description{
 Perform selection of cells/clusters/annotation and then reintegrate and reanalyze

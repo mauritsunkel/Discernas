@@ -264,8 +264,10 @@ integration_analysis <- function(integrated, output_dir, sample_name, features_o
 
   }
 
-  for (feat_name in names(features_of_interest)) {
-    plot_DEG(data = integrated, data.features = features_of_interest[[feat_name]], name = feat_name, sample_order = sample_names, output_dir = output_dir)
+  if (!is.null(features_of_interest)) {
+    for (feat_name in names(features_of_interest)) {
+      plot_DEG(data = integrated, data.features = features_of_interest[[feat_name]], name = feat_name, sample_order = sample_names, output_dir = output_dir)
+    }
   }
 
   # save Seurat object in .qs data file
@@ -280,11 +282,11 @@ integration_analysis <- function(integrated, output_dir, sample_name, features_o
 #' @param selection_markers genes of interest to be used for selection
 #' @param percent_expressed threshold for percentage of cells that have to express all selection_markers
 #' @param reference_annotations reference database and annotation label of it to perform selection on
-#' @param output_dir Package home directory, used to create output directory for results.
-#' @param sample_names names of samples
+#' @param output_dir Package home directory, used to create output directory for results
 #' @param sample_name name of integrated sample, combined of samples_names
 #' @param features_of_interest genes of interest
 #' @param exclude_samples default NULL, else vector of sample names to exclude
+#' @param integration method default = "RPCA", else "CCA" or "harmony"
 #'
 #' @export
 #'
@@ -295,20 +297,27 @@ integration_analysis <- function(integrated, output_dir, sample_name, features_o
 #' - reanalyze using same workflow you used for the entire dataset as a blank slate
 #' no need to do MT_features as they are already regressed out, no need to redo doublet and ambient RNA removal
 selection_reintegration <- function(
-    so_filename, integration_method,
-    output_dir, sample_names, sample_name, features_of_interest, exclude_samples = NULL,
-    selection_markers = NULL, percent_expressed = NULL, reference_annotations = NULL) {
+    so_filename,
+    output_dir, sample_name, features_of_interest = NULL, exclude_samples = NULL, integration_method = 'RPCA',
+    selection_markers = NULL, percent_expressed = NULL, reference_annotations = NULL, subset_reintegration = TRUE) {
+
+  if (is.null(selection_markers) && is.null(percent_expressed) && is.null(reference_annotations)) {
+    stop("To perform selection and reintegration, pass in the parameters")
+  }
 
   dir.create(output_dir, recursive = TRUE)
 
   message(paste0("\n reading .qs... --> ", output_dir, "\n"))
   so <- qs::qread(file = so_filename)
 
+  if (!is.null(exclude_samples)) {
+    Seurat::DefaultAssay(so) <- "RNA"
+    Seurat::Idents(so) <- so$orig.ident
+    so <- subset(so, idents = setdiff(unique(so$orig.ident), exclude_samples))
+  }
   Seurat::DefaultAssay(so) <- "SCT"
 
-  if (is.null(selection_markers) && is.null(percent_expressed) && is.null(reference_annotations)) {
-    stop("To perform selection and reintegration, pass in the parameters")
-  } else if (!is.null(reference_annotations)) {
+  if (!is.null(reference_annotations)) {
     if (length(unique(names(reference_annotations))) != 1) stop("Pass a single reference")
     message("\n Selecting specified annotation from reference as idents \n")
     # set idents to reference name
@@ -335,12 +344,19 @@ selection_reintegration <- function(
     hist(p$data$pct.exp, breaks = seq(0, 100, 5), main = paste0("Cells percentage expressed: ", paste(selection_markers, collapse = ", ")))
     dev.off()
     # get cluster names where percent expressed is above %threshold for each gene of selection_markers
-    cluster_selection <- names(which(table(p$data[p$data$pct.exp > percent_expressed,]$id) == length(unique(p$data$features.plot))))
+    subcluster_selection <- names(which(table(p$data[p$data$pct.exp > percent_expressed,]$id) == length(unique(p$data$features.plot))))
     # if no clusters selected, set selection to NULL
-    if (length(cluster_selection) == 0) cluster_selection <- NULL
-    # perform cluster selection
+    if (length(subcluster_selection) == 0) subcluster_selection <- NULL
+    # set RNA assay
     Seurat::DefaultAssay(so) <- "RNA"
-    so <- subset(so, idents = cluster_selection)
+    # plot selected cells
+    cell_selection <- so$seurat_subclusters %in% subcluster_selection
+    Seurat::Idents(so) <- cell_selection
+    png(file.path(output_dir, "subclusters_selected_cells.png"))
+    Seurat::DimPlot(so, reduction = "umap", label = F, repel = TRUE) + ggplot2::ggtitle(paste0("selected cells: ", table(cell_selection)["TRUE"]))
+    dev.off()
+    # perform subcluster selection
+    so <- subset(so, idents = subcluster_selection)
     # add selection panel and type as metadata
     so@misc$selection_markers <- selection_markers
   } else if (!is.null(selection_markers)) {
@@ -348,15 +364,17 @@ selection_reintegration <- function(
     layer_data <- SeuratObject::LayerData(so)
     # select each cell that has expresses each gene from selection_markers
     cellsToSelect <- sapply(as.data.frame(layer_data[selection_markers, ] > 0), sum) == length(rownames(layer_data[selection_markers, ]))
-    # perform cell selection
+    # set RNA assay
     Seurat::DefaultAssay(so) <- "RNA"
+    # plot selected cells
+    Seurat::Idents(so) <- cellsToSelect
+    png(file.path(output_dir, "selected_cells.png"))
+    Seurat::DimPlot(so, reduction = "umap", label = F, repel = TRUE) + ggplot2::ggtitle(paste0("selected cells: ", table(cellsToSelect)["TRUE"]))
+    dev.off()
+    # perform cell selection
     so <- so[, cellsToSelect]
     # add selection panel and type as metadata
     so@misc$selection_markers <- selection_markers
-  }
-  if (!is.null(exclude_samples)) {
-    Seurat::Idents(so) <- so$orig.ident
-    so <- subset(so, idents = setdiff(unique(so$orig.ident), exclude_samples))
   }
 
   # remove empty clusters from original seurat_clusters
@@ -405,10 +423,14 @@ selection_reintegration <- function(
   so <- SCTransform_subset(so)
   message("\n RUN PCA \n")
   so <- Seurat::RunPCA(so, features = SeuratObject::VariableFeatures(object = so), npcs = min(c(dim(so)[2], 50)), verbose = TRUE)
-  so <- run_integration(so = so, integration_method = integration_method)
 
-  # rerun integration_analysis post selection
-  integration_analysis(
-    integrated = so, output_dir = output_dir,
-    sample_name = sample_name, features_of_interest = features_of_interest)
+  if (subset_reintegration) {
+    # do integration and integration_analysis post selection
+    so <- run_integration(so = so, integration_method = integration_method)
+    integration_analysis(
+      integrated = so, output_dir = output_dir,
+      sample_name = sample_name, features_of_interest = features_of_interest)
+  } else {
+    return (so)
+  }
 }
