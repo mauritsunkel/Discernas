@@ -216,13 +216,13 @@ DE_EnhancedVolcano <- function(seurat_object, ref_ident, vs_ident, DE_output_dir
   }
   if (dim(DE_res_pct_padj)[1] > 0) {
     plot_DE_stats(DE_res_pct_padj, filepath = DE_output_dir, filename = paste0("DE_stats_pctAll=", pct.all, "_pctAny=", pct.any, "_p.adj=", p.adj.threshold))
-    openxlsx::write.xlsx(x = DE_res_pct, file = sub(".xlsx$", "_pct.xlsx", filename), row.names = TRUE)
-    plotEnhancedVolcano(seurat_object, DE_res_pct, ref_ident, vs_ident, filedir = DE_output_dir, comp_name, filesuffix = paste0("pctAll=", pct.all, "_pctAny=", pct.any))
+    openxlsx::write.xlsx(x = DE_res_pct_padj, file = sub(".xlsx$", "_pct.xlsx", filename), row.names = TRUE)
+    plotEnhancedVolcano(seurat_object, DE_res_pct_padj, ref_ident, vs_ident, filedir = DE_output_dir, comp_name, filesuffix = paste0("pctAll=", pct.all, "_pctAny=", pct.any))
   }
   if (dim(DE_res_pct)[1] > 0) {
     plot_DE_stats(DE_res_pct, filepath = DE_output_dir, filename = paste0("DE_stats_pctAll=", pct.all, "_pctAny=", pct.any))
-    openxlsx::write.xlsx(x = DE_res_pct_padj, file = sub(".xlsx$", "_pct_p.adj.xlsx", filename), row.names = TRUE)
-    plotEnhancedVolcano(seurat_object, DE_res_pct_padj, ref_ident, vs_ident, filedir = DE_output_dir, comp_name, filesuffix = paste0("pctAll=", pct.all, "_pctAny=", pct.any, "_p.adj=", p.adj.threshold))
+    openxlsx::write.xlsx(x = DE_res_pct, file = sub(".xlsx$", "_pct_p.adj.xlsx", filename), row.names = TRUE)
+    plotEnhancedVolcano(seurat_object, DE_res_pct, ref_ident, vs_ident, filedir = DE_output_dir, comp_name, filesuffix = paste0("pctAll=", pct.all, "_pctAny=", pct.any, "_p.adj=", p.adj.threshold))
   }
   if (dim(DE_res_filtered)[1] > 0) {
     plot_DE_stats(DE_res_filtered, filepath = DE_output_dir, filename = "DE_stat_filtered")
@@ -240,7 +240,7 @@ DE_EnhancedVolcano <- function(seurat_object, ref_ident, vs_ident, DE_output_dir
 #'
 #' @export
 plot_DE_stats <- function(DE_res, filepath, filename = "DE_stats") {
-  message('plot_DE_stats: ', filepath, filename)
+  message('plot_DE_stats: ', file.path(filepath, filename))
   pdf(file = file.path(filepath, paste0(filename, ".pdf")))
   pct <- c(DE_res$pct.1, DE_res$pct.2)
   hist(pct, breaks = seq(from = floor(min(pct)), to = ceiling(max(pct)), by = 0.01), main = "pct.1 & pct.2", xlab = paste("n_genes =", dim(DE_res)[1]))
