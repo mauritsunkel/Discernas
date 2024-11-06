@@ -364,8 +364,13 @@ selection_reintegration <- function(
     layer_data <- SeuratObject::LayerData(so)
     # select each cell that has expresses each gene from selection_markers
     if (length(levels(so$orig.ident)) == 1) {
-      cells_to_select <- names(which(layer_data[selection_markers, ] > 0))
-      cells_to_plot <- layer_data[selection_markers, ] > 0
+      if (any(selection_markers %in% rownames(layer_data))) {
+        cells_to_select <- names(which(layer_data[selection_markers, ] > 0))
+        cells_to_plot <- layer_data[selection_markers, ] > 0
+      } else {
+        warning('None of the selection markers found in the data, please check...')
+        return(NULL)
+      }
     } else {
       cells_to_select <- sapply(as.data.frame(layer_data[selection_markers, ] > 0), sum) == length(rownames(layer_data[selection_markers, ]))
       # TODO
