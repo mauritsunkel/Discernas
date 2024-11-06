@@ -364,19 +364,22 @@ selection_reintegration <- function(
     layer_data <- SeuratObject::LayerData(so)
     # select each cell that has expresses each gene from selection_markers
     if (length(levels(so$orig.ident)) == 1) {
-      cellsToSelect <- names(which(layer_data[selection_markers, ] > 0))
+      cells_to_select <- names(which(layer_data[selection_markers, ] > 0))
+      cells_to_plot <- layer_data[selection_markers, ] > 0
     } else {
-      cellsToSelect <- sapply(as.data.frame(layer_data[selection_markers, ] > 0), sum) == length(rownames(layer_data[selection_markers, ]))
+      cells_to_select <- sapply(as.data.frame(layer_data[selection_markers, ] > 0), sum) == length(rownames(layer_data[selection_markers, ]))
+      # TODO
+      cells_to_plot <- NULL
     }
 
     # set RNA assay
     Seurat::DefaultAssay(so) <- "RNA"
     # plot selected cells
-    Seurat::Idents(so) <- cellsToSelect
-    p <- Seurat::DimPlot(so, reduction = "umap", label = F, repel = TRUE) + ggplot2::ggtitle(paste0("selected cells: ", table(cellsToSelect)["TRUE"]))
+    Seurat::Idents(so) <- cells_to_plot
+    p <- Seurat::DimPlot(so, reduction = "umap", label = F, repel = TRUE) + ggplot2::ggtitle(paste0("selected cells: ", table(cells_to_plot)["TRUE"]))
     ggplot2::ggsave(file.path(output_dir, "selected_cells.png"), plot = p, width = c(12,12), height = c(12,12))
     # perform cell selection
-    so <- so[, cellsToSelect]
+    so <- so[, cells_to_select]
     # add selection panel and type as metadata
     so@misc$selection_markers <- selection_markers
   }
@@ -418,10 +421,13 @@ selection_reintegration <- function(
       message("\n Removing smallest sample as data cannot be processed by SCTransform, rerunning without")
       Seurat::Idents(so) <- so@meta.data[, "orig.ident"]
       sizeSorted_sample_names <- names(sort(table(so$orig.ident)))
-      so <- subset(so, idents = sizeSorted_sample_names[2:length(sizeSorted_sample_names)])
-      if(length(names(table(so$orig.ident))) == 0) stop("All samples to small to split in layers")
-      so <- SCTransform_subset(so)
-      return(so)
+      if (length(sizeSorted_sample_names) > 1) {
+        so <- subset(so, idents = sizeSorted_sample_names[2:length(sizeSorted_sample_names)])
+        so <- SCTransform_subset(so)
+        return(so)
+      } else {
+        stop("All samples to small to run SCTransform on subset, keeping old SCTransformed data")
+      }
     })
   }
   so <- SCTransform_subset(so)
