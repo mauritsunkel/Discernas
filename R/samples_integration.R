@@ -352,9 +352,8 @@ selection_reintegration <- function(
     # plot selected cells
     cell_selection <- so$seurat_subclusters %in% subcluster_selection
     Seurat::Idents(so) <- cell_selection
-    png(file.path(output_dir, "subclusters_selected_cells.png"))
-    Seurat::DimPlot(so, reduction = "umap", label = F, repel = TRUE) + ggplot2::ggtitle(paste0("selected cells: ", table(cell_selection)["TRUE"]))
-    dev.off()
+    p <- Seurat::DimPlot(so, reduction = "umap", label = F, repel = TRUE) + ggplot2::ggtitle(paste0("selected cells: ", table(cell_selection)["TRUE"]))
+    ggplot2::ggsave(file.path(output_dir, "subclusters_selected_cells.png"), plot = p, width = c(12,12), height = c(12,12))
     # perform subcluster selection
     Seurat::Idents(so) <- so$seurat_subclusters
     so <- subset(so, idents = subcluster_selection)
@@ -374,9 +373,8 @@ selection_reintegration <- function(
     Seurat::DefaultAssay(so) <- "RNA"
     # plot selected cells
     Seurat::Idents(so) <- cellsToSelect
-    png(file.path(output_dir, "selected_cells.png"))
-    Seurat::DimPlot(so, reduction = "umap", label = F, repel = TRUE) + ggplot2::ggtitle(paste0("selected cells: ", table(cellsToSelect)["TRUE"]))
-    dev.off()
+    p <- Seurat::DimPlot(so, reduction = "umap", label = F, repel = TRUE) + ggplot2::ggtitle(paste0("selected cells: ", table(cellsToSelect)["TRUE"]))
+    ggplot2::ggsave(file.path(output_dir, "selected_cells.png"), plot = p, width = c(12,12), height = c(12,12))
     # perform cell selection
     so <- so[, cellsToSelect]
     # add selection panel and type as metadata
