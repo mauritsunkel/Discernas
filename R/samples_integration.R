@@ -364,7 +364,12 @@ selection_reintegration <- function(
     message("\n Selecting cells based on expressing all markers \n")
     layer_data <- SeuratObject::LayerData(so)
     # select each cell that has expresses each gene from selection_markers
-    cellsToSelect <- sapply(as.data.frame(layer_data[selection_markers, ] > 0), sum) == length(rownames(layer_data[selection_markers, ]))
+    if (length(levels(so$orig.ident)) == 1) {
+      cellsToSelect <- names(which(layer_data[selection_markers, ] > 0))
+    } else {
+      cellsToSelect <- sapply(as.data.frame(layer_data[selection_markers, ] > 0), sum) == length(rownames(layer_data[selection_markers, ]))
+    }
+
     # set RNA assay
     Seurat::DefaultAssay(so) <- "RNA"
     # plot selected cells
