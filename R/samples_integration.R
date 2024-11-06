@@ -436,7 +436,7 @@ selection_reintegration <- function(
   }
   so <- SCTransform_subset(so)
   message("\n RUN PCA \n")
-  so <- Seurat::RunPCA(so, features = SeuratObject::VariableFeatures(object = so), npcs = min(c(dim(so)[2], 50)), verbose = TRUE)
+  so <- Seurat::RunPCA(so, features = SeuratObject::VariableFeatures(object = so), npcs = min(c(dim(so)[2], 51))-1, verbose = TRUE)
 
   if (subset_reintegration) {
     # do integration and integration_analysis post selection
