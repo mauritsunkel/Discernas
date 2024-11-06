@@ -55,13 +55,13 @@ differential_expression_analysis <- function(
   output_dir <- file.path(output_dir, 'DEA')
   dir.create(output_dir, recursive = TRUE)
   ## read data
-  integrated <- qs::qread(qs_file)
+  seurat_object <- qs::qread(qs_file)
 
-  if (!length(unique(integrated$orig.ident)) > 1) {
+  if (!length(unique(seurat_object$orig.ident)) > 1) {
     message("Need multiple samples in Seurat object to perform sample-level DEA")
   } else {
     # plot scatters with correlation for AggregatedExpression of unique sample pairs
-    aggregate_data <- Seurat::AggregateExpression(integrated, group.by = "orig.ident", assays = "SCT", return.seurat = TRUE)
+    aggregate_data <- Seurat::AggregateExpression(seurat_object, group.by = "orig.ident", assays = "SCT", return.seurat = TRUE)
     # get unique sample-pairs
     sample_combinations <- combn(names(aggregate_data$orig.ident), 2, simplify = F)
     scatter_plots <- patchwork::wrap_plots(lapply(sample_combinations, function(x) {
@@ -77,10 +77,10 @@ differential_expression_analysis <- function(
     for (meta_name in names(sample_celltype_DEA)) {
       message(meta_name)
       if (meta_name == "orig.ident") {
-        SeuratObject::Idents(integrated) <- integrated$orig.ident
+        SeuratObject::Idents(seurat_object) <- seurat_object$orig.ident
       } else {
-        idents <- paste(integrated$orig.ident, integrated@meta.data[, meta_name], sep = "_")
-        SeuratObject::Idents(integrated) <- idents
+        idents <- paste(seurat_object$orig.ident, seurat_object@meta.data[, meta_name], sep = "_")
+        SeuratObject::Idents(seurat_object) <- idents
       }
 
       for (i in seq_along(sample_celltype_DEA[[meta_name]])) {
@@ -92,12 +92,12 @@ differential_expression_analysis <- function(
           if (sample_celltype_DEA[[meta_name]][[i]][['regexp']] == TRUE) {
             ref_ident <- c()
             for (id in ref_ident_DEA) {
-              ref_ident <- c(ref_ident, grep(id, levels(SeuratObject::Idents(integrated)), value = TRUE))
+              ref_ident <- c(ref_ident, grep(id, levels(SeuratObject::Idents(seurat_object)), value = TRUE))
             }
             if (all(vs_ident_DEA != 'rest')) {
               vs_ident <- c()
               for (id in vs_ident_DEA) {
-                vs_ident <- c(vs_ident, grep(id, levels(SeuratObject::Idents(integrated)), value = TRUE))
+                vs_ident <- c(vs_ident, grep(id, levels(SeuratObject::Idents(seurat_object)), value = TRUE))
               }
             }
           } else {
@@ -129,9 +129,9 @@ differential_expression_analysis <- function(
         message("DE: ", comp_name)
         message("ref_idents: ", ref_ident)
         message("vs_idents: ", vs_ident)
-        DE_EnhancedVolcano(integrated, ref_ident, vs_ident, DE_output_dir, comp_name, pct.all, pct.any, p.adj.threshold, DE_test)
+        DE_EnhancedVolcano(seurat_object, ref_ident, vs_ident, DE_output_dir, comp_name, pct.all, pct.any, p.adj.threshold, DE_test)
         if (!is.null(features_of_interest)) {
-          DE_MarkerExpression(integrated, features_of_interest, idents = c(ref_ident, vs_ident), DE_output_dir)
+          DE_MarkerExpression(seurat_object, features_of_interest, idents = c(ref_ident, vs_ident), DE_output_dir)
         }
       }
     }
@@ -204,27 +204,27 @@ DE_EnhancedVolcano <- function(seurat_object, ref_ident, vs_ident, DE_output_dir
   ## plot in between filters for quality control
   ## write DE res to .xlsx
   ## plot EnhancedVolcano per sample DE
-  if (dim(DE_res)[1] == 0) {
+  if (dim(DE_res)[1] > 0) {
     plot_DE_stats(DE_res, filepath = DE_output_dir, filename = "DE_stats")
     openxlsx::write.xlsx(x = DE_res, file = filename, row.names = TRUE)
     plotEnhancedVolcano(seurat_object, DE_res, ref_ident, vs_ident, filedir = DE_output_dir, comp_name, filesuffix = NULL)
   }
-  if (dim(DE_res_padj)[1] == 0) {
+  if (dim(DE_res_padj)[1] > 0) {
     plot_DE_stats(DE_res_padj, filepath = DE_output_dir, filename = paste0("DE_stats_p.adj=", p.adj.threshold))
     openxlsx::write.xlsx(x = DE_res_padj, file = sub(".xlsx$", "_p.adj.xlsx", filename), row.names = TRUE)
     plotEnhancedVolcano(seurat_object, DE_res_padj, ref_ident, vs_ident, filedir = DE_output_dir, comp_name, filesuffix = paste0("p.adj=", p.adj.threshold))
   }
-  if (dim(DE_res_pct_padj)[1] == 0) {
+  if (dim(DE_res_pct_padj)[1] > 0) {
     plot_DE_stats(DE_res_pct_padj, filepath = DE_output_dir, filename = paste0("DE_stats_pctAll=", pct.all, "_pctAny=", pct.any, "_p.adj=", p.adj.threshold))
     openxlsx::write.xlsx(x = DE_res_pct, file = sub(".xlsx$", "_pct.xlsx", filename), row.names = TRUE)
     plotEnhancedVolcano(seurat_object, DE_res_pct, ref_ident, vs_ident, filedir = DE_output_dir, comp_name, filesuffix = paste0("pctAll=", pct.all, "_pctAny=", pct.any))
   }
-  if (dim(DE_res_pct)[1] == 0) {
+  if (dim(DE_res_pct)[1] > 0) {
     plot_DE_stats(DE_res_pct, filepath = DE_output_dir, filename = paste0("DE_stats_pctAll=", pct.all, "_pctAny=", pct.any))
     openxlsx::write.xlsx(x = DE_res_pct_padj, file = sub(".xlsx$", "_pct_p.adj.xlsx", filename), row.names = TRUE)
     plotEnhancedVolcano(seurat_object, DE_res_pct_padj, ref_ident, vs_ident, filedir = DE_output_dir, comp_name, filesuffix = paste0("pctAll=", pct.all, "_pctAny=", pct.any, "_p.adj=", p.adj.threshold))
   }
-  if (dim(DE_res_filtered)[1] == 0) {
+  if (dim(DE_res_filtered)[1] > 0) {
     plot_DE_stats(DE_res_filtered, filepath = DE_output_dir, filename = "DE_stat_filtered")
     openxlsx::write.xlsx(x = DE_res_filtered, file = sub(".xlsx$", "_filtered.xlsx", filename), row.names = TRUE)
     plotEnhancedVolcano(seurat_object, DE_res_filtered, ref_ident, vs_ident, filedir = DE_output_dir, comp_name, filesuffix = "filtered")
@@ -243,7 +243,7 @@ plot_DE_stats <- function(DE_res, filepath, filename = "DE_stats") {
   message('plot_DE_stats: ', filepath, filename)
   pdf(file = file.path(filepath, paste0(filename, ".pdf")))
   pct <- c(DE_res$pct.1, DE_res$pct.2)
-  hist(pct, breaks = seq(floor(min(pct)), ceiling(max(pct)), 0.01), main = "pct.1 & pct.2", xlab = paste("n_genes =", dim(DE_res)[1]))
+  hist(pct, breaks = seq(from = floor(min(pct)), to = ceiling(max(pct)), by = 0.01), main = "pct.1 & pct.2", xlab = paste("n_genes =", dim(DE_res)[1]))
   hist(DE_res$avg_log2FC, breaks = seq(floor(min(DE_res$avg_log2FC)), ceiling(max(DE_res$avg_log2FC)), 1), main = "average log2 fold-change", xlab = "")
   plot(DE_res$pct.1, DE_res$pct.2, main = "pct.1 vs pct.2", col = c("coral", 'darkolivegreen'), cex = 0.5, xlab = paste("R^2 = ", round(cor(DE_res$pct.1, DE_res$pct.2)^2, digits = 3)))
   plot(DE_res$avg_log2FC, DE_res$pct.1, col = 'coral', cex = .25, main = "pct.1 vs pct.2", xlab = "")
