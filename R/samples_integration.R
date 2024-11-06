@@ -346,7 +346,7 @@ selection_reintegration <- function(
     # get cluster names where percent expressed is above %threshold for each gene of selection_markers
     subcluster_selection <- names(which(table(p$data[p$data$pct.exp > percent_expressed,]$id) == length(unique(p$data$features.plot))))
     # if no clusters selected, set selection to NULL
-    if (length(subcluster_selection) == 0) subcluster_selection <- NULL
+    if (length(subcluster_selection) == 0) return(NULL)
     # set RNA assay
     Seurat::DefaultAssay(so) <- "RNA"
     # plot selected cells
