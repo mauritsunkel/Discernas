@@ -356,6 +356,7 @@ selection_reintegration <- function(
     Seurat::DimPlot(so, reduction = "umap", label = F, repel = TRUE) + ggplot2::ggtitle(paste0("selected cells: ", table(cell_selection)["TRUE"]))
     dev.off()
     # perform subcluster selection
+    Seurat::Idents(so) <- so$seurat_subclusters
     so <- subset(so, idents = subcluster_selection)
     # add selection panel and type as metadata
     so@misc$selection_markers <- selection_markers
