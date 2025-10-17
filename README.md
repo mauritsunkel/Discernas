@@ -1,4 +1,6 @@
 # Introduction
+Discernas: Differential Interpretation of Single-cell RNA-seq Signatures in Human iPSC-derived Neural Differentiation
+
 Single-cell RNA sequencing workflow used at the Erasmus Medical Center, department of Psychiatry in the lab of Steven Kushner and Femke de Vrij. 
 This repository is linked with github.com/kushnerlab/scRNAseqR.
 
