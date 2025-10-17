@@ -1,5 +1,6 @@
 # Introduction
-Single-cell RNA sequencing workflow used at the Erasmus Medical Center, department of Psychiatry at the Steven Kushner lab. 
+Single-cell RNA sequencing workflow used at the Erasmus Medical Center, department of Psychiatry in the lab of Steven Kushner and Femke de Vrij. 
+This repository is linked with github.com/kushnerlab/scRNAseqR.
 
 Preprint (BioRxiv) paper: https://www.biorxiv.org/content/10.1101/2022.08.25.505166v1
 Project data shared with UCSC Cell Browser: https://cells.ucsc.edu/?ds=ipsc-astrocyte-neuron
